@@ -65,7 +65,7 @@ Keystone следует [плейбуку Anthropic AI-native SDLC](https://clau
 | 2. Design | `spec.md` | встроен в план: `/keystone:plan` пишет требования и дизайн и до утверждения запускает `/keystone:check` (анализатор + валидатор в чистом контексте) |
 | 3. Build | `plan.md`, затем дифф | Approve, `/clear`, `/keystone:implement`: задача за задачей; пока план в draft, правки кода закрыты (хук) |
 | 4. Test | проверки + проверяющий в чистом контексте | `/keystone:verify`: сборка, тесты, линтер, затем независимый проверяющий: PASS · PASS-UNPROVEN · FAIL |
-| 5. Deploy | смёрженный PR | `git push` / `gh pr create` закрыты, пока verify не прошёл (хук): агент доходит до ворот, но не проходит их |
+| 5. Deploy | смёрженный PR | `git push` / `gh pr create` закрыты, пока verify не прошёл (хук). Шаги релиза (merge, push, деплой, задачи на проде) лежат в разделе плана `## Release`, а не в задачах; после verify `/keystone:implement` выполняет их в режиме релиза, каждый — после вашего «да»: агент готовит релиз, вы его разрешаете |
 | 6. Maintain | инцидент → новый `intent.md` | `/keystone:fix` (сначала регрессионный тест) или новый `/keystone:intent`, если находка крупнее |
 
 Не каждой задаче нужны все шесть этапов: сначала `/keystone:start` определяет размер. **S** — правка и проверка.
@@ -201,6 +201,12 @@ plan/grill/check сессий ставьте `/effort high` на сессию.
 | план в `implementing`, в `## Tasks` остались `[ ]` без `BLOCKED:` | завершение хода: одно напоминание, вопросы человеку оно не блокирует |
 | любой активный план | `git push`, `gh pr create` — до `/keystone:verify` с PASS или `/keystone:verify accept` |
 
+**Релиз после verify.** Push открывается только на verified-плане, поэтому шаги релиза никогда не лежат в `## Tasks` —
+план держит их в `## Release` (`R1`, `R2`, …). Verify не считает их открытой работой; при PASS его `Next:` ведёт на
+`/keystone:implement <план>`, который в **режиме релиза** выполняет только эти шаги, спрашивает ваше «да» перед каждым
+merge, push или деплоем и оставляет план `verified`. Это правило плейбука: *«Агент делает всё до продакшен-ворот и
+ничего за ними»*.
+
 Снять гейт: `Status: abandoned` в шапке плана или запуск с `KEYSTONE_GATES=off`. Хуки — обычный Node-скрипт
 (`hooks/gate.mjs`), читают только payload хука и файлы плана.
 
@@ -208,7 +214,8 @@ plan/grill/check сессий ставьте `/effort high` на сессию.
 
 Файлы задачи лежат в `docs/keystone/<YYYY-MM-DD>-<slug>/`: `intent.md`, `plan.md`, `verify.md` — либо в
 `paths.specs`, если проект на AI Factory. Шапка плана: `Level · Mode · Status` (плюс `Settings:` и `Done means:`),
-Status проходит `draft → approved → implementing → verified`, а `abandoned` возможен на любом шаге. Каждый этап
+Status проходит `draft → approved → implementing → verified`, а `abandoned` возможен на любом шаге; шаги `## Release`
+выполняются, когда план уже `verified`. Каждый этап
 заканчивается закоммиченным файлом, следующий начинается с его чтения, а не с переписки.
 
 ## Замеры

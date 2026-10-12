@@ -66,7 +66,7 @@ Keystone follows [Anthropic's AI-native SDLC playbook](https://claude.com/resour
 | 2. Design | `spec.md` | folded into the plan: `/keystone:plan` writes requirements + design and runs `/keystone:check` (fresh-context analyzer + validator) before you approve |
 | 3. Build | `plan.md`, then the diff | Approve, `/clear`, `/keystone:implement`: task by task; no code while the plan is draft (hook) |
 | 4. Test | checks + fresh-context verifier | `/keystone:verify`: runs your build/test/lint, then an independent verifier: PASS · PASS-UNPROVEN · FAIL |
-| 5. Deploy | merged PR | `git push` / `gh pr create` stay closed until verify passes (hook) — the agent can act up to the gate, not past it |
+| 5. Deploy | merged PR | `git push` / `gh pr create` stay closed until verify passes (hook). Release steps (merge, push, deploy, production jobs) live in the plan's `## Release`, not in its tasks; after verify, `/keystone:implement` runs them in release mode, each one after your yes — the agent prepares the release, you authorize it |
 | 6. Maintain | incident → new `intent.md` | `/keystone:fix` (regression test first), or a new `/keystone:intent` when the finding is bigger |
 
 Not every change needs all six: `/keystone:start` sizes it first. **S** — edit and check. **M** — short plan, implement,
@@ -202,6 +202,12 @@ Gates apply only while there is an **active plan**: the `plan.md` in the newest 
 | plan is `implementing` and `## Tasks` has `[ ]` without `BLOCKED:` | ending the turn: one reminder, it never blocks a question to you |
 | any active plan | `git push` and `gh pr create` until `/keystone:verify` returns PASS, or `/keystone:verify accept` |
 
+**Release after verify.** Because push opens only on a verified plan, release steps never sit in `## Tasks` — the plan
+keeps them in `## Release` (`R1`, `R2`, …). Verify does not count them as open work; on PASS its `Next:` points to
+`/keystone:implement <plan>`, which in **release mode** runs only those steps, asks for your yes before each merge, push
+or deploy, and keeps the plan `verified`. This follows the playbook's rule: *"The agent does everything up to the
+production gate and nothing past it."*
+
 To lift a gate, set `Status: abandoned` in the plan header, or run with `KEYSTONE_GATES=off`. The hooks are plain Node
 scripts (`hooks/gate.mjs`) and read only the hook payload and the plan files.
 
@@ -209,7 +215,8 @@ scripts (`hooks/gate.mjs`) and read only the hook payload and the plan files.
 
 Task files live in `docs/keystone/<YYYY-MM-DD>-<slug>/` — `intent.md`, `plan.md`, `verify.md` — or in `paths.specs`
 when the project uses AI Factory. The plan header is `Level · Mode · Status` (plus `Settings:` and `Done means:`), and
-Status moves `draft → approved → implementing → verified`, or `abandoned` at any point. Each stage ends in a committed
+Status moves `draft → approved → implementing → verified`, or `abandoned` at any point; the `## Release` steps run while the
+plan is `verified`. Each stage ends in a committed
 file and the next stage starts by reading it, not by replaying the chat.
 
 ## Benchmarks
