@@ -216,3 +216,12 @@ test('README: memlab is a separate plugin with install commands; adapter only fo
     assert.match(t, /\/plugin install memlab@memlab/, f);
   }
 });
+
+test('mod: hooks.json loads the keystone module next to the settings hooks', () => {
+  const h = json('hooks/hooks.json');
+  assert.deepEqual(h.modules, ['./keystone.ts']);
+  assert.ok(h.hooks.PreToolUse && h.hooks.Stop);
+  const m = read('hooks/keystone.ts');
+  for (const s of ["name: 'keystone-status'", "on('turn.complete'", "on('prompt.submit'", '$.session.usage()', 'Keystone cost meter'])
+    assert.ok(m.includes(s), s);
+});
