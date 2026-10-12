@@ -192,7 +192,7 @@ Glob/Grep/Read directly.
 Create the task folder and write `plan.md` in the shape of `references/PLAN-FORMAT.md`, in this order: header
 (`Level` · `Mode: feature` · `Status: draft`, `Authority:` line when an intent exists, `Settings:` line, then `Done means:` — verifiable outcomes, on L from I-n, on M from the request) · Original
 Request · Design (optional) · Requirements Reconciliation table + `Project rules check:` line · Risks · Tasks · Commit
-Plan (5+ tasks).
+Plan (5+ tasks) · Release (only when the change ships: merge, push, deploy, production jobs — never as Tasks).
 
 **Task requirements.** Every task has a clear deliverable and expected behavior, file paths to change/create, a
 verifying check, logging instructions as the `logging` Settings value asks, dependency notes when applicable, and

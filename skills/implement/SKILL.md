@@ -26,14 +26,19 @@ Keep going without asking while the next step needs no human decision; stop only
 
 ## Step 0: Find the plan and load context
 
-1. **Plan:** the argument is a path to `plan.md`. Without it, take the active plan. Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing.
+1. **Plan:** the argument is a path to `plan.md`. Without it, take the active plan. Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing — or `verified` with open `- [ ] R<n>.` lines in `## Release`.
    (`paths.specs` comes from the fallback `.ai-factory/config.yaml` when the project has AI Factory.)
    No plan found → say "No plan. Run `/keystone:start <task>` first." and STOP.
 2. **Status** (header line `Level: … · Mode: … · Status: …`):
    - `draft` → STOP: "Approve the plan first (`/keystone:plan <plan path>`), then run implement."
    - `approved` → set `Status: implementing` now (this edit goes into the baseline commit below).
    - `implementing` → continue (resume, Step 0.1).
-   - `verified` / `abandoned` → STOP and say so.
+   - `verified` with open `- [ ] R<n>.` lines in `## Release` → **release mode**: run only those steps, in order. Each
+     external or hard-to-undo step (merge into main, push, deploy, a production job or migration) needs an explicit yes
+     right before it (AskUserQuestion, one step per question); a smoke check only the human can do becomes
+     `BLOCKED: needs the human`. Tick each `R<n>` after its check passes and commit the ticks as `docs(release): <slug>`.
+     The Status stays `verified`. Never touch `## Tasks` or code in release mode.
+   - `verified` with no open `## Release` steps / `abandoned` → STOP and say so.
 3. **Settings** are mandatory. Read the header line `Settings: tests — … · logging — … · docs — …`:
    - `tests — yes`: every task that changes behaviour gets a test in the same task.
    - `tests — no`: write none, unless a task lists one.

@@ -19,7 +19,8 @@
 | План `approved` | можно реализовывать | `/clear`, затем `/keystone:implement <путь к plan.md>` (на Sonnet) |
 | План `implementing`, есть `- [ ]` | реализация не закончена | `/keystone:implement <путь к plan.md>` — продолжит с первой открытой задачи |
 | План `implementing`, все задачи `[x]` или `BLOCKED` | можно проверять | `/clear`, затем `/keystone:verify <путь к plan.md>` |
-| verify: **PASS** | готово | push и PR (на L сначала `/keystone:review`) |
+| verify: **PASS**, в плане есть открытый `## Release` | можно выпускать | `/keystone:implement <путь к plan.md>` — режим релиза: каждый merge / push / деплой после вашего «да» |
+| verify: **PASS**, без `## Release` | готово | push и PR (на L сначала `/keystone:review`) |
 | verify: **PASS-UNPROVEN** | часть строк не доказана | запустить недостающую проверку или `/keystone:verify accept <путь>` с вашей подписью |
 | verify: **FAIL** | есть `missing` / `wrong` | `/keystone:implement <путь>` по списку или `/keystone:fix <находка>` |
 | План `verified` или `abandoned` | задача закрыта | следующая задача: `/keystone:start …` |

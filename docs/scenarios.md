@@ -22,7 +22,8 @@ If none of these helps, find your situation below.
 | Plan `approved` | ready to build | `/clear`, then `/keystone:implement <plan.md path>` (on Sonnet) |
 | Plan `implementing`, open `- [ ]` tasks | build not finished | `/keystone:implement <plan.md path>` — resumes at the first open task |
 | Plan `implementing`, all tasks `[x]` or `BLOCKED` | ready to verify | `/clear`, then `/keystone:verify <plan.md path>` |
-| verify **PASS** | done | push and open the PR (on L run `/keystone:review` first) |
+| verify **PASS**, plan has open `## Release` steps | ready to ship | `/keystone:implement <plan.md path>` — release mode: each merge / push / deploy step after your yes |
+| verify **PASS**, no `## Release` | done | push and open the PR (on L run `/keystone:review` first) |
 | verify **PASS-UNPROVEN** | some rows unproven | run the missing check, or `/keystone:verify accept <path>` with your sign-off |
 | verify **FAIL** | `missing` / `wrong` rows | `/keystone:implement <path>` on the list, or `/keystone:fix <finding>` |
 | Plan `verified` or `abandoned` | task closed | next task: `/keystone:start …` |

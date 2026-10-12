@@ -49,6 +49,9 @@ Project rules check: read <CLAUDE.md, docs/architecture.md, .claude/rules/*.md, 
 - **Commit 1** (after tasks 1-3): "feat: add base models and types"
 - **Commit 2** (after tasks 4-6): "feat: implement core service logic"
 
+## Release
+- [ ] R1. <external step after verify: merge into main, push, deploy, a production job or migration, smoke check> — check: <observable result>
+
 ## Implementation notes
 <!-- left empty by /keystone:plan; /keystone:implement appends one line per decision made while building -->
 ```
@@ -68,6 +71,10 @@ Rules for the template:
 - `## Commit Plan` only with 5+ tasks: a checkpoint every 3-5 tasks, grouped logically, conventional-commit messages.
   With fewer than 5 tasks: one commit at the end, no section.
 - No test tasks when Settings say `tests — no`; no summary/report task at the end ever.
+- **Release steps are never tasks.** Merge into the main branch, push, deploy, production jobs or migrations and smoke
+  checks on production go to `## Release` as `- [ ] R<n>. …` lines (only when the change ships somewhere). They run
+  after verify — the push gate opens only on `Status: verified` — by `/keystone:implement` in release mode, each
+  external step after the human's yes. Verify does not count them as open work.
 
 ## Example task
 

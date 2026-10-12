@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.1');
+  assert.equal(p.version, '0.9.2');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -469,4 +469,14 @@ test('Next step tells skills to put the command in a fenced code block (copy but
     assert.ok(t.includes('fenced code block **with no language tag**'), `${s}: fenced Next`);
     assert.ok(t.includes('Never tag it ```bash'), `${s}: no bash tag`);
   }
+});
+
+test('release gap: release steps live in ## Release, verify ignores them, implement runs them on a verified plan', () => {
+  has('skills/plan/references/PLAN-FORMAT.md', '## Release', 'Release steps are never tasks.');
+  has('skills/plan/SKILL.md', 'Release (only when the change ships');
+  has('skills/implement/SKILL.md', 'release mode', 'The Status stays `verified`', 'one step per question');
+  has('skills/verify/SKILL.md', 'never block PASS', 'PASS with open `## Release` steps');
+  has('agents/verifier.md', '`## Release` lines');
+  has('docs/scenarios.md', 'release mode');
+  has('docs/scenarios.ru.md', 'режим релиза');
 });

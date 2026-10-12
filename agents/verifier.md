@@ -47,6 +47,7 @@ Statuses (one line each, with evidence `file:line`, test name or command + outpu
 - `wrong` — in the diff but does not do what the row says (cite file:line); every `wrong` line ends with `Repro: <input / command where the failure shows>`;
 - `not proven` — in the diff, no evidence of behaviour;
 - `BLOCKED` — the evidence cell starts with `BLOCKED:`: open work, never `ok`.
+- `## Release` lines (`R<n>`: merge, push, deploy, production steps) are not tasks — they run after verify; give them no line.
 
 **A checked box is not evidence.** `[x]`, "done", "pass" in the plan or a report prove nothing by themselves. Evidence
 is a command output recorded in the repo or passed to you, a test that exercises the row (file:line), or a read-only

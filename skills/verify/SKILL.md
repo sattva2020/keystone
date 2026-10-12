@@ -89,6 +89,8 @@ not be confirmed> — looked in <where>` section. Then print its output (with th
 If the numbers do not add up, fix the count, not the lines, and say so.
 
 Rules you enforce when reading the output (the verifier knows them, you check them):
+- `## Release` steps (`R<n>`) are not tasks: they run after the verdict, so they are never `missing`, `BLOCKED` or
+  open work, and they never block PASS.
 - `[x]`, "done", "pass" is not evidence. A grep or a code read is presence, not behaviour → `not proven`.
 - A row whose evidence starts with `BLOCKED:` is open work, never `ok`.
 - Formatting noise is not `unrequested`; new logic, files or dependencies without a task / row / `I-n` are.
@@ -210,7 +212,8 @@ PASS (or `accept` was just recorded), offer: `Milestone M-<n> done? Tick it with
 into a project rule.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
-followed only by the `Next:` line: PASS → `Next: push and open the PR` (L: `/keystone:review` first); PASS-UNPROVEN →
+followed only by the `Next:` line: PASS with open `## Release` steps → `Next: /keystone:implement <plan path>` (release
+mode; on L `/keystone:review` first); PASS without them → `Next: push and open the PR` (L: `/keystone:review` first); PASS-UNPROVEN →
 `Next: /keystone:verify accept <plan path>` or the missing check; FAIL → `Next: /keystone:implement <plan path>` (or
 `/keystone:fix <finding>`); after a fix plan or a fixed FAIL, `/keystone:evolve` may follow later.
 

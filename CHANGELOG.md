@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.9.2] — 2026-10-13
+
+### Fixed
+- **Release gap.** A release step (merge into main, push, deploy, a production job) written as a plan task could never
+  run: the push gate opens only on `Status: verified`, and `/keystone:implement` refused a verified plan. Now `plan`
+  writes release steps into a separate `## Release` section (`R1`, `R2`, …), `verify` does not count them as open work
+  and on PASS points to `/keystone:implement <plan>` in **release mode**, which runs only those steps — each merge,
+  push or deploy after your explicit yes — and keeps the plan `verified`. See the new rows in
+  [`docs/scenarios.md`](docs/scenarios.md).
+
 ## [0.9.1] — 2026-10-12
 
 ### Changed
