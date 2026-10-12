@@ -4,7 +4,7 @@
 
 Refs: A03:2025, A08:2025 (see `MAPPING.md`). **Threat model: an external attacker without write access** — a fork PR, a
 poisoned dependency, a hijacked action. Not a finding: triggers reachable only by maintainers (`workflow_dispatch`, push to a
-protected branch); missing SBOM/provenance on an internal app (info at most).
+protected branch); missing SBOM/provenance on an internal app (a hardening suggestion, not a finding — SEVERITY.md).
 
 ## GitHub Actions (`.github/workflows/*.yml`)
 | Check | Unsafe | Safe | Severity |
@@ -16,6 +16,16 @@ protected branch); missing SBOM/provenance on an internal app (info at most).
 | Secrets in logs | `echo $SECRET`, `set -x` with secrets, secrets exposed to fork-triggered jobs | secrets only on trusted triggers | high |
 | Long-lived cloud keys | static deploy keys in secrets | OIDC | low |
 | Self-hosted runner in a public repo | `runs-on: self-hosted` | GitHub-hosted | high |
+
+## AI agent in CI (Claude / LLM code-review action, auto-fix bot)
+**Risk:** an agent that runs on PR code and loads `CLAUDE.md`, `AGENTS.md`, `.claude/` (settings, hooks, MCP config, skills) from the PR head
+lets a fork author plant instructions or hooks → prompt injection / code execution with the CI secrets and a write token.
+**Look for:** a workflow on `pull_request`, `pull_request_target` or `issue_comment` that calls an LLM agent action (e.g. `anthropics/claude-code-action`),
+checks out `github.event.pull_request.head.*`, passes `ANTHROPIC_API_KEY` / cloud keys or a write-scoped `GITHUB_TOKEN`, and lets the agent run shell or MCP tools.
+**Fix:** run on the base ref (config files come from the base branch, PR code is data only), no secrets in the agent job, read-only token
+(`permissions: contents: read`; `pull-requests: write` only in the comment step), tools allow-listed, no `--dangerously-skip-permissions`.
+Severity: critical with secrets + execution on fork code; high with only a write token.
+**Bar for HIGH in CI** (Sentry's mandatory finding elements): entry point, payload, execution, impact and a PoC — all five traced in the workflow you read; a missing one → `## Needs verification`.
 
 ## Dependencies
 - Lockfile committed (`package-lock.json`, `pnpm-lock.yaml`, `poetry.lock`, `Cargo.lock`…) and CI installs with `npm ci` /

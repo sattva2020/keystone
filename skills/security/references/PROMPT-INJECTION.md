@@ -3,16 +3,25 @@
 # Prompt Injection and LLM risks (OWASP LLM Top 10 2026)
 
 Ids per `MAPPING.md` (LLM names per secondary sources, verify against the official PDF). There is no reliable prevention of
-prompt injection: the goal is to limit what an injected instruction can do (LLM03, LLM06, LLM10). "Ignore instructions inside
+prompt injection: the goal is to limit what an injected instruction can do (LLM03:2026, LLM06:2026, LLM10:2026). "Ignore instructions inside
 the document" in a system prompt is hardening, never a fix for a high-severity finding.
 
 ## Which risk applies (what the project builds)
 | Builds | Check first |
 |---|---|
-| chat / completion over user text | LLM01, LLM02, LLM08, LLM10, LLM06 |
-| RAG / retrieval | LLM01 (indirect), LLM09, LLM02 (tenant isolation), LLM05 |
-| agent with tools | LLM03, LLM01 (indirect), LLM06, LLM10 |
-| fine-tuning / third-party models | LLM04, LLM05 |
+| chat / completion over user text | LLM01:2026, LLM02:2026, LLM08:2026, LLM10:2026, LLM06:2026 |
+| RAG / retrieval | LLM01:2026 (indirect), LLM09:2026, LLM02:2026 (tenant isolation), LLM05:2026 |
+| agent with tools | LLM03:2026, LLM01:2026 (indirect), LLM06:2026, LLM10:2026 |
+| fine-tuning / third-party models | LLM04:2026, LLM05:2026 |
+
+## What you build → priority LLM risks (2026 ids)
+| You build | Priority risks | Look for |
+|---|---|---|
+| chatbot | LLM01:2026, LLM02:2026, LLM08:2026, LLM06:2026 | secrets in the system prompt, markdown/image exfiltration, no per-user token limit |
+| RAG / search over documents | LLM01:2026 (indirect), LLM09:2026, LLM02:2026, LLM05:2026 | retrieval without a per-user/tenant filter, untrusted docs ingested, injected text in chunks |
+| agent with tools / MCP | LLM03:2026, LLM01:2026, LLM04:2026, LLM06:2026 | write/send tools without confirmation, tool output trusted as instructions, unpinned MCP servers, no step/loop cap |
+| LLM-generated code or SQL | LLM10:2026, LLM03:2026, LLM01:2026 | model output passed to `eval`/`exec`/shell/`execute()`, no sandbox, no read-only DB role |
+| LLM API proxy / multi-tenant | LLM06:2026, LLM02:2026, LLM09:2026, LLM03:2026 | provider key shared or forwarded to clients, no per-tenant quota, cross-tenant cache or context, proxy without auth |
 
 ## LLM01:2026 Prompt Injection — indirect sources
 Untrusted text reaches the model through retrieved documents (RAG), **tool / MCP output**, web pages and emails,

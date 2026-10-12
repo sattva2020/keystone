@@ -108,7 +108,7 @@ Read-only scan; proposes ticks, changes nothing until confirmed. Requires `docs/
 1. Task folders: `docs/keystone/*/intent.md` (or AI Factory `paths.specs` fallback) that carry a line `Roadmap: M-<n>`, and the
    `plan.md` beside each. Read the plan header `Status:`. **`verified` = done** for that task; `implementing` / `approved` / `draft` =
    in progress. A milestone is **done** when every task folder pointing at it is `verified` (an `abandoned` one does not block if
-   the rest are verified) and at least one exists. A checked task box alone is not evidence — only the Status counts.
+   the rest are verified) and at least one of them is `verified` — abandoned-only means not done. A checked task box alone is not evidence — only the Status counts.
 2. Code and git: what files, routes, models, configs or tests would prove the outcome? `Glob`/`Grep` for them;
    `git log --oneline --all -30` for related commits. Milestones with no task folder rely on this evidence alone — say so.
 

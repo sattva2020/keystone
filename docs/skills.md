@@ -2,7 +2,7 @@
 
 [Русская версия](skills.ru.md) · [Back to README](../README.md)
 
-All 23 `/keystone:*` commands: what they take, what they do, when to use them and who starts them. The picture shows
+All 25 `/keystone:*` commands: what they take, what they do, when to use them and who starts them. The picture shows
 where each command sits on the stages of Anthropic's playbook; the tools row below the chain is optional.
 
 <picture>
@@ -56,6 +56,8 @@ showing a diff and your "yes"; a re-run only adds what is missing.
 | `/keystone:qa` | Opus | `[--all] [change-summary \| test-plan \| test-cases] [<plan.md path \| git ref>]` | A change summary, a plan and concrete manual test scenarios in `<task folder>/qa/`. With a plan, every scenario links to `I-n` and Done means, and says where to run it. | A feature with UI or tricky behavior, "what should I test by hand". | You. |
 | `/keystone:qa-check` | Sonnet | `[human \| agent] [<plan.md path \| qa folder \| branch>]` | Runs the scenarios from `/keystone:qa`. `human` walks you step by step and records what you saw; `agent` runs them itself through the built-in browser or Playwright, a CLI, tests or an API. Each scenario ends pass / fail / blocked with evidence in `qa/qa-check.md`; repeatable runs are saved as Playwright tests in `qa/replay/`. | After `/keystone:qa`; to recheck after a fix. | You. |
 | `/keystone:ask` | Opus | `<question>` | Answers only at 100/100 confidence on evidence (files, command output, documentation); otherwise `INSUFFICIENT INFORMATION` and what exactly is missing. Searches memlab first, libraries through Context7. Changes no files. | "Only if you are sure", versions and prices, "does X support Y now", security-adjacent questions. | You. |
+| `/keystone:pentest` | Opus | `<your target URL> [<security report path>]` | Confirms the findings of `/keystone:security` against your own running app — your targets only (localhost, `*.test`, or a staging URL you name as yours; production only on an explicit yes, observation-only). Passive checks (headers, CORS, cookie flags, TLS) by OWASP ZAP baseline, then one safe request per finding to confirm or lower it, with a PoC and `Refs:`. Never brute-forces, loads or bypasses protections. | After `/keystone:security` when the app runs locally or on staging; when the gate is `warn`. | You; `security` and `verify` offer it. |
+| `/keystone:optimize` | Opus | `perf <function \| endpoint \| query \| page \| bundle> \| simplify <path>` | `perf`: measures the metric 3+ times before and after with the same command and keeps the change only if the numbers improve beyond the noise, otherwise reverts; tests stay green. `simplify`: removes dead code and duplication with tests green before and after and fewer lines. Installs nothing without a yes; never touches production. | A slow endpoint, query or page; code that grew too complex. | You; `review` hands a performance finding to it. |
 
 ## Build and ship
 

@@ -13,9 +13,9 @@ with tools. Refs: A02:2025, A03:2025, LLM03:2026, LLM04:2026 (see `MAPPING.md`).
 | Over-broad permissions | `permissions.allow` with `Bash(*)`, bare `Bash`, wildcard on `curl`/`rm`; `--dangerously-skip-permissions` as a default in scripts or docs | narrow allow-list per command, ask for the rest | high if committed to a shared repo |
 | Hooks that download and run | hook command `curl … \| sh`, `wget -O- \| bash`, remote script fetched on every event | hook calls a committed, reviewed script | high |
 | MCP server from an unknown source | package/URL from an unknown publisher, no repo, `http://` remote | known vendor, pinned version, `https` | medium (high with write tools) |
-| Tool output treated as instructions | agent code feeds tool / MCP / web output into the next prompt with authority, or auto-follows its links | tool output is data: delimited, no authority, no new tool grants | high (LLM01 indirect) |
-| Irreversible actions without confirmation | agent can send, pay, delete, publish or push with no human step | confirmation step or dry-run for irreversible tools | high (LLM03) |
-| `enableAllProjectMcpServers: true` committed | the key in repo settings | list servers explicitly | low — Claude Code ignores it in an untrusted folder, but it is still a smell: it trusts every future server |
+| Tool output treated as instructions | agent code feeds tool / MCP / web output into the next prompt with authority, or auto-follows its links | tool output is data: delimited, no authority, no new tool grants | high (LLM01:2026 indirect) |
+| Irreversible actions without confirmation | agent can send, pay, delete, publish or push with no human step | confirmation step or dry-run for irreversible tools | high (LLM03:2026) |
+| `enableAllProjectMcpServers: true` committed | the key in repo settings | list servers explicitly | hardening — Claude Code ignores it in an untrusted folder; no finding without an exploit path (SEVERITY.md), a hardening suggestion otherwise |
 | Agent credentials wider than the task | one org-wide token shared by all tools | per-tool, least-privilege, short-lived | medium |
 | Memory writes from untrusted content | agent stores web/email text into long-term memory verbatim | store reviewed or marked data only | medium |
 

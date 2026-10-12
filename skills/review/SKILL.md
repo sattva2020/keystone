@@ -54,6 +54,7 @@ For every changed hunk read the surrounding code (callers, callees, tests) befor
 - **Security** — injection (SQL, command, XSS), auth/authorization, CSRF, sensitive data in code or logs, input
   validation, secrets. For a deep pass on L/auth/payments suggest `/keystone:security`.
 - **Performance** — N+1 queries, memory leaks, inefficient algorithms, missing indexes, unbounded payloads/loops.
+  A performance finding can be handed to `/keystone:optimize perf <the spot>` to measure and fix it.
 - **Project rules and best practice** — MUST/MUST NOT from Step 0, duplication, dead code, naming, magic values.
 - **Tests** — new behaviour without a check, edge cases untested.
 

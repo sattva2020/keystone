@@ -89,8 +89,8 @@ Create no source files — only the context files of step 3.
 
 ## 3. Propose the files (one change at a time)
 
-Order of the rounds: `CLAUDE.md` → `.claude/rules/base.md` → `.mcp.json` → plugins → `AGENTS.md`. Each one is its own
-show → Write / Skip / Change round. A file that is complete is reported "already there" and skipped without a question.
+Order of the questions: `CLAUDE.md` → `.claude/rules/base.md` → `.mcp.json` → plugins → `AGENTS.md`. Each one is its own
+show → Write / Skip / Change round; collect the answers first and write only after the last round, in the write order below. A file that is complete is reported "already there" and skipped without a question.
 
 **Write order and links.** Write in this order: `.claude/rules/base.md`, `.mcp.json`, then `CLAUDE.md` last, and let
 `CLAUDE.md` and `AGENTS.md` point only to files that now exist — a skipped or refused file loses its pointer line.

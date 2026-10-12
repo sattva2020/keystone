@@ -58,11 +58,15 @@ touches an entry point, a query, a permission check or an LLM call. For a diff s
 2. Walk the categories of the scope in `${CLAUDE_SKILL_DIR}/references/CHECKLIST.md`. Read the code; grep starters only find candidates.
    Read `AUTH.md`, `PROMPT-INJECTION.md`, `RACE.md`, `AGENT-MCP.md`, `SUPPLY-CHAIN.md` or `MAPPING.md` (same folder) when the scope includes that category and the code needs a pattern
    comparison. Skip categories the project cannot have (no LLM calls → no prompt injection) and say so in one line.
-3. A finding needs evidence: file:line you read, and a concrete way it is exploited. No exploit path → not a finding (note it as a
-   hardening suggestion, severity low).
-4. Severity from the table in CHECKLIST.md. Missing client-visible hardening is medium/low; a reachable injection, auth bypass,
-   exposed secret, stored XSS, financial race is critical; reflected XSS, CSRF on a cookie-auth endpoint, indirect prompt injection is high.
-5. Match each finding with the ignore-list **by item id** (`no-csrf`, `no-rate-limit`, `no-auth-/admin`, …). A match: do **NOT**
+3. A finding needs evidence: file:line you read, and a concrete way it is exploited. No exploit path → not a finding and not in the gate;
+   it may go, one line each, under `## Hardening suggestions` (no severity, no effect on the gate). **Before reporting, check each candidate against `${CLAUDE_SKILL_DIR}/references/DO-NOT-FLAG.md`** (server-controlled
+   values, framework-escaped output, tests, dead code, maintainer-only triggers…); a match is dropped.
+4. **Confidence** — HIGH: the exploit path is traced end to end in code you read (entry point → … → sink) → a finding. MEDIUM: plausible, but one link
+   is not confirmed (a caller, a config, a runtime value) → goes to `## Needs verification`, **never** into Findings, and does not affect the gate.
+   LOW: speculative → not reported at all.
+5. **Severity — pick it by the rubric in `${CLAUDE_SKILL_DIR}/references/SEVERITY.md`, not by feel**: the same issue must get the same rating on every run.
+   (CHECKLIST.md keeps the quick table; SEVERITY.md decides disputes.)
+6. Match each finding with the ignore-list **by item id** (`no-csrf`, `no-rate-limit`, `no-auth-/admin`, …). A match: do **NOT**
    flag it as a finding — put it under Ignored. An entry older than 12 months, or whose reason no longer holds in the code (e.g.
    "no cookies used" but the code sets a cookie), is shown as `ignored — stale, re-confirm`, and counts as a warn, not as a finding.
 
@@ -85,11 +89,17 @@ Items below are excluded from /keystone:security audits and from the security ga
 
 ## Output
 
-1. **Findings** — one block each, ordered critical → low, ids `S-1…`:
-   `S-1 [critical] <title> — <file>:<line>` then `Exploit:` (Repro: request / input / sequence an attacker uses), `Impact:` (one line),
+1. **Findings** (Confidence HIGH only; when the app can run locally or on staging, offer `/keystone:pentest <your target URL> <this report>` for the S-n findings too) — one block each, ordered critical → low, ids `S-1…`:
+   `S-1 [critical] <title> — <file>:<line>` then `Confidence: HIGH`, `Entry point:` (where untrusted input enters: route, handler, webhook, file, CI trigger, tool output),
+   `Exploit:` (Repro: request / input / sequence an attacker uses), `Impact:` (one line),
    `Fix:` (the smallest concrete change, with the safe pattern from the references), `Refs: <OWASP id> · <CWE-n> · <ASVS 5.0 chapter if clear> · <ISO 27001:2022 A.8.x if clear>`
-   (taken from `${CLAUDE_SKILL_DIR}/references/MAPPING.md`; omit a part you cannot map, never invent an id). Never print secrets, tokens or credential values —
-   name the variable and the location only.
+   (taken from `${CLAUDE_SKILL_DIR}/references/MAPPING.md`; omit a part you cannot map, never invent an id). **OWASP / LLM ids always carry the edition year:**
+   `A05:2025`, `LLM01:2026` — never a bare `A05`. Never print secrets, tokens or credential values — name the variable and the location only.
+1a. `## Needs verification` (only if there are MEDIUM candidates) — one line each: `N-1 <title> — <file>:<line> — Confidence: MEDIUM — missing link: <what to check>`.
+    When the app can run locally or on staging, offer in one line to confirm these and any S-n findings against it:
+    `/keystone:pentest <your target URL> <this report>` (your own targets only; it confirms or lowers each finding).
+   Not findings, not counted in `Found:`, no effect on the gate; list the count in the summary.
+1b. `## Hardening suggestions` (optional) — one line each, no severity; never counted in `Found:` or the gate.
 2. **Ignored** — table: item, reason, date, author; then `N items ignored. Review them periodically.`
 3. **Gate line** — last of the report body, exactly one of:
    - `Security gate: fail — unignored critical/high: S-1, S-3`

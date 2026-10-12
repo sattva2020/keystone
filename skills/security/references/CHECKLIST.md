@@ -47,6 +47,10 @@ id → standard mapping → `MAPPING.md`. Section tags below are OWASP Top 10:20
 - Deserialization (CWE-502) [A08:2025]: `pickle.load`, `yaml.load` (not `safe_load`), PHP `unserialize`, Java `ObjectInputStream`,
   `node-serialize` on data from outside the trust boundary. Safe: JSON + schema validation.
 
+- Destructive operations on derived paths [A05:2025 · CWE-73 · CWE-22]: `rm -rf`, `fs.rm`, `shutil.rmtree`, `os.RemoveAll`, `DROP TABLE/DATABASE` with a path or
+  name built from request/user input (`rm -rf "$DIR/$NAME"`; env-only values are not a finding, see DO-NOT-FLAG.md) and no guard against empty or `/` (unset var → `rm -rf /`) or against leaving the intended root.
+  Safe: `${VAR:?}`, resolve + `startsWith(root)`, allow-list of names. A constant or server-only value in a dev script → DO-NOT-FLAG.md.
+
 ## XSS [A05:2025]
 - Output HTML-encoded by default; CSP header; `X-Content-Type-Options: nosniff`; sanitize rich text (DOMPurify); validate URLs
   before rendering links.
@@ -139,4 +143,4 @@ bash ${CLAUDE_SKILL_DIR}/scripts/audit.sh   # secrets, tracked .env, .gitignore,
 | Actions not SHA-pinned, `npx -y` unpinned [no-mcp-pin] | Medium | < 2 weeks |
 | Missing rate limit [no-rate-limit] | Medium | < 2 weeks |
 | Verbose errors [verbose-errors] | Medium | < 2 weeks |
-| Missing headers [no-xss-csp, no-https] | Low | < 1 month |
+| Missing headers [no-xss-csp, no-https] | Low only with a traced exploit path; otherwise a hardening suggestion | < 1 month |

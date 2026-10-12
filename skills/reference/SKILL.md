@@ -145,4 +145,5 @@ check. 4. Preserve `Created:`, set `Updated:`. 5. Show the diff, write on yes, r
 - **No opinions:** a reference reflects sources and checks; recommendations belong in the plan.
 - **Respect access:** a URL that needs authentication or fails to load is reported, not guessed. Secrets are never written into a
   reference — use `${VAR}` names.
-- **Ownership:** this skill owns `docs/references/`; every other file is read-only.
+- **Ownership:** this skill owns `docs/references/`; every other file is read-only, except the one pointer line in `CLAUDE.md`
+  or `.claude/rules/` offered in the report and added only on a yes.

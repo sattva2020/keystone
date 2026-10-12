@@ -2,7 +2,7 @@
 name: verify
 description: "Keystone: verify finished work against its plan and intent — runs build/test/lint, then an independent verifier agent in a clean context gives every plan task, Reconciliation row and intent line ok / missing / wrong / not proven / BLOCKED, flags unrequested work, and returns PASS, PASS-UNPROVEN or FAIL. A checked box is not evidence. Writes verify.md; on PASS sets Status verified. Use after implementation on M and L changes, or for 'verify', 'did we miss anything', 'is it really done'. `/keystone:verify accept` records a human decision on unproven rows."
 argument-hint: "[<plan path> [base git ref]] [--strict] | accept"
-allowed-tools: Read Glob Grep Bash Agent AskUserQuestion Write Edit
+allowed-tools: Read Glob Grep Bash Agent AskUserQuestion Write Edit Skill
 model: opus
 effort: high
 ---
@@ -68,8 +68,8 @@ Two more gates join the same lines:
   run it on the changed files only; `check: review` lines go to the verifier. Print
   `Architecture gate: pass | fail — <rule, file:line> | n/a` (n/a = no such file or no rules in it).
 - **Security gate.** On L whose plan has the `Threats:` block or a `/keystone:security` task (security/auth/payments/PII),
-  `/keystone:security` must have been run for this diff: take its `Security gate: pass | warn | fail` line from the task
-  folder or run it now. `fail` without a matching entry in `docs/keystone/security-ignores.md` → verdict FAIL; none run →
+  `/keystone:security` must have been run for this diff: take its `Security gate: pass | warn | fail` line from that
+  run in this session, or run it now with the Skill tool (`/keystone:security <plan path>`) and read the line from its answer. `fail` without a matching entry in `docs/keystone/security-ignores.md` → verdict FAIL; none run →
   `not proven`. Not a security change → `n/a`. Strictness: **L is strict by default** (`--strict` for M) — then a
 lint warning, an unfinished-work marker (TODO / FIXME / HACK) or an undocumented env variable in the changed files is
 `wrong`, and a `not run` check is `not proven`; in normal mode they are reported as open work only.
@@ -198,7 +198,9 @@ The `Keystone Chain` line is mandatory and printed verbatim even when everything
 changed after the plan's first commit → name it; intent and plan first committed together → `not measurable`.
 
 **Correctness review:** run the built-in `/code-review` — verify checks the plan against the diff, not whether the code
-is well written. On L, also recommend `/keystone:review` (with `+check`) before `git push`, in `Blocked on me:`.
+is well written. On L, also recommend `/keystone:review` (its validator always runs) before `git push`, in `Blocked on me:`; when the
+Security gate is `warn` or the security report has `Needs verification` items, also recommend `/keystone:pentest <your
+staging or local URL>` to confirm them against the running app.
 
 **Roadmap and lessons (one line each, in `Found:` / `Blocked on me:`).** If the intent has `Roadmap: M-<n>` and the verdict is
 PASS (or `accept` was just recorded), offer: `Milestone M-<n> done? Tick it with /keystone:roadmap` — verify never edits

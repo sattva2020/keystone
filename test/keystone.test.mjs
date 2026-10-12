@@ -10,7 +10,7 @@ const read = (p) => readFileSync(join(root, p), 'utf8').replace(/\r/g, '');
 const json = (p) => JSON.parse(read(p));
 const front = (p) => read(p).split('---')[1];
 const body = (p) => read(p).split('\n').filter((l) => !l.includes('derived from ai-factory@')).join('\n');
-const SKILLS = ['architecture', 'ask', 'check', 'ci', 'distill', 'dockerize', 'docs', 'evolve', 'fix', 'grill', 'implement', 'intent', 'plan', 'qa', 'qa-check', 'reference', 'review', 'roadmap', 'security', 'setup', 'start', 'transfer', 'verify'];
+const SKILLS = ['architecture', 'ask', 'check', 'ci', 'distill', 'dockerize', 'docs', 'evolve', 'fix', 'grill', 'implement', 'intent', 'optimize', 'pentest', 'plan', 'qa', 'qa-check', 'reference', 'review', 'roadmap', 'security', 'setup', 'start', 'transfer', 'verify'];
 const AGENTS = ['analyzer.md', 'review-validator.md', 'validator.md', 'verifier.md'];
 const allSkillFiles = () => SKILLS.flatMap((s) => {
   const refs = existsSync(join(root, 'skills', s, 'references')) ? readdirSync(join(root, 'skills', s, 'references')).map((f) => `skills/${s}/references/${f}`) : [];
@@ -20,13 +20,13 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.8.2');
+  assert.equal(p.version, '0.9.0');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
 });
 
-test('I-2: exactly the 23 skills and four agents; name = file', () => {
+test('I-2: exactly the 25 skills and four agents; name = file', () => {
   assert.deepEqual(readdirSync(join(root, 'skills')).sort(), SKILLS);
   assert.deepEqual(readdirSync(join(root, 'agents')).sort(), AGENTS);
   for (const s of SKILLS) assert.equal(front(`skills/${s}/SKILL.md`).match(/^name:\s*(\S+)/m)?.[1], s);
@@ -320,7 +320,7 @@ test('output is Markdown, not a code-block wall: grill summary table, rendering 
   has('skills/grill/SKILL.md', '| # | Decision | Answer |', 'never inside a code block');
   for (const s of SKILLS) {
     const t = read(`skills/${s}/SKILL.md`);
-    if (t.includes('Blocked on me') && s !== 'grill') assert.ok(t.includes('**Output rendering.**'), `${s}: rendering rule`);
+    if ((t.includes('Blocked on me') || /```text/.test(t)) && s !== 'grill') assert.ok(t.includes('**Output rendering.**'), `${s}: rendering rule`);
   }
 });
 
@@ -372,4 +372,93 @@ test('audit.sh behaviour: provider and uppercase env secrets found, ${VAR} and p
   assert.doesNotMatch(run('a.js', 'const s = "see risk-assessmentframeworkversion2";'), /a\.js:1/);
   assert.match(run('.mcp.json', '{"env":{"OPENAI_API_KEY":"${OPENAI_API_KEY:-sk-AbCdEfGhIjKlMnOpQrStUvWx}"}}'), /\.mcp\.json:1/);
   assert.match(run('config.yml', 'OPENAI_API_KEY: sk-proj-Ab_Cd-EfGhIjKlMnOpQrStUvWxYz012345\n'), /config\.yml:1/);
+});
+
+test('security P1', () => {
+  has('skills/security/SKILL.md', 'Confidence:', 'Entry point:', '## Needs verification', 'SEVERITY.md', 'DO-NOT-FLAG.md', 'A05:2025');
+  for (const f of ['SEVERITY.md', 'DO-NOT-FLAG.md']) {
+    assert.ok(read(`skills/security/references/${f}`).startsWith('<!-- original Keystone file (MIT) -->'), f);
+  }
+  assert.match(read('skills/security/references/PROMPT-INJECTION.md'), /^\| RAG/m);
+  has('skills/security/references/SUPPLY-CHAIN.md', 'AGENTS.md');
+  has('skills/security/references/CHECKLIST.md', 'CWE-73');
+});
+
+test('pentest skill, authorized and scoped', () => {
+  assert.match(front('skills/pentest/SKILL.md'), /^disable-model-invocation:\s*true$/m);
+  has('skills/pentest/SKILL.md', 'Scope gate', 'localhost', 'production', 'brute', 'DoS', 'Not reproduced', 'OWASP WSTG');
+  for (const f of ['SCOPE', 'PASSIVE-CHECKS', 'CONFIRM']) {
+    assert.ok(read(`skills/pentest/references/${f}.md`).startsWith('<!-- original Keystone file (MIT) -->'), f);
+  }
+  has('skills/pentest/references/SCOPE.md', 'third-party');
+});
+
+test('every .ai-factory/ mention in skills is a fallback (paths.specs reads excepted)', () => {
+  const walk = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
+  for (const f of walk('skills').filter((x) => x.endsWith('.md'))) {
+    for (const para of read(f).split(/\n\s*\n/)) {
+      if (!para.includes('.ai-factory/') || para.includes('derived from ai-factory@')) continue;
+      assert.match(para, /fall ?back|paths\.specs|AI Factory project|when the project (uses|has) AI Factory/i, `${f}: .ai-factory only as a fallback`);
+    }
+  }
+});
+
+test('writing skills ask before they write (yes-gates)', () => {
+  has('skills/evolve/SKILL.md', 'write only after "yes"');
+  has('skills/transfer/SKILL.md', 'write only after "yes"', 'Nothing is written without a yes.');
+  has('skills/roadmap/SKILL.md', 'After the yes');
+  has('skills/distill/SKILL.md', 'after the yes only');
+  has('skills/reference/SKILL.md', 'added only on a yes');
+  has('skills/qa-check/SKILL.md', 'replay/');
+  has('skills/roadmap/SKILL.md', 'abandoned-only means not done');
+  has('skills/verify/SKILL.md', 'its validator always runs');
+});
+
+test('pentest is wired: security offers it for Needs verification, verify recommends it on warn', () => {
+  has('skills/security/SKILL.md', '/keystone:pentest <your target URL> <this report>');
+  has('skills/verify/SKILL.md', '/keystone:pentest <your');
+});
+
+test('optimize skill measures before and after', () => {
+  assert.match(front('skills/optimize/SKILL.md'), /disable-model-invocation: true/);
+  has('skills/optimize/SKILL.md', 'perf', 'simplify', 'before', 'after', 'noise', 'revert', '3+', 'production');
+  assert.ok(read('skills/optimize/references/MEASURE.md').startsWith('<!-- original Keystone file (MIT) -->'));
+  has('skills/optimize/references/MEASURE.md', 'EXPLAIN ANALYZE');
+  has('skills/review/SKILL.md', '/keystone:optimize perf');
+});
+
+test('security severity rubric is consistent; ids carry the year; pentest/optimize rules', () => {
+  const sev = read('skills/security/references/SEVERITY.md');
+  assert.ok(!/off by default\*\*/.test(sev) && !/capped at/.test(sev));
+  has('skills/security/references/SEVERITY.md', 'only with a traced exploit path', 'one rule', 'not a finding');
+  has('skills/security/references/CHECKLIST.md', 'request/user input', 'env-only values are not a finding');
+  assert.doesNotMatch(read('skills/security/references/PROMPT-INJECTION.md').split('\n').slice(5, 15).join('\n'), /\bLLM\d\d\b(?!:)/);
+  assert.doesNotMatch(read('skills/security/references/AGENT-MCP.md'), /\(LLM\d\d(?!:)/);
+  assert.doesNotMatch(read('skills/security/references/MAPPING.md'), /bare `A05:2025`/);
+  has('skills/security/SKILL.md', 'for the S-n findings too');
+  has('skills/pentest/references/SCOPE.md', 'expected answer', 'masked', 'outside the target origin');
+  has('skills/pentest/references/PASSIVE-CHECKS.md', 'lowest accepted version is out of scope');
+  assert.doesNotMatch(front('skills/optimize/SKILL.md'), /allowed-tools:.*Agent/);
+  has('skills/optimize/SKILL.md', 'Tests red after the change', 'Net lines must go down');
+});
+
+test('security: hardening without an exploit path is never a finding (one rule everywhere)', () => {
+  has('skills/security/SKILL.md', '## Hardening suggestions', 'not in the gate');
+  has('skills/security/references/SEVERITY.md', 'A traced exploit path with small impact');
+  has('skills/security/references/CHECKLIST.md', 'Low only with a traced exploit path');
+  assert.doesNotMatch(read('skills/security/SKILL.md'), /hardening suggestion, severity low/);
+});
+
+test('pentest: one hardening rule, one refusal rule, browser stays on the target', () => {
+  has('skills/pentest/references/PASSIVE-CHECKS.md', 'hardening suggestion, not a finding');
+  has('skills/pentest/SKILL.md', 'expected answer, not a refusal', 're-rated with');
+  has('skills/pentest/references/SCOPE.md', 'never follow links or call endpoints outside the target origin');
+  assert.doesNotMatch(read('skills/pentest/SKILL.md'), /\(403, 429/);
+});
+
+test('security severity: criteria decide over examples; references defer no-path items to SEVERITY.md', () => {
+  has('skills/security/references/SEVERITY.md', 'The **Criteria** column decides');
+  assert.ok(!read('skills/security/references/SEVERITY.md').includes('every user sees; financial double-spend'));
+  assert.doesNotMatch(read('skills/security/references/AGENT-MCP.md'), /\| low — Claude Code ignores/);
+  has('skills/security/references/SUPPLY-CHAIN.md', 'a hardening suggestion, not a finding');
 });

@@ -87,6 +87,8 @@ function svg(c) {
     ['ask · reference', ['evidence-only answers;', 'docs/references/']],
     ['/keystone:distill', ['book, docs, URL', '→ a Claude Code skill']],
     ['qa · qa-check', ['test cases → run:', 'human or agent']],
+    ['/keystone:pentest', ['confirm security', 'findings on your app']],
+    ['/keystone:optimize', ['measure before/after;', 'simplify, tests green']],
   ];
   TB2.forEach(([t, l], i) => { s += box(c, COL(i), yT + 86, W, 64, t, l); });
   // footer

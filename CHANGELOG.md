@@ -3,6 +3,26 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] — 2026-10-12
+
+### Added
+- **`/keystone:pentest`** — confirms the findings of `/keystone:security` against your own running app (your targets
+  only: localhost, `*.test`, or a staging URL you name as yours; production only on an explicit yes, observation-only).
+  Passive checks by the OWASP ZAP baseline, then one safe request per finding to raise or lower it, with a PoC and
+  `Refs:`. It never brute-forces, loads or bypasses protections. `security` and `verify` offer it.
+- **`/keystone:optimize`** — makes code faster or simpler on measurement. `perf`: the same command 3+ times before and
+  after, a change kept only if the numbers beat the noise, else reverted, tests green. `simplify`: dead code and
+  duplication removed with tests green before and after and fewer lines. Installs nothing without a yes; never touches
+  production. `review` hands it a performance finding.
+- 25 skills in total; the user-flow image now shows the two new tools.
+
+### Changed
+- **`/keystone:security` (P1)** — a `Confidence` and `Entry point` on every finding; MEDIUM goes to a separate
+  "Needs verification" list that does not move the gate, LOW is not reported, hardening without an exploit path is a
+  suggestion, not a finding. A severity rubric (`references/SEVERITY.md`, criteria decide over examples) and a
+  "Do Not Flag" list (`references/DO-NOT-FLAG.md`) keep ratings stable between runs. `Refs:` ids carry the edition year
+  (`A05:2025`, `LLM01:2026`). A "what you build → LLM risks" table and a CI prompt-injection check were added.
+
 ## [0.8.2] — 2026-10-12
 
 ### Added

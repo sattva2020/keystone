@@ -136,7 +136,7 @@ see **[What to run next — scenarios](docs/scenarios.md)**.
 
 ## Commands
 
-All 23 commands, grouped. Parameters are in brackets; `|` is a choice.
+All 25 commands, grouped. Parameters are in brackets; `|` is a choice.
 
 **Task chain**
 
@@ -168,6 +168,8 @@ All 23 commands, grouped. Parameters are in brackets; `|` is a choice.
 | `/keystone:qa [--all] [change-summary\|test-plan\|test-cases] [plan\|ref]` | change summary, test plan and manual scenarios linked to `I-n` |
 | `/keystone:qa-check [human\|agent] [plan\|qa folder\|branch]` | runs the `qa` scenarios; pass / fail / blocked with evidence |
 | `/keystone:ask <question>` | answers only on evidence, otherwise `INSUFFICIENT INFORMATION` |
+| `/keystone:pentest <your target URL> [report]` | confirms the security findings against your own running app (localhost / staging, or a URL you name as yours); one safe request per finding, raises or lowers it |
+| `/keystone:optimize perf <target> \| simplify <path>` | makes code faster or simpler on measurement: same command before and after, a change kept only if the numbers improve |
 
 **Build and ship**
 
