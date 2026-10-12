@@ -10,7 +10,6 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-D97757)](https://code.claude.com/docs/en/plugins)
-[![CI](https://github.com/sattva2020/keystone/actions/workflows/ci.yml/badge.svg)](https://github.com/sattva2020/keystone/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/sattva2020/keystone)](https://github.com/sattva2020/keystone/releases)
 
 English | [Русский](README.ru.md)

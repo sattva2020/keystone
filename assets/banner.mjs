@@ -20,12 +20,16 @@ function arch(cx, cy, r1, r2, n, c) {
 }
 const font = `font-family="'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif"`;
 const mono = `font-family="'JetBrains Mono', 'Cascadia Code', Consolas, 'SFMono-Regular', monospace"`;
+function chipsWidth(size, gapX) {
+  const steps = ['grill', 'intent', 'plan', 'check', 'implement', 'verify'];
+  return steps.reduce((s, t) => s + t.length * size * 0.62 + size * 1.4, 0) + gapX * (steps.length - 1);
+}
 function chips(x, y, c, size, gapX) {
-  const steps = ['intent', 'plan', 'check', 'implement', 'verify'];
+  const steps = ['grill', 'intent', 'plan', 'check', 'implement', 'verify'];
   let s = '', cur = x;
   steps.forEach((t, i) => {
     const w = t.length * size * 0.62 + size * 1.4, h = size * 1.9;
-    const first = i === 0;
+    const first = t === 'intent'; // the keystone of the chain
     s += `<rect x="${cur}" y="${y - h / 2}" width="${w}" height="${h}" rx="${h / 2}" fill="${first ? c.key : c.chip}" stroke="${first ? c.keyEdge : c.edge}" stroke-width="1.5"/>`;
     s += `<text x="${cur + w / 2}" y="${y + size * 0.36}" text-anchor="middle" ${mono} font-size="${size}" fill="${first ? '#1a1300' : c.chipText}" font-weight="${first ? 700 : 500}">${t}</text>`;
     cur += w;
@@ -41,7 +45,7 @@ ${arch(170, 236, 78, 128, 9, c)}
 <line x1="30" y1="238" x2="310" y2="238" stroke="${c.edge}" stroke-width="2"/>
 <text x="360" y="128" ${font} font-size="76" font-weight="800" fill="${c.title}" letter-spacing="-1">Keystone</text>
 <text x="364" y="172" ${font} font-size="26" fill="${c.sub}">Intent-first workflow for <tspan fill="${c.accent}" font-weight="600">Claude Code</tspan></text>
-${chips(364, 232, c, 19, 30)}
+${chips(364, 232, c, 17, 26)}
 </svg>`;
 }
 function social(c) {
@@ -52,7 +56,7 @@ ${arch(640, 300, 120, 200, 9, c)}
 <line x1="380" y1="302" x2="900" y2="302" stroke="${c.edge}" stroke-width="2"/>
 <text x="640" y="418" text-anchor="middle" ${font} font-size="92" font-weight="800" fill="${c.title}" letter-spacing="-1">Keystone</text>
 <text x="640" y="470" text-anchor="middle" ${font} font-size="32" fill="${c.sub}">Intent-first workflow for <tspan fill="${c.accent}" font-weight="600">Claude Code</tspan></text>
-${chips(276, 550, c, 22, 34)}
+${chips((1280 - chipsWidth(22, 34)) / 2, 550, c, 22, 34)}
 </svg>`;
 }
 writeFileSync(`${out}/keystone-dark.svg`, banner(T.dark));
