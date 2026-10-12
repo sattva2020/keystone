@@ -85,8 +85,15 @@ Create no source files — only the context files of step 3.
 
 ## 3. Propose the files (one change at a time)
 
-Order: `CLAUDE.md` → `.claude/rules/base.md` → `.mcp.json` → plugins → `AGENTS.md`. Each one is its own
+Order of the rounds: `CLAUDE.md` → `.claude/rules/base.md` → `.mcp.json` → plugins → `AGENTS.md`. Each one is its own
 show → Write / Skip / Change round. A file that is complete is reported "already there" and skipped without a question.
+
+**Write order and links.** Write in this order: `.claude/rules/base.md`, `.mcp.json`, then `CLAUDE.md` last, and let
+`CLAUDE.md` and `AGENTS.md` point only to files that now exist — a skipped or refused file loses its pointer line.
+Claude Code asks its own permission for anything under `.claude/` and for `.mcp.json`; say so once before the first
+write ("Claude Code will ask permission for these paths — that prompt, not this chat, is the yes it needs"). A write
+that is still refused is reported and skipped; never retry the same write or route around it (Bash, other paths), and
+go on with the next file. Commit only what was written.
 
 ### 3.1 `CLAUDE.md` — at most 60 lines
 

@@ -38,7 +38,9 @@ Take the diff from one of three inputs. Remember the exact diff text — the val
   ask: all / last 20 / cancel. Review the net change `git diff <ref>...HEAD`, then each commit with `git show`: does the
   message match the change, is it atomic, did this commit introduce an issue.
 
-A branch literally named like a PR number is read as a PR — an accepted compromise. Empty diff → `Nothing to review.`
+A branch literally named like a PR number is read as a PR — an accepted compromise. Exception: bare digits of 7+
+characters that `git rev-parse --verify <arg>^{commit}` resolves locally are an abbreviated commit hash → ref (say so
+in one line); `#N` and URLs stay PRs. Empty diff → `Nothing to review.`
 
 ## Step 2 — Review
 

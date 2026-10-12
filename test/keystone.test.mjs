@@ -328,3 +328,8 @@ test('setup proposes the Dokploy MCP by signal, with ${VAR} only', () => {
   has('skills/setup/references/STACK-SIGNALS.md', '@sattva/dokploy-mcp@latest', 'DOKPLOY_API_KEY');
   has('skills/dockerize/SKILL.md', 'github.com/sattva2020/dokploy-mcp');
 });
+
+test('stand 12.10 K6: setup writes CLAUDE.md last with links to written files only; review reads a digit-only hash as a ref', () => {
+  has('skills/setup/SKILL.md', '`CLAUDE.md` last', 'never retry the same write');
+  has('skills/review/SKILL.md', 'abbreviated commit hash → ref');
+});

@@ -31,6 +31,7 @@ All notable changes to this project are documented here. The format follows
 - `docs`, `dockerize`, `ci`, `qa-check` and `reference` run on Sonnet.
 
 ### Fixed
+- `setup` writes `CLAUDE.md` last and links only files that were written; it warns that Claude Code asks its own permission for `.claude/` and `.mcp.json`. `review` reads a digit-only abbreviated commit hash as a ref, not a PR number.
 - AI Factory bugs that were not ported: a repeated setup overwrote existing files (now it only adds, after a "yes");
   `audit.sh` was called by a wrong path and its `((ISSUES++))` stopped the script under `set -e`; the `.git` grep filter
   dropped any path containing "git".
