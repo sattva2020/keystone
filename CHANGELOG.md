@@ -3,6 +3,12 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.9.1] — 2026-10-12
+
+### Changed
+- Every skill prints its final  command in a fenced code block, so the app shows a copy button on it; the
+  command is never tagged as shell, which would offer to run it.
+
 ## [0.9.0] — 2026-10-12
 
 ### Added

@@ -14,9 +14,11 @@ of the decision tree has been visited and **nothing is silently assumed** — no
 point: a decision nobody asked about becomes a guess in the plan and a bug in the code. Facts are your job; decisions
 are the user's. (Contract agreed in lee-to/ai-factory#151; depth as in the design-tree grilling practice.)
 
-**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
-`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
-`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+**Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
+command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
+copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
+later command in that fenced block. Never end on a caveat or an open-ended question.
 
 ## Input
 

@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.0');
+  assert.equal(p.version, '0.9.1');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -461,4 +461,12 @@ test('security severity: criteria decide over examples; references defer no-path
   assert.ok(!read('skills/security/references/SEVERITY.md').includes('every user sees; financial double-spend'));
   assert.doesNotMatch(read('skills/security/references/AGENT-MCP.md'), /\| low — Claude Code ignores/);
   has('skills/security/references/SUPPLY-CHAIN.md', 'a hardening suggestion, not a finding');
+});
+
+test('Next step tells skills to put the command in a fenced code block (copy button), never ```bash', () => {
+  for (const s of SKILLS) {
+    const t = read(`skills/${s}/SKILL.md`);
+    assert.ok(t.includes('fenced code block **with no language tag**'), `${s}: fenced Next`);
+    assert.ok(t.includes('Never tag it ```bash'), `${s}: no bash tag`);
+  }
 });
