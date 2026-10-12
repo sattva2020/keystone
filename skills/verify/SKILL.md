@@ -94,6 +94,13 @@ Unrequested: src/util/retry.ts — new retry logic, no task or I-n
   as `n/a`. An intent whose status is not `accepted` is reported, not silently trusted.
 - A plan with no `Settings:` line (older plan format): treat as `Settings: ok`, and say `Settings line absent`.
 
+## Step 3c — implementation notes
+
+Every drift edit of the plan after approval (`git log -p <approval commit>..HEAD -- <plan>`: a changed task text,
+snippet or value) and every decision in the diff the plan did not spell out should have a line in
+`## Implementation notes`. Report `Implementation notes: <n> lines; unexplained deviations: <k> — <list>`. An
+unexplained deviation is not a FAIL by itself; list it under `Found:` so the human can ask why.
+
 ## Step 4 — verdict
 
 Strict mode (L by default, or `--strict`) additionally requires: every task `ok` (no partial), build and tests pass

@@ -48,6 +48,9 @@ Project rules check: read <CLAUDE.md, AGENTS.md, .ai-factory/RULES.md …> — M
 ## Commit Plan
 - **Commit 1** (after tasks 1-3): "feat: add base models and types"
 - **Commit 2** (after tasks 4-6): "feat: implement core service logic"
+
+## Implementation notes
+<!-- left empty by /keystone:plan; /keystone:implement appends one line per decision made while building -->
 ```
 
 Rules for the template:

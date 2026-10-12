@@ -112,6 +112,18 @@ commit run `git diff --cached --stat`: if code changed, the work deviated from t
 → stop, edit the plan, stage it, then commit. Work the plan did not ask for is "unrequested": do not add it; if it is
 needed, record it in the plan as a change first.
 
+## Implementation notes (decision journal)
+
+The plan says *what*; the journal says *why it was built this way*. Append one line to `## Implementation notes` at the
+end of the plan (create the section if missing) for every decision you make that the plan did not spell out: a choice
+between two ways, a workaround, a fact discovered in the code that changed the approach, the reason behind a drift edit:
+
+`- <YYYY-MM-DD> Task <n> — <decision> — why: <reason> — evidence: <file:line | command → result>`
+
+Stage the line in the same commit as the code it explains (with the drift edit, when there is one). Routine work that
+follows the plan needs no line. Never rewrite earlier lines — the journal is append-only; a reversed decision gets a new
+line that says so. The final report adds `Implementation notes: <n> new lines`.
+
 ## BLOCKED goes into the table
 
 When a planned check or a mandatory step cannot run (no DB, no network, no dependencies, needs prod), keep it and write

@@ -199,3 +199,20 @@ test('stand 12.10 fixes: verify never edits intent, accept re-checks freshness, 
   assert.match(g, /n\/a \(user\)/);
   assert.match(g, /coverage/i);
 });
+
+test('implementation notes: plan template section, implement appends why-lines, verify checks deviations', () => {
+  assert.match(read('skills/plan/references/PLAN-FORMAT.md'), /## Implementation notes/);
+  const i = read('skills/implement/SKILL.md');
+  assert.match(i, /## Implementation notes \(decision journal\)/);
+  assert.match(i, /append-only/);
+  assert.match(i, /Task <n> — <decision> — why: <reason> — evidence:/);
+  assert.match(read('skills/verify/SKILL.md'), /unexplained deviations/);
+});
+
+test('README: memlab is a separate plugin with install commands; adapter only for /aif-plan users', () => {
+  for (const f of ['README.md', 'README.ru.md']) {
+    const t = read(f);
+    assert.match(t, /github\.com\/sattva2020\/memlab/, f);
+    assert.match(t, /\/plugin install memlab@memlab/, f);
+  }
+});
