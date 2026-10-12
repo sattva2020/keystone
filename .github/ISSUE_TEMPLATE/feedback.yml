@@ -1,0 +1,39 @@
+name: Feedback
+description: Tell us how Keystone worked for you
+labels: [feedback]
+body:
+  - type: dropdown
+    id: level
+    attributes:
+      label: Level you used
+      options: [S, M, L, mixed]
+    validations:
+      required: true
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Which skill
+      options: [start, grill, intent, plan, check, implement, fix, verify, hooks (gates), whole chain]
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: dropdown
+    id: keep
+    attributes:
+      label: Would you keep using it?
+      options: [Yes, Maybe, No]
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why (optional)

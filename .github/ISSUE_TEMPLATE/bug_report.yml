@@ -1,0 +1,46 @@
+name: Bug report
+description: A skill, agent or hook behaved wrongly
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Keystone and Claude Code versions
+      placeholder: "Keystone 0.6.0, Claude Code 2.1.218"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options: [start, grill, intent, plan, check, implement, fix, verify, hooks (gates), AI Factory adapter, other]
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Level of the change
+      options: [S, M, L, not sure]
+  - type: input
+    id: os
+    attributes:
+      label: OS and shell
+      placeholder: "Windows 11 / Git Bash"
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: Quote the relevant model output or hook message.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Commands you ran, plan Status at the time, whether `KEYSTONE_GATES` was set.

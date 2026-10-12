@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest a change to the workflow
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The observed problem
+      description: What went wrong or was missing in real use. Skills are prompts, so please describe a failure you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: scenario
+    attributes:
+      label: A test or scenario that shows it
+      description: A unit test idea or a harness scenario that fails now and would pass after the change.

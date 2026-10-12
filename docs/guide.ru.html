@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keystone — intent-first workflow for Claude Code</title>
+<style>
+:root{
+  --bg:#f7f6f2;--panel:#ffffff;--ink:#1d1c1a;--sub:#5f5d58;--faint:#8b8982;--line:rgba(0,0,0,.10);
+  --accent:#c4623f;--accent-soft:rgba(196,98,63,.12);--ok:#2f8a5b;--ok-soft:rgba(47,138,91,.12);
+  --warn:#b7791f;--warn-soft:rgba(183,121,31,.13);--info:#3b6fb6;--info-soft:rgba(59,111,182,.12);
+  --code:#f0eee8;--shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04);
+  --mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161614;--panel:#1f1e1c;--ink:#ecebe7;--sub:#b1aea6;--faint:#86837b;--line:rgba(255,255,255,.10);
+  --accent:#e08360;--accent-soft:rgba(224,131,96,.16);--ok:#5cc38a;--ok-soft:rgba(92,195,138,.14);
+  --warn:#e0a84a;--warn-soft:rgba(224,168,74,.15);--info:#79a6e6;--info-soft:rgba(121,166,230,.15);
+  --code:#2a2926;--shadow:none;}}
+:root[data-theme="dark"]{
+  --bg:#161614;--panel:#1f1e1c;--ink:#ecebe7;--sub:#b1aea6;--faint:#86837b;--line:rgba(255,255,255,.10);
+  --accent:#e08360;--accent-soft:rgba(224,131,96,.16);--ok:#5cc38a;--ok-soft:rgba(92,195,138,.14);
+  --warn:#e0a84a;--warn-soft:rgba(224,168,74,.15);--info:#79a6e6;--info-soft:rgba(121,166,230,.15);
+  --code:#2a2926;--shadow:none;}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans)}
+a{color:var(--accent)}
+code,kbd{font:13px var(--mono);background:var(--code);padding:1px 6px;border-radius:5px}
+pre{font:13px/1.55 var(--mono);background:var(--code);padding:12px 14px;border-radius:10px;overflow-x:auto;margin:10px 0;position:relative}
+pre .copy{position:absolute;top:8px;right:8px;font:12px var(--sans);border:1px solid var(--line);background:var(--panel);color:var(--sub);border-radius:6px;padding:2px 8px;cursor:pointer}
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+.top .wrap{display:flex;align-items:center;gap:14px;height:54px}
+.brand{font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.brand span{color:var(--accent)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;flex:1;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{color:var(--sub);text-decoration:none;font-size:14px;padding:6px 10px;border-radius:8px;white-space:nowrap}
+nav.tabs a:hover,nav.tabs a.on{background:var(--accent-soft);color:var(--accent)}
+.theme{border:1px solid var(--line);background:var(--panel);color:var(--sub);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px}
+section{padding:34px 0 8px;scroll-margin-top:60px}
+h1{font-size:30px;line-height:1.2;margin:28px 0 6px;letter-spacing:-.02em}
+h2{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+h3{font-size:16px;margin:18px 0 6px}
+.lead{color:var(--sub);font-size:16px;max-width:760px;margin:0 0 6px}
+.muted{color:var(--sub)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);margin:14px 0}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;margin-right:6px;vertical-align:1px}
+.pill.new{background:var(--accent-soft);color:var(--accent)}
+.pill.inj{background:var(--info-soft);color:var(--info)}
+.pill.core{background:var(--code);color:var(--sub)}
+.note{border-left:3px solid var(--info);background:var(--info-soft);padding:10px 14px;border-radius:0 10px 10px 0;margin:12px 0}
+.note.warn{border-color:var(--warn);background:var(--warn-soft)}
+.note.ok{border-color:var(--ok);background:var(--ok-soft)}
+/* pipeline */
+.pipe{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:16px 0 4px}
+.step{flex:1 1 150px;min-width:140px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;text-align:left;color:var(--ink);font:inherit;position:relative;transition:border-color .15s,transform .15s}
+.step:hover{border-color:var(--accent)}
+.step.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.step .n{font:12px var(--mono);color:var(--faint)}
+.step .t{font-weight:650;font-size:14px;display:block;margin:2px 0}
+.step .s{font-size:12px;color:var(--sub)}
+.step.gate{border-style:dashed}
+.step.opt .t::after{content:" · по желанию";font-weight:400;color:var(--faint);font-size:12px}
+.detail{display:none}
+.detail.on{display:block}
+/* router */
+.q{margin:12px 0}
+.q .opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.opt{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:8px 12px;cursor:pointer;font:inherit;font-size:14px}
+.opt:hover{border-color:var(--accent)}
+.opt.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.route{display:none}.route.on{display:block}
+ol.flow{padding-left:20px;margin:8px 0}
+ol.flow li{margin:4px 0}
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{color:var(--sub);font-weight:600;font-size:13px}
+.tbl{overflow-x:auto}
+/* skill cards */
+details.skill{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;box-shadow:var(--shadow)}
+details.skill>summary{list-style:none;cursor:pointer;padding:16px 20px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+details.skill>summary::-webkit-details-marker{display:none}
+details.skill>summary::before{content:"▸";color:var(--faint);transition:transform .15s}
+details.skill[open]>summary::before{transform:rotate(90deg)}
+details.skill .name{font:600 16px var(--mono)}
+details.skill .what{color:var(--sub);font-size:14px;flex-basis:100%;padding-left:18px}
+details.skill .body{padding:0 20px 16px 38px}
+/* checklist */
+.check label{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.check input{margin-top:4px;accent-color:var(--ok)}
+.check label.done span{color:var(--faint);text-decoration:line-through}
+.progress{height:6px;background:var(--code);border-radius:4px;overflow:hidden;margin:8px 0 2px}
+.progress i{display:block;height:100%;background:var(--ok);width:0;transition:width .2s}
+/* faq */
+details.faq{border-bottom:1px solid var(--line);padding:10px 0}
+details.faq summary{cursor:pointer;font-weight:600}
+details.faq div{color:var(--ink);margin-top:6px}
+.search{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}
+footer{color:var(--faint);font-size:13px;padding:30px 0 50px;border-top:1px solid var(--line);margin-top:30px}
+@media (max-width:640px){h1{font-size:24px}.step{flex-basis:100%}details.skill .body{padding-left:20px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="brand">Key<span>·</span>stone</div>
+  <nav class="tabs" id="tabs">
+    <a href="#pipeline">Конвейер</a><a href="#router">Какая задача?</a><a href="#gates">Гейты</a><a href="#status">Статусы</a><a href="#skills">Скиллы</a>
+    <a href="#checks">Чек-листы</a><a href="#files">Где что</a><a href="#faq">Если что-то не так</a>
+  </nav>
+  <button class="theme" id="theme" title="Тема">◐</button>
+</div></header>
+
+<main class="wrap">
+<h1>Keystone — intent-first workflow for Claude Code</h1>
+<p class="lead">Keystone — самостоятельный плагин Claude Code. Он начинался как расширение AI Factory (<a href="https://github.com/lee-to/ai-factory" target="_blank" rel="noopener">lee-to/ai-factory</a>), теперь развивается отдельно: скиллы plan, check, implement, fix и verify портированы из AI Factory 2.19.0 (MIT, см. <code>THIRD_PARTY_NOTICES.md</code>) и доработаны. Адаптер AI Factory заморожен. Основа — <a href="https://claude.com/blog/the-ai-native-sdlc-playbook" target="_blank" rel="noopener">The AI-native SDLC playbook</a> (Anthropic, 21.08.2026) и <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Claude Code best practices</a>.</p>
+<p class="lead">Идея: церемония соответствует размеру задачи. Мелочь делается сразу, понятная задача получает план с рисками, задача с открытыми решениями проходит цепочку <code>intent → план → проверка плана → код → проверка</code>. Каждый этап заканчивается файлом, следующий начинается с этого файла, а не с переписки. Жёсткие правила держат хуки, а не только текст.</p>
+<div class="note">Отдельного <code>spec.md</code> нет: <b>план = спека</b>. Требования и дизайн пишутся в плане; его таблица сверки ссылается прямо на строки intent (<code>I-1</code>, <code>I-2</code>…). AI Factory для работы не нужен.</div>
+<p class="muted">Версия 0.6.0 · самостоятельный плагин <code>keystone</code> (8 скиллов <code>/keystone:*</code>); plan/check/implement/fix/verify портированы из AI Factory 2.19.0 (MIT) и доработаны; адаптер AIF заморожен.</p>
+
+<!-- ===================== PIPELINE ===================== -->
+<section id="pipeline">
+<h2>Конвейер для уровня L</h2>
+<p class="muted">Нажми на шаг, чтобы увидеть, что делать и что должно получиться. Пунктир — точка, где решаешь ты. Всё идёт командами <code>/keystone:*</code>. Уровни S и M короче — см. «Какая задача?».</p>
+<div class="pipe" id="pipe">
+  <button class="step on" data-d="d1"><span class="n">1</span><span class="t">/keystone:start</span><span class="s">уровень S / M / L</span></button>
+  <button class="step" data-d="d2"><span class="n">2</span><span class="t">/keystone:intent</span><span class="s">grill до конца → intent.md с I-n</span></button>
+  <button class="step gate" data-d="d3"><span class="n">3</span><span class="t">прочитать + accept</span><span class="s">твой accept = подтверждение</span></button>
+  <button class="step" data-d="d4"><span class="n">4</span><span class="t">/keystone:plan</span><span class="s">сверка, Rules check, Risks</span></button>
+  <button class="step" data-d="d5"><span class="n">5</span><span class="t">/keystone:check</span><span class="s">analyzer + validator, Coverage %</span></button>
+  <button class="step gate" data-d="d6"><span class="n">6</span><span class="t">Approve + коммит</span><span class="s">Status approved; новая сессия</span></button>
+  <button class="step" data-d="d7"><span class="n">7</span><span class="t">/keystone:implement</span><span class="s">Sonnet, [x], отчёт по строкам</span></button>
+  <button class="step" data-d="d8"><span class="n">8</span><span class="t">/keystone:verify</span><span class="s">PASS / PASS-UNPROVEN / FAIL</span></button>
+</div>
+
+<div class="card">
+<div class="detail on" id="d1">
+  <h3>1 · <code>/keystone:start &lt;задача&gt;</code></h3>
+  <p>Агент смотрит на задачу дёшево (текст, имена файлов, один-два поиска) и <b>предлагает</b> уровень: <code>Level: M — причина. OK / S / L?</code>. Ты подтверждаешь. Любой признак L делает задачу L; сомневаешься между двумя уровнями — берётся старший.</p>
+  <pre>/keystone:start Хочу, чтобы оператор в карточке лида видел, на какой из наших номеров WhatsApp написал клиент</pre>
+  <ul><li>Если уже есть активный план другой задачи — спросит: продолжить его или поставить <code>Status: abandoned</code>. Его гейты действуют, пока ты не выбрал.</li>
+  <li>Необратимые внешние действия (подача заявки, платежи, DNS, рассылки) — только после проверки предпосылок.</li></ul>
+  <p><b>Получится:</b> принятый уровень (в шапке плана или в отчёте), бюджет поиска и модель на этап. Дальше — по маршруту уровня.</p>
+</div>
+<div class="detail" id="d2">
+  <h3>2 · <code>/keystone:intent &lt;идея своими словами&gt;</code></h3>
+  <p>Агент сам ищет факты в коде и git, а потом проводит <code>/keystone:grill</code> <b>до конца</b>: раундами по всему дереву решений (реализация, UX, крайние случаи, отказы, данные, безопасность, компромиссы), пока ни одна ветка не осталась неохваченной.</p>
+  <ul><li>В раунде — все вопросы, на которые уже можно ответить, пронумерованы, у каждого «Recommended…»; решения об объёме работы — в первых раундах.</li>
+  <li>В конце — итог <code>D1…Dn</code> и просьба подтвердить; файл пишется только после подтверждения.</li></ul>
+  <p><b>Получится:</b> <code>docs/keystone/&lt;дата&gt;-&lt;slug&gt;/intent.md</code> (в проекте с AI Factory — в <code>paths.specs</code>), <code>Status: draft</code>. Каждая строка результата и ограничения имеет ID <code>I-1, I-2…</code> (ID не перенумеровываются), в <code>## Decisions log</code> записан каждый ответ: <code>дата Q → A (D#)</code>.</p>
+  <div class="note">Отвечай коротко: «Q1 a, Q2 по рекомендации». Если агент спрашивает факт о коде — это ошибка, он должен искать сам.</div>
+</div>
+<div class="detail" id="d3">
+  <h3>3 · Прочитать intent и подписать</h3>
+  <p>Главный ручной шаг плейбука: <b>прочитай intent целиком и исправь то, что Claude понял не так</b>. Потом:</p>
+  <pre>/keystone:intent accept docs/keystone/2026-10-12-my-feature/intent.md</pre>
+  <ul><li>Команда <code>accept</code>, набранная тобой, и есть подтверждение: агент не переспрашивает. Если accept вызвал другой скилл или агент, он спросит тебя.</li>
+  <li>Каждый <i>Desired outcome</i> проверяемый («оператор видит X на экране Y»), а не «улучшить X».</li>
+  <li>Одна задача — один intent; если внутри несколько независимых — агент предложит разделить.</li>
+  <li>Open questions, меняющие объём, должны быть закрыты — иначе accept откажет со списком.</li></ul>
+</div>
+<div class="detail" id="d4">
+  <h3>4 · <code>/keystone:plan &lt;путь&gt;/intent.md</code></h3>
+  <p>План пишется в ту же папку, что и intent: <code>plan.md</code> со <code>Status: draft</code>. Скилл работает на Opus и сам ничего не спрашивает про тесты, логи и документацию.</p>
+  <ul><li><b>Settings выводятся из репозитория</b>, не спрашиваются: строка <code>Settings: tests — … · logging — … · docs — …</code> в шапке. Поправить можно при Approve.</li>
+  <li><code>Level: L</code> и <code>Authority: intent.md — путь (accepted дата)</code>. Intent не accepted → WARN и вопрос «Plan anyway» / «Stop».</li>
+  <li><b>Сверка требований</b> (<code>## Requirements Reconciliation</code>): строка на каждый <code>I-n</code> — решение · источник <code>intent — I-n</code> · проверка, которая это докажет. Конфликт источников, меняющий реализацию, — вопрос тебе и остановка.</li>
+  <li><b>Project rules check</b> — одна строка: какие файлы правил прочитаны и <code>MUST violations: none | список</code>. Нарушение MUST — <b>блокер</b>, не риск.</li>
+  <li><b><code>## Risks</code></b>: Could break · Riskiest step · Rejected alternatives.</li>
+  <li>Зависимые решения — контракт grill, а не россыпь вопросов. Планка готовности: инженер, не видевший разговор, реализует по одному плану.</li></ul>
+  <p>Перед Approve на L план сам запускает <code>/keystone:check</code> (шаг 5).</p>
+</div>
+<div class="detail" id="d5">
+  <h3>5 · <code>/keystone:check &lt;intent&gt; &lt;план&gt;</code></h3>
+  <p>Порт aif-improve и +check плюс сверка с intent. Два агента в <b>чистых контекстах</b> (Opus): <code>keystone:analyzer</code> перечитывает код глубже планировщика, <code>keystone:validator</code> оставляет, правит или отбрасывает каждую находку. Валидатор обязателен.</p>
+  <ul><li><b>Feasibility sweep</b> по каждой задаче: версии библиотек, деплой и env, генерируемые файлы, privacy и экспорт данных, вычисления (часовые пояса, округления), платформы, устаревший текст плана, необратимые внешние действия.</li>
+  <li>Группы находок: missing, improvements, dependency fixes, removals, out of scope, intent gaps, rule violations. Для каждого <code>I-n</code> — covered / partial / missing.</li></ul>
+  <pre>I-1 covered — Task 2 · check: e2e chip visible
+I-2 partial — нет проверяющего шага
+I-3 missing
+Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
+  <p>PASS — без missing, без нарушений правил и покрытие ≥ 90 %. Дальше вопрос: <b>Apply all</b> / выбрать / ничего. <b>План правится только после твоего ответа</b>; строка <code>Coverage</code> записывается после <code>Project rules check</code>. Код check не трогает никогда.</p>
+</div>
+<div class="detail" id="d6">
+  <h3>6 · Approve / Adjust, коммит, новая сессия</h3>
+  <p>Три ответа (что сломается, самый рискованный шаг, что отвергнуто), строка <code>Settings:</code> и coverage-строка check → <i>Approve plan</i> или <i>Adjust</i>. На Approve в шапке ставится <code>Status: approved</code> и делается <b>базовый коммит</b> intent и плана — цепочка в git и есть аудит-след, по нему verify увидит правки intent после плана. Потом реализация в новой сессии: <code>/clear</code>, <b>не <code>/compact</code></b>.</p>
+</div>
+<div class="detail" id="d7">
+  <h3>7 · <code>/keystone:implement &lt;план&gt;</code> (Sonnet)</h3>
+  <ul><li>Статус <code>approved</code> → ставит <code>implementing</code>. <code>draft</code> — остановка («сначала Approve»); <code>verified</code> / <code>abandoned</code> — остановка.</li>
+  <li>Задачи по порядку, после каждой сразу <code>- [x]</code> в плане, коммит после задачи (или в точках Commit Plan). Прогресс — в галочках и git, поэтому после <code>/clear</code> скилл продолжает с первой <code>[ ]</code>.</li>
+  <li>Перед задачей — проверка согласованности с требованиями: явный конфликт → <code>ERROR [requirement-conflict]</code> и остановка.</li>
+  <li><b>Дрейф:</b> любое отклонение от плана правится в самом тексте плана и коммитится <b>в том же коммите</b>, что и код (перед коммитом <code>git diff --cached --stat</code>).</li>
+  <li><b>BLOCKED:</b> проверку нельзя выполнить → буквально <code>BLOCKED: причина</code> в конце строки задачи <code>- [ ] N.</code> и в ячейке строки сверки; задача остаётся <code>[ ]</code>.</li>
+  <li><b>Отчёт строка в строку</b> по таблице сверки: <i>pass / fail / not run / BLOCKED</i> + доказательство и итог <code>Reconciliation: n rows — pass a, fail b, not run c, BLOCKED d</code>; затем строка <code>Level · cost</code>.</li>
+  <li>Verify сам не запускает; <code>git push</code> закрыт гейтом.</li></ul>
+</div>
+<div class="detail" id="d8">
+  <h3>8 · <code>/keystone:verify &lt;план&gt;</code> (новая сессия)</h3>
+  <ol class="flow"><li><b>Команды проверки:</b> сборка, тесты, линтер, проверка импортов (по <code>references/CHECKS.md</code>); зависимости скилл не ставит. На L режим строгий по умолчанию.</li>
+  <li><b>Агент <code>keystone:verifier</code></b> в чистом контексте: каждая задача, строка сверки и <code>I-n</code> получает ok / missing / wrong / not proven / BLOCKED с доказательством; изменения вне плана — unrequested. Включает <b>adversarial pass</b> — состязательный проход по изменённой логике.</li>
+  <li><b>Вердикт:</b> PASS · PASS-UNPROVEN · FAIL (см. таблицу ниже).</li>
+  <li><b>Запись:</b> <code>verify.md</code> в папке задачи; на PASS — <code>Status: verified</code> и коммит только <code>verify.md</code> и плана.</li></ol>
+  <div class="tbl"><table>
+  <tr><th>Вердикт</th><th>Когда</th><th>Что дальше</th></tr>
+  <tr><td><b>PASS</b></td><td>нет missing / wrong / unrequested / not proven, BLOCKED = 0, Settings ok</td><td><code>Status: verified</code>, push открыт</td></tr>
+  <tr><td><b>PASS-UNPROVEN</b></td><td>нет missing / wrong / unrequested, но есть not proven или BLOCKED</td><td>доказать строки и проверить снова, либо <code>/keystone:verify accept</code> (твоё явное «да») — тогда <code>verified</code></td></tr>
+  <tr><td><b>FAIL</b></td><td>есть missing, wrong или unrequested, нарушены Settings или правила</td><td><code>/keystone:fix</code> или <code>/keystone:implement</code>; push закрыт</td></tr>
+  </table></div>
+  <p><b>Галочка ≠ доказательство:</b> <code>[x]</code> и «pass» в плане ничего не доказывают; grep и чтение кода доказывают присутствие, не поведение → <code>not proven</code>. В конце отчёта всегда строка <code>Keystone Chain: …</code>. На L перед push стоит прогнать ещё и встроенный <code>/code-review</code>.</p>
+</div>
+</div>
+</section>
+
+<!-- ===================== ROUTER ===================== -->
+<section id="router">
+<h2>Какая у меня задача?</h2>
+<p class="muted">Уровень предлагает агент (<code>/keystone:start</code>), подтверждает человек. <b>Любой признак L делает задачу L.</b> Выбери уровень и что не хватает — покажу маршрут.</p>
+<div class="card">
+  <div class="q"><b>1. Какой уровень?</b>
+    <div class="opts" data-q="size">
+      <button class="opt" data-v="s">S — диф в одно предложение, одна-две правки, проверка уже есть</button>
+      <button class="opt" data-v="m">M — один очевидный подход, несколько файлов, решений нет</button>
+      <button class="opt" data-v="l">L — решения за мной, данные, безопасность, чужой модуль, неясно «готово»</button>
+    </div></div>
+  <div class="q"><b>2. Чего не хватает, чтобы начать?</b>
+    <div class="opts" data-q="gap">
+      <button class="opt" data-v="none">Всего хватает</button>
+      <button class="opt" data-v="facts">Не знаю, как это устроено в коде</button>
+      <button class="opt" data-v="decisions">Не решил, чего именно хочу</button>
+    </div></div>
+  <div id="routes">
+    <div class="route" data-r="hint"><p class="muted">Выбери оба ответа.</p></div>
+    <div class="route" data-r="s"><h3>Уровень S — просто сделать и проверить</h3><ol class="flow"><li>Правка напрямую, затем существующая проверка, затем отчёт.</li><li>Баг — <code>/keystone:fix</code> (S): план сразу в <code>implementing</code>, регрессия первой; после зелёной регрессии скилл сам ставит <code>Status: verified</code> перед единственным коммитом.</li><li>Ни intent, ни отдельного плана-согласования; запись — сообщение коммита.</li></ol><p class="muted">Поиск — не более 2 чтений/поисков; модель сессии, низкий effort.</p></div>
+    <div class="route" data-r="m"><h3>Уровень M — короткий план</h3><ol class="flow"><li><code>/keystone:plan &lt;задача&gt;</code>: новая папка, Settings из репо, Project rules check, <code>## Risks</code> в 3 строки.</li><li>Три вопроса себе (что сломается, самый рискованный шаг, что отвергнуто) → Approve → коммит.</li><li>Новая сессия: <code>/keystone:implement</code> (Sonnet) → <code>/keystone:verify</code>.</li><li>Баг на M: <code>/keystone:fix</code> (Plan first) пишет план <code>draft</code> и останавливается; одобрить его — <code>/keystone:plan &lt;путь к plan.md&gt;</code> → Approve, затем <code>/keystone:implement</code>.</li></ol><p class="muted">Intent и <code>/keystone:check</code> не нужны. Поиск — один проход Explore.</p></div>
+    <div class="route" data-r="l"><h3>Уровень L — полная цепочка</h3><ol class="flow"><li><code>/keystone:intent</code> (grill до конца) → прочитать → <code>accept</code></li><li><code>/keystone:plan &lt;intent&gt;</code>: сверка по <code>I-n</code>, Rules check, Risks, затем <code>/keystone:check</code></li><li>Approve/Adjust → базовый коммит</li><li>новая сессия → <code>/keystone:implement</code> (Sonnet) → <code>/keystone:verify</code></li></ol></div>
+    <div class="route" data-r="facts"><div class="note">Факты о системе агент собирает сам: Explore-субагентом на Haiku (только факты, без выводов). Это не вопрос к тебе.</div></div>
+    <div class="route" data-r="decisions"><div class="note">Сначала <code>/keystone:grill &lt;идея&gt;</code> — допрос без файлов, чтобы определиться. На L <code>/keystone:intent</code> проведёт тот же допрос сам.</div></div>
+  </div>
+</div>
+
+<h3>Бюджет по уровням</h3>
+<div class="card tbl"><table>
+<tr><th></th><th>S</th><th>M</th><th>L</th></tr>
+<tr><td>Поиск</td><td>≤ 2 поисков/чтений до действия</td><td>≤ 1 проход Explore</td><td>Explore по необходимости, только факты</td></tr>
+<tr><td>Модель</td><td>модель сессии, low effort</td><td>Opus — план, Sonnet — реализация</td><td>Opus — допрос, intent, план, check, verify · Sonnet — реализация · Haiku — поиск фактов</td></tr>
+<tr><td>Артефакты</td><td>нет — запись в коммите</td><td><code>plan.md</code></td><td><code>intent.md</code>, <code>plan.md</code>, <code>verify.md</code></td></tr>
+<tr><td>Проверка</td><td>результат проверки</td><td><code>/keystone:verify</code></td><td><code>/keystone:check</code> до Approve + <code>/keystone:verify</code></td></tr>
+</table></div>
+<p class="muted">Превысить бюджет поиска можно, только сказав почему. Поднять уровень (S→M, M→L) нужно сразу, как появился признак старшего — и сказать об этом; молча понижать нельзя.</p>
+<div class="note ok"><b>Зачем S и M.</b> Стенд 11.10.2026: мелкая правка стоила $3.9–10.2, план по готовым требованиям — $6, полная цепочка с отдельной спекой — $30. Полная цепочка окупается только там, где решения ещё открыты.</div>
+<p>Любой уровень заканчивается строкой отчёта (свои расходы агент не видит — стоимость берётся из твоего <code>/cost</code>):</p>
+<pre>Level: M · checks: npm test → 42 passed · cost: $6.1 (из /cost) | not measured</pre>
+</section>
+
+<!-- ===================== GATES ===================== -->
+<section id="gates">
+<h2>Гейты (хуки)</h2>
+<p class="muted">Жёсткие правила держит скрипт <code>hooks/gate.mjs</code> (Node, работает на Windows в PowerShell и Git Bash), а не только текст скиллов. Гейты действуют <b>только при активном плане</b>; без него уровень S ничем не блокируется.</p>
+<div class="card tbl"><table>
+<tr><th>Когда</th><th>Что запрещено</th></tr>
+<tr><td>план в <code>draft</code></td><td>правки кода вне папки задачи, пока план не одобрен (внутри папки задачи править можно)</td></tr>
+<tr><td>fix в <code>implementing</code></td><td>правка тест-файлов, закоммиченных в HEAD (новый регрессионный тест писать можно)</td></tr>
+<tr><td>план в <code>implementing</code>, в <code>## Tasks</code> остались <code>[ ]</code> без <code>BLOCKED:</code></td><td>завершение хода: одно напоминание, вопросы человеку оно не блокирует</td></tr>
+<tr><td>любой активный план</td><td><code>git push</code>, <code>gh pr create</code> — до <code>/keystone:verify</code> с PASS или <code>/keystone:verify accept</code></td></tr>
+</table></div>
+
+<h3>Что такое «активный план»</h3>
+<p>Это <code>plan.md</code> <b>самой свежей папки задачи</b> (в <code>docs/keystone/</code> или в <code>paths.specs</code> проекта с AI Factory), у которого статус <code>draft</code>, <code>approved</code> или <code>implementing</code>. «Свежая» — по дате в имени папки (<code>YYYY-MM-DD-…</code>); при равенстве даты — по времени изменения <code>plan.md</code>. Статус берётся из шапки <code>Level: … · Mode: … · Status: …</code>. Планы со статусом <code>verified</code> и <code>abandoned</code> гейтов не создают.</p>
+
+<h3>Как снять гейт</h3>
+<ul><li>Поставить <code>Status: abandoned</code> в шапке плана (план брошен, гейты не действуют).</li>
+<li>Запустить Claude Code с переменной <code>KEYSTONE_GATES=off</code>.</li>
+<li>Либо выполнить то, чего гейт ждёт: одобрить draft, пройти verify.</li></ul>
+<div class="note warn">Снимать гейт, чтобы обойти FAIL у verify, нельзя: <code>abandoned</code> и <code>KEYSTONE_GATES=off</code> не делают план verified, они только открывают дорогу. Обход гейта через Bash, переименование или копирование поверх файла — нарушение правил.</div>
+</section>
+
+<!-- ===================== STATUS ===================== -->
+<section id="status">
+<h2>Статусы плана</h2>
+<p class="muted">Шапка плана: <code>Level · Mode · Status</code>. Статус идёт так: <code>draft → approved → implementing → verified</code>, либо в любой момент <code>abandoned</code>.</p>
+<div class="card tbl"><table>
+<tr><th>Статус</th><th>Что значит</th><th>Кто ставит</th></tr>
+<tr><td><code>draft</code></td><td>план написан, не одобрен; правки кода заблокированы</td><td><code>/keystone:plan</code>; <code>/keystone:fix</code> в режиме «Plan first» (M)</td></tr>
+<tr><td><code>approved</code></td><td>ты нажал Approve, базовый коммит сделан</td><td><code>/keystone:plan</code> на твой Approve</td></tr>
+<tr><td><code>implementing</code></td><td>идёт реализация</td><td><code>/keystone:implement</code> при старте; <code>/keystone:fix</code> (S) создаёт план сразу в этом статусе</td></tr>
+<tr><td><code>verified</code></td><td>работа проверена, push открыт</td><td><code>/keystone:verify</code> на PASS или на <code>accept</code> (после твоего «да»); S-fix ставит сам после зелёной регрессии</td></tr>
+<tr><td><code>abandoned</code></td><td>план брошен, гейты сняты</td><td>только ты (правка шапки вручную)</td></tr>
+</table></div>
+</section>
+
+<!-- ===================== SKILLS ===================== -->
+<section id="skills">
+<h2>Скиллы</h2>
+<p class="muted"><span class="pill new">плагин</span> — скилл <code>/keystone:*</code> · <span class="pill core">порт</span> — портирован из AI Factory 2.19.0 (MIT) и доработан · <span class="pill inj">адаптер</span> — заморожен, только для проектов, где план пишет <code>/aif-plan</code>.</p>
+
+<details class="skill" open><summary><span class="pill new">плагин</span><span class="name">/keystone:start</span><span class="what">Определяет уровень S / M / L, задаёт бюджет и маршрут.</span></summary><div class="body">
+<div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
+<tr><td><code>/keystone:start &lt;задача&gt;</code></td><td>Предлагает уровень с причиной в одну строку, спрашивает подтверждение, называет бюджет (поиск, модель на этап) и маршрут. Проверяет, нет ли активного плана другой задачи. Необратимые внешние действия — только после проверки предпосылок. Итоговая строка <code>Level · checks · cost</code>.</td></tr></table></div>
+<h3>Как проверить, что сработал</h3>
+<ul><li>Был вопрос «Level: … OK / S / L?», а не молчаливое решение; уровень записан в плане или отчёте.</li>
+<li>На S не появился план или intent; при выбранном M и признаке L — предложен старший уровень с причиной.</li>
+<li>Отчёт заканчивается строкой <code>Level · checks · cost</code>; без <code>/cost</code> там честное <code>not measured</code>.</li></ul>
+</div></details>
+
+<details class="skill"><summary><span class="pill new">плагин</span><span class="name">/keystone:grill</span><span class="what">Допрос раундами по всему дереву решений. Файлов не пишет — отдаёт итог вызвавшему.</span></summary><div class="body">
+<div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
+<tr><td><code>/keystone:grill &lt;идея, план или вопрос&gt;</code></td><td>Строит дерево решений (реализация, UX, крайние случаи, отказы, данные, безопасность, компромиссы), задаёт фронтир раундами, в конце — итог <code>D1…Dn</code> и подтверждение. Без аргумента берёт тему текущего разговора и говорит, что взял.</td></tr></table></div>
+<h3>Как проверить, что сработал</h3>
+<ul><li>Факты о коде ищет сам (Explore на Haiku); у тебя спрашивает только решения.</li>
+<li>Раунд = все вопросы, чьи предпосылки закрыты; у каждого «Recommended» и причина со ссылкой на найденный факт.</li>
+<li>Не раскрывает следующие вопросы заранее, не переспрашивает отвеченное, не расширяет скоуп рекомендацией.</li>
+<li>Заканчивает, когда фронтир пуст, итогом D1…Dn и просьбой подтвердить; до подтверждения не действует.</li>
+<li>При <code>HANDOFF_MODE=1</code> не спрашивает и не выдумывает: <code>BLOCKED [grill] n user decisions open: …</code>.</li></ul>
+<p class="muted">Контракт согласован в <a href="https://github.com/lee-to/ai-factory/issues/151" target="_blank" rel="noopener">lee-to/ai-factory#151</a>.</p>
+</div></details>
+
+<details class="skill"><summary><span class="pill new">плагин</span><span class="name">/keystone:intent</span><span class="what">Файл intent.md — «что и зачем» твоими словами; первое звено цепочки.</span></summary><div class="body">
+<div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
+<tr><td><code>/keystone:intent &lt;идея&gt;</code></td><td>Допрос по контракту grill → <code>intent.md</code> (draft) словами автора; каждая строка с ID <code>I-n</code>, каждый ответ в Decisions log. Без решений, архитектуры и задач — это работа плана. Несколько независимых задач — предложит разделить. План уже есть → intent ретроспективный, в шапке <code>Written after plan:</code>, нужен <code>/keystone:check</code>.</td></tr>
+<tr><td><code>/keystone:intent accept &lt;путь&gt;</code></td><td><code>Status: accepted</code>. Твоя команда и есть подтверждение. Open question, меняющий объём, — отказ со списком.</td></tr></table></div>
+<h3>Как проверить, что сработал</h3>
+<ul><li>В файле есть все разделы, ID у каждого результата и ограничения, <code>Status: draft</code>, Decisions log с датами.</li>
+<li>Каждое утверждение в Problem и Affected восходит к твоим словам или проверенному факту; догадки ушли в Open questions.</li>
+<li>Сроки и релизные условия — в Constraints, а не в Desired outcome.</li></ul>
+<h3>Шаблон intent.md</h3>
+<pre># Intent: &lt;название&gt;
+
+Author: … · Created: YYYY-MM-DD · Status: draft
+Source: идея | тикет | инцидент
+Written after plan: &lt;путь&gt;   (только для ретроспективного intent)
+
+## Problem            — что болит, кому, как часто
+## Desired outcome
+- I-1 &lt;наблюдаемый результат: «оператор видит X за Y», не «улучшить X»&gt;
+- I-2 …
+## Affected users and systems
+- Users/roles: …
+- Systems/modules: … (пути, если известны)
+## Constraints
+- I-3 &lt;что нельзя ломать, безопасность, данные, срок&gt;
+## Open questions
+- [ ] &lt;вопрос&gt; — &lt;кто ответит&gt;
+## Decisions log
+- YYYY-MM-DD Q: &lt;вопрос&gt; → A: &lt;ответ&gt; (D&lt;n&gt;)</pre>
+<p class="muted">ID не перенумеровываются и не переиспользуются; снятая строка остаётся зачёркнутой: <code>~~I-4 …~~ dropped дата: почему</code>. Правка intent после плана допустима — запись в Decisions log; check и verify считают её сигналом переделки.</p>
+</div></details>
+
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:plan</span><span class="what">План M и L в docs/keystone/&lt;дата&gt;-&lt;slug&gt;/plan.md; план = спека.</span></summary><div class="body">
+<div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
+<tr><td><code>/keystone:plan &lt;intent или задача&gt; [S|M|L]</code></td><td>Opus, только по явной команде. S — плана нет, скилл останавливается. M — новая папка, без intent и check. L — по <code>intent.md</code>, план в ту же папку. Разведка (Explore на Haiku), сверка требований, Project rules check, Risks, задачи с файлами и проверками, Commit Plan на 5+ задач.</td></tr>
+<tr><td><code>/keystone:plan &lt;путь к plan.md&gt;</code></td><td>Существующий draft: не переписывается, сразу к «Перед Approve» и Approve (так одобряется план от <code>/keystone:fix</code> M).</td></tr></table></div>
+<ul><li>Settings (tests / logging / docs) выводятся из репозитория и пишутся одной строкой, не спрашиваются.</li>
+<li>Requirements Reconciliation Gate: строка на каждый <code>I-n</code>; при независимых режимах — перечень поддерживаемых сочетаний.</li>
+<li>Перед Approve: три ответа, на L — <code>/keystone:check</code> (без него самопроверки нет), потом Approve / Adjust. Approve → <code>Status: approved</code> и базовый коммит.</li></ul>
+<h3>Как проверить, что сработал</h3>
+<ul><li>В шапке <code>Level · Mode · Status</code>, <code>Authority</code> (на L) и <code>Settings</code> с причинами.</li>
+<li>Строк сверки не меньше, чем непогашенных <code>I-n</code>; нет «handle / support / as needed / etc.».</li>
+<li>Есть <code>Project rules check</code> и <code>## Risks</code>; на L — coverage-строка от check.</li></ul>
+</div></details>
+
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:check</span><span class="what">Независимая проверка плана в чистых контекстах, до Approve.</span></summary><div class="body">
+<div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
+<tr><td><code>/keystone:check [intent] [план]</code></td><td>Агент-анализатор и агент-валидатор в чистых контекстах (Opus). Feasibility sweep: версии библиотек, деплой и env, генерация, privacy, вычисления, платформы, устаревший текст, необратимые действия. Для каждого <code>I-n</code> — covered / partial / missing, строка <code>Coverage: a/b = N%</code>. План правится только после твоего ответа; код не правится никогда.</td></tr></table></div>
+<h3>Как проверить, что сработал</h3>
+<ul><li>Отчёт по шаблону: группы находок, Summary (с Hidden/Adjusted by validator), строка на каждый I-n, <code>Notes</code>, <code>Coverage … verdict</code>.</li>
+<li>Покрытие: partial = 0.5; PASS при ≥ 90 %, без missing и нарушений правил.</li>
+<li>После «Apply all» строка Coverage записана в план после <code>Project rules check</code>; <code>[x]</code> и Original Request не тронуты; ничего не закоммичено.</li></ul>
+</div></details>
+
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:implement</span><span class="what">Реализация плана задача за задачей; план всегда равен построенному.</span></summary><div class="body">
+<div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
+<tr><td><code>/keystone:implement [план]</code></td><td>Только по явной команде. Берёт план (или активный), ставит <code>implementing</code>, делает базовый коммит (если план не закоммичен), идёт по задачам с проверкой согласованности, <code>[x]</code> сразу, коммитом, продолжением после <code>/clear</code>. Дрейф — в плане в том же коммите, <code>BLOCKED:</code> — буквально в конце строки задачи, отчёт — строка в строку.</td></tr></table></div>
+<h3>Как проверить, что сработал</h3>
+<ul><li>Baseline first: план и intent закоммичены до кода; галочки ставятся по ходу, а не пачкой в конце.</li>
+<li>Сумма a+b+c+d в строке <code>Reconciliation</code> равна числу строк таблицы; pass стоит только у проверок, реально выполненных в этой сессии.</li>
+<li>Не создано отчётных файлов; <code>git push</code> не запущен.</li></ul>
+</div></details>
+
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:fix</span><span class="what">Багфикс регрессией вперёд: воспроизвести, тест, починить, тот же тест зелёный.</span></summary><div class="body">
+<div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
+<tr><td><code>/keystone:fix &lt;баг&gt;</code></td><td>Спрашивает режим: <b>Fix now</b> (S) — план сразу в <code>implementing</code>; <b>Plan first</b> (M) — план <code>draft</code> и остановка. Баг с данными, безопасностью или чужим модулем — это L, идти через <code>/keystone:start</code>.</td></tr>
+<tr><td><code>/keystone:fix</code> (без аргумента)</td><td>Продолжает активный fix-план; <code>draft</code> — сначала Approve через <code>/keystone:plan</code>.</td></tr></table></div>
+<ul><li>Сначала регрессия: минимальная проверка, <b>падающий тест новым файлом</b>, подтверждённое падение, потом минимальная правка, та же проверка зелёная.</li>
+<li>Тесты из HEAD не правятся (гейт запрещает, включая перезапись). Неверный старый тест — решает человек.</li>
+<li>В план пишутся <code>## Root cause</code> и <code>## Prevention</code>; отдельных отчётов нет.</li>
+<li>S: после зелёной регрессии <b>в этой сессии</b> скилл сам ставит <code>Status: verified</code> перед единственным коммитом кода и плана. M: коммит и совет <code>/keystone:verify</code> в новой сессии.</li></ul>
+<h3>Как проверить, что сработал</h3>
+<ul><li>В выводе процитировано падение до фикса и успех после — для одной и той же проверки.</li>
+<li>Тест — новый файл; изменённых тестов из HEAD нет; в плане заполнены Root cause и Prevention.</li></ul>
+</div></details>
+
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:verify</span><span class="what">Сверка готовой работы с планом и intent в чистом контексте; запись verify.md.</span></summary><div class="body">
+<div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
+<tr><td><code>/keystone:verify [план [base-ref]]</code></td><td>Определяет диф от базового коммита, запускает команды проверки (сборка, тесты, линтер), вызывает <code>keystone:verifier</code> в чистом контексте. Каждая задача, строка сверки и <code>I-n</code> — ok / missing / wrong / not proven / BLOCKED с доказательством; unrequested; adversarial pass по изменённой логике. Вердикт PASS / PASS-UNPROVEN / FAIL, запись в <code>verify.md</code>. Пишет только <code>verify.md</code> и значение <code>Status:</code>.</td></tr>
+<tr><td><code>/keystone:verify accept</code></td><td>Только после PASS-UNPROVEN: показывает список not proven / BLOCKED, спрашивает «Yes / No»; на Yes дописывает <code>Accepted unproven by …</code> в <code>verify.md</code> и ставит <code>verified</code>.</td></tr></table></div>
+<h3>Как проверить, что сработал</h3>
+<ul><li>Рядом с каждым статусом — доказательство: file:line, имя теста или команда и строка вывода.</li>
+<li>Итог <code>n rows — ok a, missing b, wrong c, not proven d, BLOCKED e; unrequested u</code>, причём a+b+c+d+e = n.</li>
+<li>Строки с <code>BLOCKED:</code> посчитаны как открытая работа, не как ok; <code>[x]</code> без доказательства — not proven.</li>
+<li>Строка <code>Keystone Chain:</code> есть в отчёте дословно, даже когда всё в порядке; <code>verify.md</code> закоммичен отдельно.</li></ul>
+</div></details>
+
+<details class="skill"><summary><span class="pill inj">адаптер</span><span class="name">keystone-aif (заморожен)</span><span class="what">Для проектов, где план пишет /aif-plan. Новые механики только в плагине.</span></summary><div class="body">
+<ul><li>Адаптер встраивает правила Keystone в <code>/aif-plan</code>, <code>/aif-implement</code> и <code>/aif-verify</code> (уровни, строки сверки по <code>I-n</code>, Rules check, Risks, <code>BLOCKED:</code>, строка <code>Keystone Chain:</code>).</li>
+<li>Лежит в <code>adapters/ai-factory/</code>; ставится в домашнюю папку (см. «Где что»). Для работы плагина не нужен.</li>
+<li>Если стоит расширение <code>aif-ext-sattva</code>, его строка <code>Implementation Notes Coverage:</code> по-прежнему идёт в отчёт verify дословно.</li></ul>
+</div></details>
+</section>
+
+<!-- ===================== CHECKLISTS ===================== -->
+<section id="checks">
+<h2>Чек-листы «правильно ли отработало»</h2>
+<p class="muted">Отметки сохраняются в этом браузере. <button class="opt" id="reset" style="padding:3px 10px;font-size:13px">Сбросить</button></p>
+<div class="grid">
+  <div class="card check" data-list="intent"><h3>После /keystone:intent</h3><div class="progress"><i></i></div>
+    <label><input type="checkbox"><span>Агент сам нашёл факты в коде, не спрашивал меня о них</span></label>
+    <label><input type="checkbox"><span>Grill дошёл до конца: итог D1…Dn и просьба подтвердить</span></label>
+    <label><input type="checkbox"><span>Все разделы, Status: draft, у результатов и ограничений ID I-n</span></label>
+    <label><input type="checkbox"><span>Decisions log: строка Q → A с датой на каждое решение</span></label>
+    <label><input type="checkbox"><span>Каждый Desired outcome проверяемый, внутри одна задача</span></label>
+    <label><input type="checkbox"><span>Я прочитал целиком, исправил неточности и сделал accept</span></label>
+  </div>
+  <div class="card check" data-list="plan"><h3>После /keystone:plan</h3><div class="progress"><i></i></div>
+    <label><input type="checkbox"><span>В шапке Level, Mode, Status: draft; на L — Authority с путём и датой</span></label>
+    <label><input type="checkbox"><span>Settings выведены из репо, не спрошены; у каждого значения причина</span></label>
+    <label><input type="checkbox"><span>Для каждого I-n есть строка сверки с проверкой</span></label>
+    <label><input type="checkbox"><span>Есть Project rules check, MUST violations: none</span></label>
+    <label><input type="checkbox"><span>Есть ## Risks: Could break / Riskiest step / Rejected alternatives</span></label>
+    <label><input type="checkbox"><span>У каждой задачи файлы и проверка; нет «as needed / etc.»</span></label>
+    <label><input type="checkbox"><span>Approve: Status approved и базовый коммит; дальше новая сессия (/clear)</span></label>
+  </div>
+  <div class="card check" data-list="check"><h3>После /keystone:check</h3><div class="progress"><i></i></div>
+    <label><input type="checkbox"><span>Отработали analyzer и validator (в Summary есть Hidden/Adjusted)</span></label>
+    <label><input type="checkbox"><span>Feasibility sweep дал находки или явное «solid»</span></label>
+    <label><input type="checkbox"><span>Строка на каждый I-n и итог Coverage ≥ 90 %, verdict PASS</span></label>
+    <label><input type="checkbox"><span>План правился только после моего ответа; [x] и Original Request целы</span></label>
+    <label><input type="checkbox"><span>Строка Coverage записана после Project rules check; код не тронут</span></label>
+  </div>
+  <div class="card check" data-list="impl"><h3>После /keystone:implement</h3><div class="progress"><i></i></div>
+    <label><input type="checkbox"><span>Baseline first: план и intent закоммичены до первой задачи</span></label>
+    <label><input type="checkbox"><span>Галочки [x] ставились сразу после задачи, а не пачкой</span></label>
+    <label><input type="checkbox"><span>Отклонения от плана — в тексте плана, в том же коммите, что и код</span></label>
+    <label><input type="checkbox"><span>BLOCKED: записан буквально в конце строки задачи; задача не [x]</span></label>
+    <label><input type="checkbox"><span>Отчёт строка в строку; pass+fail+not run+BLOCKED равно числу строк</span></label>
+    <label><input type="checkbox"><span>Строка Level · cost; verify не запускался, push не делался</span></label>
+  </div>
+  <div class="card check" data-list="fix"><h3>После /keystone:fix</h3><div class="progress"><i></i></div>
+    <label><input type="checkbox"><span>Регрессия написана первой, новым файлом, и падала до фикса</span></label>
+    <label><input type="checkbox"><span>Фикс минимальный, исправлена причина, а не симптом</span></label>
+    <label><input type="checkbox"><span>Та же проверка зелёная в этой сессии (вывод процитирован)</span></label>
+    <label><input type="checkbox"><span>Тесты из HEAD не менялись</span></label>
+    <label><input type="checkbox"><span>В плане заполнены Root cause и Prevention</span></label>
+    <label><input type="checkbox"><span>S: Status verified и один коммит; M: draft-план или совет на verify</span></label>
+  </div>
+  <div class="card check" data-list="verify"><h3>После /keystone:verify</h3><div class="progress"><i></i></div>
+    <label><input type="checkbox"><span>Команды проверки выполнены; пропущенные честно помечены not run</span></label>
+    <label><input type="checkbox"><span>Строка на каждую задачу, строку сверки и I-n, с доказательством</span></label>
+    <label><input type="checkbox"><span>Подсчёт ok+missing+wrong+not proven+BLOCKED равен числу строк</span></label>
+    <label><input type="checkbox"><span>Unrequested пуст или объяснён; [x] без доказательства не засчитан</span></label>
+    <label><input type="checkbox"><span>Есть строка «Keystone Chain:» и verify.md в папке задачи</span></label>
+    <label><input type="checkbox"><span>Вердикт PASS → Status verified; PASS-UNPROVEN → доказал строки или сделал accept</span></label>
+  </div>
+</div>
+</section>
+
+<!-- ===================== FILES ===================== -->
+<section id="files">
+<h2>Где что лежит и как поставить</h2>
+<div class="card tbl"><table>
+<tr><th>Что</th><th>Где</th></tr>
+<tr><td>Скиллы плагина</td><td><code>skills/start|grill|intent|plan|check|implement|fix|verify</code>; манифесты — <code>.claude-plugin/plugin.json</code>, <code>marketplace.json</code></td></tr>
+<tr><td>Агенты</td><td><code>agents/analyzer.md</code>, <code>validator.md</code> (check), <code>verifier.md</code> (verify)</td></tr>
+<tr><td>Хуки (гейты)</td><td><code>hooks/gate.mjs</code>, <code>hooks/hooks.json</code></td></tr>
+<tr><td>Артефакты задачи в проекте</td><td><code>docs/keystone/&lt;дата&gt;-&lt;slug&gt;/</code>: <code>intent.md</code>, <code>plan.md</code>, <code>verify.md</code>. В проекте с AI Factory — в <code>paths.specs</code></td></tr>
+<tr><td>Атрибуция</td><td><code>THIRD_PARTY_NOTICES.md</code> — что портировано из AI Factory 2.19.0 (MIT)</td></tr>
+<tr><td>Адаптер AI Factory (заморожен)</td><td><code>adapters/ai-factory/</code> — <code>extension.json</code> (<code>keystone-aif</code>) и вставки <code>injections/</code></td></tr>
+<tr><td>Тесты</td><td><code>npm test</code>, <code>claude plugin validate .</code>, <code>test/smoke-install.sh &lt;проект AIF&gt;</code>; headless-стенд — <code>test/harness/README.md</code>, сводки — <code>docs/test-reports/</code></td></tr>
+</table></div>
+
+<h3>Установить плагин (скиллы <code>/keystone:*</code>)</h3>
+<pre>claude plugin marketplace add sattva2020/keystone
+claude plugin install keystone@keystone</pre>
+<p class="muted">Плагинные скиллы имеют префикс <code>keystone:</code>, поэтому личные скиллы из <code>~/.claude/skills</code> их не перекрывают.</p>
+<h3>Разовая проба без установки</h3>
+<pre>claude --plugin-dir <path-to-repo></pre>
+
+<h3>Адаптер AI Factory (заморожен, только для проектов с <code>/aif-plan</code>)</h3>
+<p class="muted">Ставить в <b>домашнюю папку</b>: личные скиллы <code>~/.claude/skills</code> перекрывают проектные с тем же именем.</p>
+<pre>cd ~ &amp;&amp; ai-factory extension add <repo>/adapters/ai-factory</pre>
+
+<h3>Тесты</h3>
+<pre>npm test</pre>
+<pre>claude plugin validate .</pre>
+<pre>bash test/smoke-install.sh &lt;проект AIF&gt;</pre>
+<ul><li><code>npm test</code> — тексты скиллов, атрибуция, дословные блоки AI Factory, все ветки хуков;</li>
+<li><code>claude plugin validate .</code> — манифесты;</li>
+<li><code>test/smoke-install.sh</code> — установка и удаление адаптера на копии проекта.</li></ul>
+</section>
+
+<!-- ===================== FAQ ===================== -->
+<section id="faq">
+<h2>Если что-то пошло не так</h2>
+<input class="search" id="q" placeholder="Поиск по вопросам: например, «push» или «BLOCKED»">
+<div class="card" id="faqlist">
+<details class="faq"><summary>Гейт не даёт править код</summary><div>Есть активный план в <code>draft</code> (самая свежая папка задачи). Либо одобри его: <code>/keystone:plan &lt;путь к plan.md&gt;</code> → Approve; либо, если план не нужен, поставь в его шапке <code>Status: abandoned</code>. Правки внутри папки задачи разрешены. Аварийно — запуск с <code>KEYSTONE_GATES=off</code>. Если мешает тест-файл во время fix: регрессию пиши новым файлом, а неверный старый тест — решение человека.</div></details>
+<details class="faq"><summary>push запрещён</summary><div>Пока есть активный план, <code>git push</code> и <code>gh pr create</code> закрыты. Открывает их <code>/keystone:verify</code> с вердиктом PASS (<code>Status: verified</code>) или <code>/keystone:verify accept</code> после PASS-UNPROVEN. Если план больше не нужен — <code>Status: abandoned</code>. Не снимай гейт, чтобы обойти FAIL: сначала <code>/keystone:fix</code> или <code>/keystone:implement</code>.</div></details>
+<details class="faq"><summary>Stop-хук напоминает о задачах</summary><div>План в <code>implementing</code>, а в <code>## Tasks</code> остались <code>[ ]</code> без <code>BLOCKED:</code>. Варианты: продолжить задачи; дописать <code>BLOCKED: причина</code> в конец строки той, что выполнить нельзя; либо сказать одной строкой, что ты сделал паузу или ждёшь ответа, и завершить ход. Напоминание приходит один раз за ход и вопросам человеку не мешает.</div></details>
+<details class="faq"><summary>Скилл /keystone:* не виден</summary><div>Плагин не установлен или не включён. Проверь <code>claude plugin list</code>: должен быть <code>keystone</code> в состоянии enabled. Если нет — выполни <code>claude plugin marketplace add sattva2020/keystone</code> и <code>claude plugin install keystone@keystone</code> (или запусти <code>claude --plugin-dir …</code>), затем открой новую сессию: список скиллов запоминается на старте.</div></details>
+<details class="faq"><summary>Нужен ли AI Factory?</summary><div>Нет. Keystone 0.6.0 — самостоятельный плагин, все восемь скиллов (в том числе plan, implement, fix, verify) работают без него. AI Factory нужен только если ты хочешь писать планы через <code>/aif-plan</code>: для этого есть замороженный адаптер.</div></details>
+<details class="faq"><summary>Агент спрашивает у меня факты о коде</summary><div>Нарушение контракта grill: факты он ищет сам. Ответь «посмотри в коде» и запомни пример — это повод поправить скилл.</div></details>
+<details class="faq"><summary>План говорит «intent is draft, not accepted»</summary><div>Так и задумано: ты ещё не подписал intent. Прочитай его и выполни <code>/keystone:intent accept &lt;путь&gt;/intent.md</code>, затем снова планируй. Или выбери «Plan anyway» — в Authority появится пометка.</div></details>
+<details class="faq"><summary>Check вернул FAIL, но я считаю, что план нормальный</summary><div>FAIL — это missing, нарушение MUST-правила или покрытие ниже 90 %. Partial считается как 0.5: добавь в план проверку, которая доказывает поведение, а не присутствие. Если расхождение в самом intent — поправь его (запись в Decisions log) и запусти check снова.</div></details>
+<details class="faq"><summary>Verify вернул PASS-UNPROVEN</summary><div>Нет ошибок, но часть строк не доказана (только grep/чтение кода) или помечена BLOCKED. Докажи их тестом или запуском и проверь снова, либо осознанно прими: <code>/keystone:verify accept</code> покажет список и спросит «Yes / No»; push останется закрытым до этого.</div></details>
+<details class="faq"><summary>Почему нет spec.md, как в плейбуке Anthropic?</summary><div>План и есть спека: требования и дизайн живут в плане, его таблица сверки ссылается на строки intent по ID, а конфликты с правилами проекта ловит Project rules check. Отдельный документ дублировал бы план.</div></details>
+<details class="faq"><summary>Intent получился огромным (много функций сразу)</summary><div>Попроси: «раздели на отдельные intent: &lt;A&gt;, &lt;B&gt;». Одна задача — один intent; иначе план неподъёмен, а один спорный пункт держит всё.</div></details>
+<details class="faq"><summary>Кажется, на мелочь ушла вся цепочка</summary><div>Скажи уровень явно: «это S» — и ответь на вопрос <code>/keystone:start</code>. Если агент предлагает старший уровень, он назвал причину (данные, безопасность, чужой модуль, неясное «готово»); любой признак L делает задачу L. Стенд 11.10.2026: мелкая правка $3.9–10.2 против $30 за полную цепочку.</div></details>
+</div>
+</section>
+
+<footer>Keystone · справка к версии 0.6.0 · 12.10.2026</footer>
+</main>
+
+<script>
+(function(){
+  var store={get:function(k){try{return localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+  // theme
+  var root=document.documentElement,t=store.get("ks-theme");if(t)root.dataset.theme=t;
+  document.getElementById("theme").onclick=function(){var cur=root.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");var n=cur==="dark"?"light":"dark";root.dataset.theme=n;store.set("ks-theme",n)};
+  // pipeline
+  document.querySelectorAll("#pipe .step").forEach(function(b){b.onclick=function(){
+    document.querySelectorAll("#pipe .step").forEach(function(x){x.classList.toggle("on",x===b)});
+    document.querySelectorAll(".detail").forEach(function(d){d.classList.toggle("on",d.id===b.dataset.d)})}});
+  // router
+  var ans={};function route(){
+    var show={hint:!(ans.size&&ans.gap)};
+    if(ans.size&&ans.gap){show[ans.size]=true;if(ans.gap!=="none")show[ans.gap]=true}
+    document.querySelectorAll(".route").forEach(function(r){r.classList.toggle("on",!!show[r.dataset.r])})}
+  document.querySelectorAll(".opts").forEach(function(g){g.querySelectorAll(".opt").forEach(function(o){o.onclick=function(){
+    g.querySelectorAll(".opt").forEach(function(x){x.classList.toggle("on",x===o)});ans[g.dataset.q]=o.dataset.v;route()}})});
+  route();
+  // checklists
+  function prog(list){var cbs=list.querySelectorAll("input"),d=0;cbs.forEach(function(c){if(c.checked)d++;c.parentNode.classList.toggle("done",c.checked)});list.querySelector(".progress i").style.width=(cbs.length?100*d/cbs.length:0)+"%"}
+  document.querySelectorAll(".check").forEach(function(list){var key="ks-chk-"+list.dataset.list,saved=(store.get(key)||"").split(",");
+    list.querySelectorAll("input").forEach(function(c,i){c.checked=saved[i]==="1";c.onchange=function(){store.set(key,Array.prototype.map.call(list.querySelectorAll("input"),function(x){return x.checked?"1":"0"}).join(","));prog(list)}});prog(list)});
+  document.getElementById("reset").onclick=function(){document.querySelectorAll(".check").forEach(function(list){list.querySelectorAll("input").forEach(function(c){c.checked=false});store.set("ks-chk-"+list.dataset.list,"");prog(list)})};
+  // copy buttons
+  document.querySelectorAll("pre").forEach(function(p){var b=document.createElement("button");b.className="copy";b.textContent="копировать";b.onclick=function(){var txt=p.childNodes[0].textContent;if(navigator.clipboard)navigator.clipboard.writeText(txt).then(function(){b.textContent="скопировано";setTimeout(function(){b.textContent="копировать"},1200)})};p.appendChild(b)});
+  // faq search
+  var q=document.getElementById("q");q.oninput=function(){var s=q.value.trim().toLowerCase();document.querySelectorAll("#faqlist .faq").forEach(function(f){var hit=!s||f.textContent.toLowerCase().indexOf(s)>=0;f.style.display=hit?"":"none";if(s&&hit)f.open=true})};
+  // active tab
+  var secs=[].slice.call(document.querySelectorAll("section")),tabs=[].slice.call(document.querySelectorAll("#tabs a"));
+  addEventListener("scroll",function(){var y=scrollY+90,cur=secs[0].id;secs.forEach(function(s){if(s.offsetTop<=y)cur=s.id});tabs.forEach(function(a){a.classList.toggle("on",a.getAttribute("href")==="#"+cur)})},{passive:true});
+})();
+</script>
+</body>
+</html>

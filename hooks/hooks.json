@@ -1,0 +1,14 @@
+{
+  "description": "Keystone gates: no code edits while the active plan is draft; no edits to existing tests during a fix; Stop reminder while plan tasks are open; no push/PR before /keystone:verify. Off: KEYSTONE_GATES=off.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell",
+        "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/gate.mjs"], "timeout": 10 }]
+      }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/gate.mjs"], "timeout": 10 }] }
+    ]
+  }
+}

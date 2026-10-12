@@ -1,0 +1,8 @@
+{
+  "name": "keystone",
+  "description": "Keystone — intent-first workflow for Claude Code",
+  "owner": { "name": "sattva2020" },
+  "plugins": [
+    { "name": "keystone", "source": "./" }
+  ]
+}

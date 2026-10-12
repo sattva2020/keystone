@@ -1,0 +1,29 @@
+{
+  "name": "@sattva2020/keystone",
+  "version": "0.6.0",
+  "description": "Keystone — intent-first workflow for Claude Code (plugin) with an AI Factory adapter.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sattva2020/keystone.git"
+  },
+  "homepage": "https://github.com/sattva2020/keystone#readme",
+  "bugs": {
+    "url": "https://github.com/sattva2020/keystone/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "claude-code-plugin",
+    "workflow",
+    "intent",
+    "planning",
+    "verification",
+    "sdlc",
+    "hooks"
+  ]
+}
