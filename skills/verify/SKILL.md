@@ -1,7 +1,7 @@
 ---
 name: verify
 description: "Keystone: verify finished work against its plan and intent — runs build/test/lint, then an independent verifier agent in a clean context gives every plan task, Reconciliation row and intent line ok / missing / wrong / not proven / BLOCKED, flags unrequested work, and returns PASS, PASS-UNPROVEN or FAIL. A checked box is not evidence. Writes verify.md; on PASS sets Status verified. Use after implementation on M and L changes, or for 'verify', 'did we miss anything', 'is it really done'. `/keystone:verify accept` records a human decision on unproven rows."
-argument-hint: "[<plan path> [base git ref]] | accept"
+argument-hint: "[<plan path> [base git ref]] [--strict] | accept"
 allowed-tools: Read Glob Grep Bash Agent AskUserQuestion Write Edit
 model: opus
 effort: high
@@ -16,6 +16,10 @@ skill runs the commands, collects the verdict, and writes the record. **Write/Ed
 `accept`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/keystone:fix` or
 `/keystone:implement`, not this skill.
 
+**Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
+headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
+and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
+
 **No decisions through verify.** If the user asks to put a decision or change into the intent or the plan, do not edit
 anything: answer that this is `/keystone:intent <path>` (intent) or `/keystone:plan <plan path>` (plan), and that verify
 must be run again afterwards. Never attribute to the user an edit the agent made.
@@ -24,12 +28,15 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref]`, or `accept`, or empty (= t
 
 ## Step 0 — find the plan, intent, rules
 
-- Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. (`paths.specs` comes from `.ai-factory/config.yaml` when that file exists.) If none: ask for the path, or stop with `no plan to verify`.
+- Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. (`paths.specs` comes from the fallback `.ai-factory/config.yaml` when that file exists.) If none: ask for the path, or stop with `no plan to verify`.
 - A plan with `Status: draft` was never approved: stop and say so — verify measures an implementation, not a draft.
 - Read the plan header (`Level`, `Mode`, `Status`, `Authority`, `Settings`), the intent named in `Authority:` (or
-  `intent.md` next to the plan), and the project rules: `CLAUDE.md`, `AGENTS.md`, `.ai-factory/RULES.md`,
-  `.ai-factory/rules/*.md`, the `docs/` overview. Rules there are MUST / MUST NOT.
-- A plan in AI Factory format (`.ai-factory/plans/<x>.md`, no task folder): `verify.md` goes next to the intent when the
+  `intent.md` next to the plan), and the project rules (those that exist): `CLAUDE.md`, `.claude/CLAUDE.md`,
+  `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:` rules apply only to matching files), `AGENTS.md`; fallback
+  only for AI Factory projects without them.
+  Fallback files: `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`. MUST / MUST NOT lines
+  there are project rules.
+- A plan in the fallback AI Factory format (`.ai-factory/plans/<x>.md`, no task folder): `verify.md` goes next to the intent when the
   plan has an `Authority:` line or a link to an intent; otherwise `<plan>.verify.md`.
 - `accept` → jump to **Accept** below.
 
@@ -50,14 +57,23 @@ Read `${CLAUDE_SKILL_DIR}/references/CHECKS.md` and run build, test, lint and th
 for this project. Running the project's test command and read-only HTTP checks (`curl` GET against a local/staging URL
 named in the plan) is allowed; **installing dependencies is not.** A tool or command that is missing → `not run — <reason>`; never
 write it down as a pass. Honour the plan's `Settings:` — `tests — no` means no test run and no failure for it.
-Output is one line per check, as CHECKS.md says. Strictness: **L is strict by default** (`--strict` for M) — then a
+Output is one line per check, as CHECKS.md says.
+Two more gates join the same lines:
+- **Architecture gate.** If `docs/architecture.md` exists, read its layer dependency rules and grep the changed files'
+  imports against them: each `MUST NOT:` line written by `/keystone:architecture` carries its own `check: <grep>` —
+  run it on the changed files only; `check: review` lines go to the verifier. Print
+  `Architecture gate: pass | fail — <rule, file:line> | n/a` (n/a = no such file or no rules in it).
+- **Security gate.** On L whose plan has the `Threats:` block or a `/keystone:security` task (security/auth/payments/PII),
+  `/keystone:security` must have been run for this diff: take its `Security gate: pass | warn | fail` line from the task
+  folder or run it now. `fail` without a matching entry in `docs/keystone/security-ignores.md` → verdict FAIL; none run →
+  `not proven`. Not a security change → `n/a`. Strictness: **L is strict by default** (`--strict` for M) — then a
 lint warning, an unfinished-work marker (TODO / FIXME / HACK) or an undocumented env variable in the changed files is
 `wrong`, and a `not run` check is `not proven`; in normal mode they are reported as open work only.
 
 ## Step 3 — the verifier
 
 Call the agent (Agent tool, `subagent_type: "keystone:verifier"`). Its prompt contains **only** facts, no opinion:
-plan path, intent path, base ref, the Step-2 lines, and the project-rules file list. It returns one line per task,
+plan path, intent path, base ref, the Step-2 lines (incl. the Architecture and Security gate lines), and the project-rules file list. It returns one line per task,
 Reconciliation row and `I-n`, then `Unrequested`, `Settings`, `Rules gate`, the count line and the `Keystone Chain` line.
 Its first checked line is `Done means:` — every outcome there gets ok / not proven / wrong.
 Before writing verify.md, **cross-check every `ok` and `wrong` line** against the cited `file:line` (open it and confirm
@@ -107,10 +123,10 @@ Strict mode (L by default, or `--strict`) additionally requires: every task `ok`
 (tests are required there unless `tests — no`), lint clean, no unfinished-work markers and no undocumented env
 variables in the changed files, Rules gate `pass`. Anything short of that is `wrong` or `not proven` as in Step 2.
 
-- **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Settings: ok`; `Rules gate` not `fail`.
+- **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Settings: ok`; `Rules gate` not `fail`; `Architecture gate` not `fail`; `Security gate` not an unignored `fail`.
 - **PASS-UNPROVEN** — no `missing` / `wrong` / `unrequested`, `Settings: ok`, Rules gate not `fail`, but at least one
   `not proven` or `BLOCKED` row.
-- **FAIL** — anything else: a `missing`, `wrong` or `unrequested` line, `Settings: violated`, `Rules gate: fail`.
+- **FAIL** — anything else: a `missing`, `wrong` or `unrequested` line, `Settings: violated`, `Rules gate: fail`, `Architecture gate: fail`, an unignored `Security gate: fail`.
 
 ## Step 5 — record
 
@@ -178,7 +194,12 @@ The `Keystone Chain` line is mandatory and printed verbatim even when everything
 changed after the plan's first commit → name it; intent and plan first committed together → `not measurable`.
 
 **Correctness review:** run the built-in `/code-review` — verify checks the plan against the diff, not whether the code
-is well written. On L, do it before `git push`.
+is well written. On L, also recommend `/keystone:review` (with `+check`) before `git push`, in `Blocked on me:`.
+
+**Roadmap and lessons (one line each, in `Found:` / `Blocked on me:`).** If the intent has `Roadmap: M-<n>` and the verdict is
+PASS (or `accept` was just recorded), offer: `Milestone M-<n> done? Tick it with /keystone:roadmap` — verify never edits
+`docs/roadmap.md`. After a `Mode: fix` plan, or a FAIL that was later fixed, recommend `/keystone:evolve` to turn the lesson
+into a project rule.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
 the **very last thing** in the answer: the recommendation (former `Next:`) goes inside `Blocked on me:` (or `Found:`),

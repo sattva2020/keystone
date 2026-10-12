@@ -1,6 +1,6 @@
 {
   "name": "@sattva2020/keystone",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Keystone — intent-first workflow for Claude Code (plugin).",
   "type": "module",
   "private": true,

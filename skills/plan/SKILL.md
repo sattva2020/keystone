@@ -16,6 +16,10 @@ is no separate spec document). Output: `plan.md` with `Status: draft`, then `app
 Format, template, example task, logging checklist and the Required Detail Gate:
 read `${CLAUDE_SKILL_DIR}/references/PLAN-FORMAT.md` before writing the plan.
 
+**Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
+headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
+and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
+
 Do not skip a step: re-read the step list before you finish and confirm each applicable one is done.
 
 ## Step 0: Level, input, project context
@@ -33,15 +37,15 @@ security/auth/payments, a module owned by others, unclear "done") makes it L.
   "Plan anyway".
 
 **Task folder.** `docs/keystone/<YYYY-MM-DD>-<slug>/` (slug: lowercase, hyphenated, ≤ 50 characters). If the project
-has AI Factory (`.ai-factory/config.yaml` exists), read only `paths.specs` from it and use that directory instead of
-`docs/keystone`. Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by
+has AI Factory, as a fallback location (`.ai-factory/config.yaml` exists), read only `paths.specs` from it and use that
+directory instead of `docs/keystone`. Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by
 the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or
 implementing.
 
 **Existing plan (one plan per task).** If the argument is a path to an existing `plan.md` (or its folder) with
 `Status: draft`, do not create a folder or rewrite the plan: go straight to § Before approval → § On Approve (used by
 `/keystone:fix` M, `/keystone:implement` draft-stop, `/keystone:check`, and a plan with open questions). If a plan for
-this intent/task already exists (in the task folder, or in `.ai-factory/plans/*.md` that cites this intent), refine it
+this intent/task already exists (in the task folder, or in a fallback `.ai-factory/plans/*.md` that cites this intent), refine it
 instead of creating a second one.
 
 **Intent mode** — the argument is a path to an `intent.md` or to a folder that contains one. Always L.
@@ -54,8 +58,12 @@ Preserve internal whitespace, line breaks, wording, casing and punctuation exact
 `## Original Request`; do not rewrite, summarize, translate or normalize it. In intent mode the request is the user's
 words that came with the path; if there were none, the intent's Problem line is cited instead and the section says so.
 
-**Project context.** Read what exists: `CLAUDE.md`, `AGENTS.md`, `.ai-factory/RULES.md` and `.ai-factory/rules/*.md`,
-and the `docs/` overview. Rules there are MUST / MUST NOT. Use this context when exploring, writing task text (correct
+**Project context.** Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
+`.claude/rules/**/*.md` (a rule with `paths:` frontmatter applies only to matching files); `AGENTS.md` if present.
+Fallback only if the project uses AI Factory and those files are absent.
+Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+MUST / MUST NOT lines there are
+project rules. Use this context when exploring, writing task text (correct
 technologies) and planning file structure (follow project conventions and layer boundaries). Treat explicit rules as
 authoritative requirements: more specific area rules override base rules, which override project-wide axioms.
 **Rules beat the template:** if a project rule says "tasks MUST include X" or "plan MUST have section Y", augment the
@@ -193,8 +201,16 @@ after it). Check the **text of every task** — including its Logging and Testin
 MUST/MUST NOT the plan would break as
 `MUST violations: <rule> — <task>`. A MUST violation is a **blocker**, not a risk: fix the plan or ask the user.
 
+If `docs/architecture.md` exists, the Rules check includes its layer dependency rules: a task whose files import across a
+forbidden direction is a MUST violation like any other.
+
 **Risks.** `## Risks` after the Rules check line: `Could break:` / `Riskiest step:` / `Rejected alternatives:` — three
 lines on M, more allowed on L.
+
+**L touching security / auth / payments / PII** (the L sign from `/keystone:start`): add a `Threats:` block to Risks — one
+line per threat (what an attacker or a mistake could do, where, and the task that closes it) — and add a task
+`Run /keystone:security <scope> — files: … — check: Security gate pass|warn` before the final verify. Not security → no
+block, no task.
 
 ## Important rules
 

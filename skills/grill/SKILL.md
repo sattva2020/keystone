@@ -53,14 +53,13 @@ nodes below it — ask the rest of the frontier now. Use the facts to make recom
 
 The frontier = every decision whose prerequisites are closed. A round holds up to ~8 questions; a longer frontier is
 split into consecutive rounds. A question whose answer depends on another question still
-open in this round belongs to a later round. Number every question and give your recommendation with one line of why:
+open in this round belongs to a later round. Number every question and give your recommendation with one line of why. Plain Markdown, never a code block (a code
+block renders as a monospace wall); one blank line between questions:
 
-```text
-❓ Q1 — <decision>: <the question, with the options when there are several>
-➡️ Recommended: <answer> — <why, citing the fact you found>
-```
+> **Q1 · <decision>** — <the question; options as `a)` / `b)` when there are several>
+> ➡️ Recommended: **<answer>** — <why, citing the fact you found>
 
-Ask a round as plain text in the ❓/➡️ format above. Use AskUserQuestion only when the round has at most 4 questions
+Ask a round as plain text in this format. Use AskUserQuestion only when the round has at most 4 questions
 and all of them have discrete options (recommended option first). Never re-ask a decision the user already answered.
 **Verify facts in recommendations.** Every recommendation that contains a fact (price, limit, version, name, path) is
 checked against a source in the repo or the docs and cites it; a mismatch with the source is stated aloud (lesson: $49
@@ -87,8 +86,14 @@ who creates / launches it; who sees it or gets access; repeats and frequency; li
 delivery or execution fails (offline, outage); how it is cancelled or rolled back; the done criterion. An area or node
 with neither a `D#` nor `n/a (user)` → one more round. The summary is shown only when the table is complete.
 
-Show the normalized result, one line per decision — `D<n>. <decision> → <answer>` — plus `Open:` for anything the user
-deferred, and ask for **explicit confirmation**. "OK to all" given to raw rounds is not that confirmation; the
+Show the normalized result as a Markdown table, never inside a code block:
+
+| # | Decision | Answer |
+|---|---|---|
+| D1 | <decision, a few words> | <answer, one short sentence; **bold** the key value> |
+
+Rows grouped by area in the order of the coverage table; keep each cell short (details go to the caller's artifact).
+Below the table: `Open:` as a bullet list for anything the user deferred. Then ask for **explicit confirmation**. "OK to all" given to raw rounds is not that confirmation; the
 normalized list is what gets confirmed. Do not act on the result before it is confirmed.
 
 ## Output contract

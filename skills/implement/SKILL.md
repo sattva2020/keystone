@@ -2,7 +2,7 @@
 name: implement
 description: "Keystone: execute an approved plan task by task — requirement consistency gate, checkbox after every task, resume after /clear, plan drift edited in the same commit, literal BLOCKED:, line-by-line evidence report. Use only via explicit /keystone:implement [plan path]."
 argument-hint: "[path to plan.md]"
-allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion
+allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Skill
 disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-implement/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
@@ -12,12 +12,16 @@ disable-model-invocation: true
 Execute the tasks of an approved plan one at a time, tick each box immediately, and keep the plan equal to what was
 built. Progress lives in the plan's checkboxes and in git, so a new session can continue after `/clear`.
 
+**Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
+headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
+and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
+
 Keep going without asking while the next step needs no human decision; stop only before a destructive action, an irreversible external action, or an action outside the repository — and say which.
 
 ## Step 0: Find the plan and load context
 
 1. **Plan:** the argument is a path to `plan.md`. Without it, take the active plan. Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing.
-   (`paths.specs` comes from `.ai-factory/config.yaml` when the project has AI Factory.)
+   (`paths.specs` comes from the fallback `.ai-factory/config.yaml` when the project has AI Factory.)
    No plan found → say "No plan. Run `/keystone:start <task>` first." and STOP.
 2. **Status** (header line `Level: … · Mode: … · Status: …`):
    - `draft` → STOP: "Approve the plan first (`/keystone:plan <plan path>`), then run implement."
@@ -28,10 +32,13 @@ Keep going without asking while the next step needs no human decision; stop only
    - `tests — yes`: every task that changes behaviour gets a test in the same task.
    - `tests — no`: write none, unless a task lists one.
    - `logging — minimal|standard|verbose`: read `${CLAUDE_SKILL_DIR}/references/LOGGING.md` only if it is not `minimal`.
-   - `docs — yes`: do a documentation step before the final report (update the docs the change affects).
-4. **Project context:** read `CLAUDE.md`, `AGENTS.md`, `.ai-factory/RULES.md` and `.ai-factory/rules/*.md` when they
-   exist, plus a `docs/` overview. Rules there are MUST / MUST NOT; they override general habits. Follow the stack, import
-   patterns, file placement and module boundaries they describe.
+   - `docs — yes`: the documentation step before the final report is `/keystone:docs update <affected topics>`.
+4. **Project context:** read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
+   `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
+   projects without them.
+   Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+   MUST / MUST NOT lines there override general habits. Follow the stack, import patterns, file
+   placement and module boundaries they describe.
 5. **Context:** if the plan's `## Requirements Reconciliation` cites an `intent.md`, read it once — it explains *why*;
    the plan stays the source of *what* and *how*. The intent is read-only here.
 6. **Baseline first.** Run `git status`. If the plan file or the cited `intent.md` is untracked or modified and no code
@@ -144,7 +151,14 @@ calls); reading the rule or the code without that check is presence → `not run
 you just printed (not from memory); `a + b + c + d` must equal `n`, and `n` must equal the number of table rows —
 recount if it does not. If the plan has no reconciliation section, say so in one line.
 
-Before the report, if `docs — yes`, do the documentation step: update the docs the change affects and commit them.
+Before the report, if `docs — yes`, run the documentation step `/keystone:docs update <affected topics>` and commit the
+result.
+
+**Project rules learned (optional).** If the work exposed a convention the project does not state yet, you may propose up
+to 3 new rules at the end of the task. Ask once (AskUserQuestion, one option per rule plus "none") and, only on an
+explicit yes, write each to `.claude/rules/<topic>.md` (`paths:` frontmatter when it applies to part of the tree). Never
+edit an existing rule silently: a change to an existing rule is shown as a diff and needs its own yes. No yes → write
+nothing.
 
 Close with the level and cost line:
 `Level: <S|M|L from the plan> · cost: $<X> (from /cost) | cost: not measured`.

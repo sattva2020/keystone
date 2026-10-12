@@ -43,8 +43,10 @@ claude plugin install keystone@keystone
 
 Try it without installing: `claude --plugin-dir <path-to-this-repo>`.
 
-Requirements: Claude Code 2.1.218 or newer (skills with `background`), and Node.js on `PATH` for the hooks. Plugin
-skills are namespaced `keystone:`, so your personal skills in `~/.claude/skills` do not shadow them.
+Requirements: Claude Code 2.1.218 or newer (skills with `background`), and Node.js on `PATH` for the hooks. The mod
+(`/keystone-status` and the status line) needs Claude Code 2.1.287+ in the terminal or 2.1.286+ in Desktop; the hooks
+work without it. Plugin skills are namespaced `keystone:`, so your personal skills in `~/.claude/skills` do not shadow
+them.
 
 ## How it works
 
@@ -67,6 +69,10 @@ Keystone follows [Anthropic's AI-native SDLC playbook](https://claude.com/resour
 
 Not every change needs all six: `/keystone:start` sizes it first. **S** — edit and check. **M** — short plan, implement,
 verify. **L** — the whole chain above.
+
+Below the chain sits a row of tools you run when you need them: `setup` (project context), `architecture`, `docs`,
+`security`, `review`, `dockerize`, `ci`, `evolve` / `transfer` (lessons into rules), `roadmap`, `ask` / `reference`,
+`distill`, `qa` / `qa-check`. See the [full reference](docs/skills.md).
 
 ## See it in action
 
@@ -121,16 +127,57 @@ line in its header; you can change it at Approve.
 
 ## Commands
 
+All 23 commands, grouped. Parameters are in brackets; `|` is a choice.
+
+**Task chain**
+
 | Command | What it does |
 |---|---|
-| `/keystone:start <task>` | sizes the change S/M/L, picks the route and an exploration budget; irreversible external actions only after their preconditions are checked |
-| `/keystone:grill [topic]` | interviews you in rounds over the whole decision tree (implementation, UX, edge cases, failures, data, security, trade-offs, what "done" means). The agent finds facts, you make decisions |
-| `/keystone:intent [idea]` · `accept <path>` | writes `intent.md` in the author's words: numbered `I-n` lines, a decision log, a human sign-off |
-| `/keystone:plan <intent or task>` | reconciliation table against the intent, rules check, Risks, tasks with files and checks, Approve with a base commit |
-| `/keystone:check [intent] [plan]` | independent check in clean contexts: an analyzer (code, library versions, deploy and env, privacy, computations, platforms) and a validator; intent Coverage %; edits the plan only after you answer |
-| `/keystone:implement [plan]` | tasks in order with `[x]` after each, resumable after `/clear`; plan drift is fixed in the plan in the same commit; literal `BLOCKED:`; a line-by-line report |
-| `/keystone:fix <bug>` | regression first: reproduce, write a failing test in a new file, fix, same check green. S goes straight, M through a plan |
-| `/keystone:verify [plan]` · `accept` | build, tests, lint, then a verifier in a clean context: ok / missing / wrong / not proven / BLOCKED per row, unrequested work, an adversarial pass over changed logic. Verdict PASS / PASS-UNPROVEN / FAIL, saved to `verify.md` |
+| `/keystone:start <task>` | sizes the change S/M/L and picks the route |
+| `/keystone:grill [topic]` | interviews you over the whole decision tree; returns a numbered decision list, writes no file |
+| `/keystone:intent [idea]` · `accept <path>` | writes `intent.md` in your words: numbered `I-n` lines, a decision log, a sign-off |
+| `/keystone:plan <intent or task> [S\|M\|L]` | the plan is the spec: reconciliation, rules check, Risks, tasks with checks, Approve |
+| `/keystone:check [intent] [plan]` | independent plan check in clean contexts; intent coverage % |
+| `/keystone:implement [plan]` | tasks in order, `BLOCKED:` instead of "not run", a decision log, resumable after `/clear` |
+| `/keystone:verify [plan [base]] [--strict]` · `accept` | build, tests, lint, then a verifier in a clean context; architecture and security gates; PASS / PASS-UNPROVEN / FAIL |
+| `/keystone:fix <bug>` | regression first: a failing test in a new file, then the smallest fix |
+
+**Project context**
+
+| Command | What it does |
+|---|---|
+| `/keystone:setup [description]` | writes a short `CLAUDE.md`, `.claude/rules/base.md` and a project `.mcp.json` after a diff and a "yes"; imports an existing `AGENTS.md` |
+| `/keystone:architecture [pattern]` | picks an architecture pattern and writes `docs/architecture.md` with a grep check per rule |
+| `/keystone:docs [update <files\|topics>] [--web]` | README as a landing page and topic pages in `docs/` |
+
+**Checks and quality**
+
+| Command | What it does |
+|---|---|
+| `/keystone:security [category\|path\|plan] \| ignore <id> <reason>` | OWASP, prompt-injection and race-condition audit; `Security gate: pass\|warn\|fail` |
+| `/keystone:review [PR\|ref\|empty = staged]` | review without edits; a clean-context validator rechecks every finding |
+| `/keystone:qa [--all] [change-summary\|test-plan\|test-cases] [plan\|ref]` | change summary, test plan and manual scenarios linked to `I-n` |
+| `/keystone:qa-check [human\|agent] [plan\|qa folder\|branch]` | runs the `qa` scenarios; pass / fail / blocked with evidence |
+| `/keystone:ask <question>` | answers only on evidence, otherwise `INSUFFICIENT INFORMATION` |
+
+**Build and ship**
+
+| Command | What it does |
+|---|---|
+| `/keystone:dockerize [--audit]` | Dockerfile, compose, hardened production overlay; or an audit |
+| `/keystone:ci [github\|gitlab] [--enhance]` | CI pipeline from the tools the project really has |
+
+**Lessons and knowledge**
+
+| Command | What it does |
+|---|---|
+| `/keystone:roadmap [check\|vision]` | `docs/roadmap.md` with milestones `M-n` |
+| `/keystone:evolve [all\|stage\|topic]` | turns repeated lessons into `.claude/rules/` after a "yes" |
+| `/keystone:transfer <project path> [all\|stage\|topic]` | brings rules and lessons from another of your projects |
+| `/keystone:reference <url\|path>… [--name] [--update]` · `list\|show\|delete` | project reference: conclusions, prices, limits with a source |
+| `/keystone:distill <path\|url>… [--name] [--path] [--update] [--split]` | turns a book or documents into a Claude Code skill |
+
+Full reference with models, "when to use" and who calls each command: [`docs/skills.md`](docs/skills.md).
 
 ## Gates (hooks)
 
@@ -205,9 +252,9 @@ Mods need Claude Code 2.1.287+ (terminal) or 2.1.286+ (Desktop). In `claude -p` 
 Adapted: the playbook has a `spec.md` between intent and plan; Keystone drops it, **the plan is the spec**. The S/M/L
 levels are new here.
 
-Credits: the plan, check, implement, fix and verify skills are derived from
-[AI Factory](https://github.com/lee-to/ai-factory) 2.19.0 (MIT) and reworked; see
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Keystone is not affiliated with KeystoneJS or keystone-engine.
+Credits: 21 skills are ported from [AI Factory](https://github.com/lee-to/ai-factory) 2.19.0 (MIT) and reworked, 5 of
+its skills are replaced by Claude Code mechanisms and 6 are skipped; what was taken and why is in
+[`docs/ai-factory.md`](docs/ai-factory.md). Attribution: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Keystone is not affiliated with KeystoneJS or keystone-engine.
 
 ## Known limitations
 

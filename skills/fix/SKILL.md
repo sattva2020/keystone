@@ -16,6 +16,10 @@ Fix a specific bug or problem in the codebase. Two modes: **fix now** (level S, 
 `/keystone:implement`). The default workflow is regression-first whenever a regression check is needed: reproduce the
 problem, confirm the reported behavior, implement the fix, then verify the same check passes.
 
+**Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
+headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
+and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
+
 ## Workflow
 
 Keep going without asking while the next step needs no human decision; stop only before a destructive action, an irreversible external action, or an action outside the repository — and say which.
@@ -51,16 +55,19 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
 ### Step 0: Existing fix plan and project context
 
 1. **Active plan.** It is the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. (`paths.specs` comes from
-   `.ai-factory/config.yaml` when the project has AI Factory.)
+   the fallback `.ai-factory/config.yaml` when the project has AI Factory.)
    - `$ARGUMENTS` empty and the active plan has `Mode: fix` → "Found existing fix plan. Executing the fix based on the
      plan." Skip Step 1; if `approved`, set `Status: implementing`; if `draft`, STOP ("Approve it in `/keystone:plan`
      first"). Go to Step 2 using the plan as a guide, still applying the Regression-First Policy.
    - `$ARGUMENTS` empty and no fix plan → "No fix plan and no problem description. Run `/keystone:fix <description>`."
      STOP.
    - `$ARGUMENTS` given while another plan is active → say which one and ask: finish it, or mark it `abandoned`.
-2. **Project context.** Read `CLAUDE.md`, `AGENTS.md`, `.ai-factory/RULES.md` and `.ai-factory/rules/*.md` when they
-   exist, plus a `docs/` overview, to avoid fixes that violate project structure or conventions. Rules there are
-   MUST / MUST NOT. Infer the Settings (tests: a runner or test files exist; logging: an existing logger; docs: `docs/`
+2. **Project context.** Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
+   `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
+   projects without them.
+   Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+   Use them to avoid fixes that violate project structure or conventions; MUST / MUST NOT lines
+   there are project rules. Infer the Settings (tests: a runner or test files exist; logging: an existing logger; docs: `docs/`
    or a README with usage sections) — they are written into the plan, never asked.
 
 ### Step 1: Understand the problem and choose the mode
@@ -73,7 +80,7 @@ Then ask once (AskUserQuestion, recommended first): **Fix now** — investigate 
 **Plan first** — write a plan for review, fix later (level M). A bug that touches data/schema, security/auth/payments or
 a module owned by others is L: say so and use `/keystone:start` instead.
 
-- **Fix now (S)** → create `<paths.specs from .ai-factory/config.yaml if it exists, else docs/keystone>/<YYYY-MM-DD>-fix-<slug>/plan.md` (slug from the problem) in the short format below, with `Status: implementing`, then go to Step 2.
+- **Fix now (S)** → create `<paths.specs from the fallback .ai-factory/config.yaml if it exists, else docs/keystone>/<YYYY-MM-DD>-fix-<slug>/plan.md` (slug from the problem) in the short format below, with `Status: implementing`, then go to Step 2.
 - **Plan first (M)** → Step 1.1.
 
 ```markdown

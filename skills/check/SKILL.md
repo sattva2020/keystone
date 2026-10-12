@@ -13,6 +13,10 @@ The plan was written by one context; this skill re-checks it with two other cont
 shows the human only what survives. It is read-only for code: it never edits source files, only the plan, and only after
 an explicit answer.
 
+**Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
+headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
+and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
+
 ## Core idea
 
 (Cost: two Opus agents. The validator is mandatory here; in upstream AI Factory it was the optional `+check`.)
@@ -28,12 +32,14 @@ an explicit answer.
 - One path (plan): take the intent from the plan's `Authority:` line, if there is one. No Authority line → no intent;
   say so, skip `intent-gap` and the I-n lines (Coverage then reads `n/a`).
 - Nothing: the active plan. It is: the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. (`paths.specs` comes from
-  `.ai-factory/config.yaml` when it exists.) Its intent from Authority.
+  the fallback `.ai-factory/config.yaml` when it exists.) Its intent from Authority.
 - No plan found: print `FAIL: plan not found` and stop.
 
 Read the plan **completely**. Note what is done (`- [x]`, never touched), the `## Original Request` (the scope anchor,
 never touched), the Settings line, the Requirements Reconciliation table, the Risks, the Tasks and the Commit Plan.
-Project rules: `CLAUDE.md`, `AGENTS.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md` — those that exist. Intent
+Project rules (those that exist): `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md`
+(`paths:` rules apply only to matching files), `AGENTS.md`; fallback only for AI Factory projects without them:
+fallback files `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`. Intent
 status not `accepted`, or intent.md changed after the plan's first commit (`git log`) → remember it for the Notes line.
 
 ## Step 2 — analyze

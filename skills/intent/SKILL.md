@@ -12,6 +12,10 @@ effort: high
 Source: Anthropic, "The AI-native SDLC playbook" (claude.com/blog, 2026-08-21), adapted.
 Rule of the chain: **every stage ends with a committed file, and the next stage starts by reading it — not the chat.**
 
+**Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
+headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
+and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
+
 Chain: `intent.md` → plan → code + tests → verify. There is **no separate spec stage**: the plan is the spec.
 This skill captures only *what and why*; *how* belongs to the plan.
 
@@ -22,10 +26,16 @@ Two subcommands:
 
 ## Step 0: Context
 
-- **Where it lives.** If `.ai-factory/config.yaml` exists, use its `paths.specs` (default `.ai-factory/specs/`);
-  otherwise `docs/keystone/`. Intent home: `<root>/<YYYY-MM-DD>-<slug>/intent.md` — one folder
+- **Where it lives.** Default `docs/keystone/`. Fallback for AI Factory projects: if `.ai-factory/config.yaml` exists,
+  use its `paths.specs` (default fallback `.ai-factory/specs/`). Intent home: `<root>/<YYYY-MM-DD>-<slug>/intent.md` — one folder
   per change; `slug` = kebab-case of the idea, ≤ 6 words, ASCII. In plain Claude Code the plan goes next to it as
   `plan.md`.
+- **Research (L, optional).** If the "how" is unclear — a new integration, an unfamiliar library, several architectural
+  paths — offer research before the interview (AskUserQuestion: "Research first" / "Skip"). On yes: facts are collected
+  by a subagent (`Task`, `subagent_type: Explore`, `model: haiku`, facts only — no opinions) and by Context7 for library
+  docs, and written to `<intent home>/research.md` with a `## Active summary` (what is established, what stays unknown) and
+  a `## Sources` list (file:line or URL for every fact). The interview then starts from that file: facts in it are not
+  asked again. The user declined, or the "how" is already clear → no research, no file.
 - **No idea given.** Take the idea from the current conversation and say in one line what you took and from where.
   Nothing to take → ask for the idea in one line and stop.
 - **Plan already exists** for this change (a plan file in the folder or one the user names): this intent is
@@ -57,6 +67,7 @@ Two subcommands:
 Author: <git user.name or the user's name> · Created: <YYYY-MM-DD> · Status: draft
 Source: <idea | ticket URL | incident/alert link>
 <Written after plan: <path> — only for a retrospective intent>
+<Roadmap: M-<n> — optional; only when docs/roadmap.md exists and the task belongs to a milestone>
 
 ## Problem
 <what hurts today, for whom, how often — originator's words>
@@ -79,6 +90,8 @@ Source: <idea | ticket URL | incident/alert link>
 - <YYYY-MM-DD> Q: <question asked> → A: <answer> (D<n>)
 ```
 
+   `Roadmap: M-<n>` is optional: add it only when `docs/roadmap.md` exists and the task belongs to that milestone
+   (ask in one line if unclear); `/keystone:verify` then offers to tick the milestone via `/keystone:roadmap`.
    The template is mandatory: Status, Problem, Desired outcome, Affected users and systems, Constraints, Open questions,
    Decisions log. I-n numbers ascend in order of appearance.
 

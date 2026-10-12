@@ -22,6 +22,9 @@ Look only at what you can see cheaply (the task text, file names, one or two sea
 
 Any single L sign makes it L. Unsure between two levels → propose the higher one and say why in one line.
 
+No `CLAUDE.md` in the project (root or `.claude/`)? Add one line to the answer: "No CLAUDE.md — `/keystone:setup`
+creates it (stack, commands, rules) after your yes." Do not block and do not run it; on S add nothing else.
+
 Ask once: `Level: M — <one-line reason>. OK / S / L?` (AskUserQuestion, recommended first). The human's answer wins;
 record the level in the plan header or the report.
 
@@ -59,6 +62,12 @@ from the higher row appears — say so; never re-size down silently.
   Settings (tests, logging, docs) from the repo instead of asking, asks the three risk questions and Approve / Adjust.
 - **L** — `/keystone:intent <idea>` (grill → intent.md → human reads and accepts), then `/keystone:plan <intent path>`,
   which runs `/keystone:check` (analyzer + validator in clean contexts) before Approve.
+- **Where the other skills switch on.** Not separate steps — each is pulled in by the stage that needs it: L with
+  security/auth/payments/PII → `/keystone:plan` adds a threat block and a `/keystone:security <scope>` task, and
+  `/keystone:verify` requires its result; `docs — yes` → `/keystone:implement` runs `/keystone:docs update`;
+  `docs/architecture.md` exists → `/keystone:verify` runs the architecture gate (`/keystone:architecture` creates that
+  file); L → `/keystone:verify` recommends `/keystone:review` before push; a new project → `/keystone:setup`,
+  later `/keystone:dockerize` and `/keystone:ci` on request. S gets none of these.
 - After Approve: commit, then a **fresh session** (`/clear`, not `/compact`) → `/keystone:implement <plan>` on Sonnet →
   `/keystone:verify <plan>` in a fresh session. Until verify passes, `git push` / `gh pr create` are closed by the hook.
 

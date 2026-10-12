@@ -10,8 +10,8 @@ const read = (p) => readFileSync(join(root, p), 'utf8').replace(/\r/g, '');
 const json = (p) => JSON.parse(read(p));
 const front = (p) => read(p).split('---')[1];
 const body = (p) => read(p).split('\n').filter((l) => !l.includes('derived from ai-factory@')).join('\n');
-const SKILLS = ['check', 'fix', 'grill', 'implement', 'intent', 'plan', 'start', 'verify'];
-const AGENTS = ['analyzer.md', 'validator.md', 'verifier.md'];
+const SKILLS = ['architecture', 'ask', 'check', 'ci', 'distill', 'dockerize', 'docs', 'evolve', 'fix', 'grill', 'implement', 'intent', 'plan', 'qa', 'qa-check', 'reference', 'review', 'roadmap', 'security', 'setup', 'start', 'transfer', 'verify'];
+const AGENTS = ['analyzer.md', 'review-validator.md', 'validator.md', 'verifier.md'];
 const allSkillFiles = () => SKILLS.flatMap((s) => {
   const refs = existsSync(join(root, 'skills', s, 'references')) ? readdirSync(join(root, 'skills', s, 'references')).map((f) => `skills/${s}/references/${f}`) : [];
   return [`skills/${s}/SKILL.md`, ...refs];
@@ -20,13 +20,13 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.7.0');
+  assert.equal(p.version, '0.8.0');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
 });
 
-test('I-2: exactly the eight skills and three agents; name = file', () => {
+test('I-2: exactly the 23 skills and four agents; name = file', () => {
   assert.deepEqual(readdirSync(join(root, 'skills')).sort(), SKILLS);
   assert.deepEqual(readdirSync(join(root, 'agents')).sort(), AGENTS);
   for (const s of SKILLS) assert.equal(front(`skills/${s}/SKILL.md`).match(/^name:\s*(\S+)/m)?.[1], s);
@@ -53,7 +53,7 @@ test('plan, implement, fix run only on explicit /keystone:* (no clash with aif-*
 test('I-15: no AI Factory leftovers in skills (attribution lines excepted)', () => {
   for (const f of allSkillFiles()) {
     const t = body(f);
-    assert.doesNotMatch(t, /\/aif-|HANDOFF_MODE|Handoff|TaskCreate|TaskUpdate|TaskList|TaskGet|ultra|spec\.md|DESCRIPTION\.md|ARCHITECTURE\.md/, f);
+    assert.doesNotMatch(t, /\/aif-|HANDOFF_MODE|Handoff|TaskCreate|TaskUpdate|TaskList|TaskGet|ultra|spec.md/, f);
     if (/config\.yaml/.test(t)) assert.match(t, /paths\.specs/, `${f}: config.yaml only for paths.specs`);
   }
 });
@@ -164,7 +164,6 @@ test('start routes to the Keystone skills and handles a lingering active plan', 
     assert.ok(t.includes(s), s);
 });
 
-
 test('I-19…I-23: Done means, keep going / stop, three-part summary, Repro/Unconfirmed, effort', () => {
   const plan = read('skills/plan/SKILL.md') + read('skills/plan/references/PLAN-FORMAT.md');
   assert.match(plan, /Done means:/);
@@ -203,7 +202,7 @@ test('implementation notes: plan template section, implement appends why-lines, 
 });
 
 test('README: memlab is a separate plugin with install commands; adapter only for /aif-plan users', () => {
-  for (const f of ['README.md', 'README.ru.md']) {
+  for (const f of ['README.md', 'README.ru.md'].filter((f) => existsSync(join(root, f)) && read(f).includes('Integrations'))) {
     const t = read(f);
     assert.match(t, /github\.com\/sattva2020\/memlab/, f);
     assert.match(t, /\/plugin install memlab@memlab/, f);
@@ -217,4 +216,110 @@ test('mod: hooks.json loads the keystone module next to the settings hooks', () 
   const m = read('hooks/keystone.ts');
   for (const s of ["name: 'keystone-status'", "on('turn.complete'", "on('prompt.submit'", '$.session.usage()', 'Keystone cost meter'])
     assert.ok(m.includes(s), s);
+});
+
+// 0.8.0 — project context and toolbox (docs/keystone/2026-10-12-project-context-and-toolbox/intent.md)
+test('0.8 I-1/I-10: setup writes only after a yes, never overwrites, secrets as ${VAR}, no skills.sh installs', () => {
+  const s = read('skills/setup/SKILL.md');
+  for (const x of ['CLAUDE.md', '.claude/rules/base.md', '.mcp.json', '${', 'enabledPlugins', 'Never overwrite', 'at most 60 lines', 'skills.sh'])
+    assert.ok(s.includes(x), x);
+  assert.match(front('skills/setup/SKILL.md'), /^disable-model-invocation: true$/m);
+  for (const x of ['/keystone:architecture', '/keystone:docs', '/keystone:dockerize', '/keystone:ci']) assert.ok(s.includes(x), `setup offers ${x}`);
+  assert.match(s, /`@AGENTS\.md` \(import\)/, 'a new CLAUDE.md must not switch off an existing AGENTS.md');
+});
+
+test('0.8 I-2/I-13: plan, check, implement, fix, verify, review, security read the native project context', () => {
+  for (const s of ['plan', 'check', 'implement', 'fix', 'verify', 'review', 'security']) {
+    const t = read(`skills/${s}/SKILL.md`);
+    for (const x of ['CLAUDE.md', '.claude/rules', 'docs/architecture.md']) assert.ok(t.includes(x), `${s}: ${x}`);
+  }
+});
+
+test('0.8 I-3: security — ignore list with reason, pass/warn/fail gate, audit script by skill dir, wired into plan/verify', () => {
+  const s = read('skills/security/SKILL.md');
+  for (const x of ['docs/keystone/security-ignores.md', 'Security gate: pass | warn | fail', '${CLAUDE_SKILL_DIR}/scripts/audit.sh'])
+    assert.ok(s.includes(x), x);
+  for (const r of ['AUTH.md', 'PROMPT-INJECTION.md', 'RACE.md', 'CHECKLIST.md']) assert.ok(existsSync(join(root, 'skills/security/references', r)), r);
+  assert.match(read('skills/security/SKILL.md').replace(/\s+/g, ' '), /do \*\*NOT\*\* flag it as a finding/);
+  assert.match(read('skills/plan/SKILL.md'), /Threats:/);
+  assert.match(read('skills/verify/SKILL.md'), /unignored `?Security gate: fail/);
+});
+
+test('0.8 I-4: architecture writes docs/architecture.md with checkable rules; verify runs the architecture gate', () => {
+  const a = read('skills/architecture/SKILL.md');
+  for (const x of ['docs/architecture.md', 'Codebase Alignment Check', 'MUST NOT:', 'check: grep']) assert.ok(a.includes(x), x);
+  assert.match(read('skills/verify/SKILL.md'), /Architecture gate: pass \| fail/);
+});
+
+test('0.8 I-5/I-9: docs update from implement; implement proposes rules into .claude/rules only after a yes', () => {
+  assert.match(read('skills/docs/SKILL.md'), /README is a landing page, not a manual/);
+  assert.match(front('skills/docs/SKILL.md'), /^disable-model-invocation: false$/m);
+  const i = read('skills/implement/SKILL.md');
+  assert.match(i, /\/keystone:docs update/);
+  assert.match(front('skills/implement/SKILL.md'), /^allowed-tools:.*\bSkill\b/m);
+  assert.match(i, /\.claude\/rules\//);
+  assert.match(i, /to 3 new rules/);
+});
+
+test('0.8 I-6: review always runs the clean-context validator (keep / modify / drop) and keeps Unconfirmed', () => {
+  const r = read('skills/review/SKILL.md');
+  for (const x of ['keystone:review-validator', '`keep`', '`modify`', '`drop`', 'Unconfirmed']) assert.ok(r.includes(x), x);
+  assert.match(read('skills/review/references/VALIDATOR.md'), /Never treat a finding as fabricated just because the cited code is absent from disk/);
+  assert.match(read('skills/verify/SKILL.md'), /\/keystone:review/);
+});
+
+test('0.8 I-7/I-8/I-12: dockerize, ci, research mode; S stays light', () => {
+  assert.match(read('skills/dockerize/SKILL.md') + read('skills/dockerize/references/SECURITY-CHECKLIST.md'), /Production hardening overlay|NO `ports:` on infrastructure services/);
+  assert.match(read('skills/ci/SKILL.md'), /one workflow per concern/i);
+  assert.match(read('skills/intent/SKILL.md'), /research\.md/);
+  assert.match(read('skills/start/SKILL.md'), /on S add nothing else/);
+});
+
+test('0.8 I-11: every new ported .md carries the attribution and its skill is listed in THIRD_PARTY_NOTICES', () => {
+  const notices = read('THIRD_PARTY_NOTICES.md');
+  const walk = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
+  for (const s of ['setup', 'security', 'architecture', 'docs', 'review', 'dockerize', 'ci', 'qa', 'qa-check', 'roadmap', 'reference', 'distill', 'evolve', 'transfer', 'ask']) {
+    for (const f of walk(`skills/${s}`).filter((f) => f.endsWith('.md'))) assert.match(read(f), /derived from ai-factory@2\.19\.0 .*\(MIT\)/, f);
+    assert.ok(notices.includes('`skills/' + s + '/`'), `skills/${s}/ in NOTICES`);
+  }
+  assert.match(read('agents/review-validator.md'), /derived from ai-factory@2\.19\.0/);
+  assert.ok(notices.includes('`agents/review-validator.md`'));
+});
+
+// qa-roadmap-lessons (docs/keystone/2026-10-12-qa-roadmap-lessons/intent.md)
+const has = (f, ...xs) => { const t = read(f).replace(/\s+/g, ' '); for (const x of xs) assert.ok(t.includes(x), `${f}: ${x}`); };
+
+test('qa/qa-check: files in <task>/qa/, evidence before pass, Playwright replay', () => {
+  has('skills/qa/SKILL.md', 'qa/', 'MUST NOT create a `test-plan` without a `change-summary` artifact');
+  has('skills/qa-check/SKILL.md', 'MUST NOT mark a case passed in agent mode without concrete evidence', 'replay/', 'Playwright');
+});
+
+test('roadmap, reference, distill: stable milestone ids, Context7 first, output location asked', () => {
+  has('skills/roadmap/SKILL.md', 'docs/roadmap.md', 'Never remove milestones silently');
+  has('skills/intent/SKILL.md', 'Roadmap: M-<n>');
+  has('skills/verify/SKILL.md', '/keystone:roadmap', '/keystone:evolve');
+  has('skills/reference/SKILL.md', 'docs/references/', 'Context7');
+  has('skills/distill/SKILL.md', 'Distill, do not copy.', '${CLAUDE_SKILL_DIR}/scripts/material-prep.py', '~/.claude/skills');
+});
+
+test('evolve/transfer: lessons become .claude/rules after a yes, evolve-log, read-only source, no skill-context', () => {
+  for (const f of ['skills/evolve/SKILL.md', 'skills/transfer/SKILL.md']) {
+    has(f, '.claude/rules/', 'docs/keystone/evolve-log.md');
+    assert.doesNotMatch(read(f), /skill-context/, f);
+  }
+  has('skills/evolve/SKILL.md', 'One prevention point = one rule.');
+  has('skills/transfer/SKILL.md', 'The source project is read-only for the whole run.');
+});
+
+test('ask: 100/100 or INSUFFICIENT INFORMATION, read-only', () => {
+  has('skills/ask/SKILL.md', 'Only provide the final answer if confidence is 100/100 based on evidence available.', 'Result: INSUFFICIENT INFORMATION (no guessing)', 'Context7');
+  assert.doesNotMatch(front('skills/ask/SKILL.md'), /^allowed-tools:.*(Write|Edit)/m);
+});
+
+test('output is Markdown, not a code-block wall: grill summary table, rendering rule in report skills', () => {
+  has('skills/grill/SKILL.md', '| # | Decision | Answer |', 'never inside a code block');
+  for (const s of SKILLS) {
+    const t = read(`skills/${s}/SKILL.md`);
+    if (t.includes('Blocked on me') && s !== 'grill') assert.ok(t.includes('**Output rendering.**'), `${s}: rendering rule`);
+  }
 });

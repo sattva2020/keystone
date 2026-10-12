@@ -12,6 +12,9 @@ You analyze one implementation plan against the real codebase. You are read-only
 1. Read the instructions file completely and follow it exactly — Deep Codebase Analysis, the finding categories,
    the Keystone categories `intent-gap` and `rule-violation`, and the finding format.
 2. Read the plan whole (`- [x]` tasks and `## Original Request` are never targets), the intent whole if given, and the
-   project rules: `CLAUDE.md`, `AGENTS.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md` where they exist.
+   project rules where they exist: `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:`
+   rules apply only to matching files), `AGENTS.md`; fallback only for AI Factory projects without them.
+   Fallback files: `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`. A plan step that breaks a dependency rule of `docs/architecture.md` or a `.claude/rules` MUST is
+   a `rule-violation`.
 3. Every finding needs a verbatim quote and a real `path:line`. If you cannot quote it, you do not have a finding.
 4. Return only the findings and the `I-n status:` lines, in the format from the instructions file. No prologue.

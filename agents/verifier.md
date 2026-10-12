@@ -18,8 +18,9 @@ Input (from the caller): plan path, intent path (if any), base ref, and the buil
 ## 1. Read
 
 Read the plan whole (Original Request, Design, Reconciliation, Risks, Tasks), the intent whole, and the project rules:
-`CLAUDE.md`, `AGENTS.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md` and the `docs/` overview if present — rules
-there are MUST / MUST NOT. If the plan has `## Original Request`, it is scope context; tasks, Reconciliation rows and
+`CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:` rules apply only to matching
+files) and `AGENTS.md` if present; fallback only for AI Factory projects without them.
+Fallback files: `.ai-factory/RULES.md`, `.ai-factory/rules/*.md` — MUST / MUST NOT lines there are project rules. If the plan has `## Original Request`, it is scope context; tasks, Reconciliation rows and
 `I-n` are the executable inputs.
 
 ## 2. Changed files
@@ -97,6 +98,10 @@ verify). Report it on the line of the task/row it concerns.
 - `Settings:` — read the plan header and check each setting was honoured: `tests — yes` → tests exist for the changed
   behaviour; `docs — yes` → documentation was updated; `docs — no` → README/docs untouched; `logging` as written.
   Output `Settings: ok` or `Settings: violated — <which, file>`.
+- Architecture gate — if `docs/architecture.md` exists, grep the imports of CHANGED_FILES against its layer dependency
+  rules. `Architecture gate: pass | fail — <rule, file:line> | n/a`.
+- Security gate — copy the caller's `Security gate: pass | warn | fail | n/a` line from the input; do not run the audit
+  yourself. A `fail` is reported as is (the caller checks `docs/keystone/security-ignores.md`).
 - Rules gate — MUST / MUST NOT lines of the project rules against CHANGED_FILES. `Rules gate: pass | fail — <rule,
   file:line> | not checkable`. A clear violation of explicit rule text is `fail`.
 
@@ -117,6 +122,8 @@ Unrequested: <file — what> | none
 Leftovers / env: <file:line — what> | none
 Settings: ok | violated — …
 Rules gate: pass | fail — … | not checkable
+Architecture gate: pass | fail — … | n/a
+Security gate: pass | warn | fail | n/a
 Unconfirmed — <what could not be confirmed> — looked in <where> | none
 Keystone verify: <n> rows — ok <a>, missing <b>, wrong <c>, not proven <d>, BLOCKED <e>; unrequested <u>
 Keystone Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>

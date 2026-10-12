@@ -120,7 +120,7 @@ footer{color:var(--faint);font-size:13px;padding:30px 0 50px;border-top:1px soli
 <p class="lead">Keystone — самостоятельный плагин Claude Code. Он начинался как расширение AI Factory (<a href="https://github.com/lee-to/ai-factory" target="_blank" rel="noopener">lee-to/ai-factory</a>), теперь развивается отдельно: скиллы plan, check, implement, fix и verify портированы из AI Factory 2.19.0 (MIT, см. <code>THIRD_PARTY_NOTICES.md</code>) и доработаны. Адаптер AI Factory заморожен. Основа — <a href="https://claude.com/blog/the-ai-native-sdlc-playbook" target="_blank" rel="noopener">The AI-native SDLC playbook</a> (Anthropic, 21.08.2026) и <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Claude Code best practices</a>.</p>
 <p class="lead">Идея: церемония соответствует размеру задачи. Мелочь делается сразу, понятная задача получает план с рисками, задача с открытыми решениями проходит цепочку <code>intent → план → проверка плана → код → проверка</code>. Каждый этап заканчивается файлом, следующий начинается с этого файла, а не с переписки. Жёсткие правила держат хуки, а не только текст.</p>
 <div class="note">Отдельного <code>spec.md</code> нет: <b>план = спека</b>. Требования и дизайн пишутся в плане; его таблица сверки ссылается прямо на строки intent (<code>I-1</code>, <code>I-2</code>…). AI Factory для работы не нужен.</div>
-<p class="muted">Версия 0.6.0 · самостоятельный плагин <code>keystone</code> (8 скиллов <code>/keystone:*</code>); plan/check/implement/fix/verify портированы из AI Factory 2.19.0 (MIT) и доработаны; адаптер AIF заморожен.</p>
+<p class="muted">Версия 0.8.0 · самостоятельный плагин <code>keystone</code> (23 скилла <code>/keystone:*</code>); 21 скилл портирован из AI Factory 2.19.0 (MIT) и доработан.</p>
 
 <!-- ===================== PIPELINE ===================== -->
 <section id="pipeline">
@@ -296,7 +296,7 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
 <!-- ===================== SKILLS ===================== -->
 <section id="skills">
 <h2>Скиллы</h2>
-<p class="muted"><span class="pill new">плагин</span> — скилл <code>/keystone:*</code> · <span class="pill core">порт</span> — портирован из AI Factory 2.19.0 (MIT) и доработан · <span class="pill inj">адаптер</span> — заморожен, только для проектов, где план пишет <code>/aif-plan</code>.</p>
+<p class="muted"><span class="pill new">плагин</span> — скилл <code>/keystone:*</code> · <span class="pill core">порт</span> — портирован из AI Factory 2.19.0 (MIT) и доработан</p>
 
 <details class="skill" open><summary><span class="pill new">плагин</span><span class="name">/keystone:start</span><span class="what">Определяет уровень S / M / L, задаёт бюджет и маршрут.</span></summary><div class="body">
 <div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
@@ -405,6 +405,23 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
 <li>Строка <code>Keystone Chain:</code> есть в отчёте дословно, даже когда всё в порядке; <code>verify.md</code> закоммичен отдельно.</li></ul>
 </div></details>
 
+<h3>Остальные 15 скиллов (0.8)</h3>
+<p class="muted">Краткая сводка. Параметры, модели и «кто вызывает» — в <a href="skills.ru.md">справочнике</a>.</p>
+<div class="card tbl"><table>
+<tr><th>Группа</th><th>Скилл</th><th>Коротко</th></tr>
+<tr><td>Контекст проекта</td><td><code>/keystone:setup</code></td><td>Пишет короткий <code>CLAUDE.md</code>, <code>.claude/rules/base.md</code> и <code>.mcp.json</code> после диффа и «да». Готовый <code>AGENTS.md</code> импортирует через <code>@AGENTS.md</code>.</td></tr>
+<tr><td></td><td><code>/keystone:architecture</code></td><td>Подбирает паттерн и пишет <code>docs/architecture.md</code>; у каждого правила MUST NOT своя grep-проверка.</td></tr>
+<tr><td></td><td><code>/keystone:docs</code></td><td>README как лендинг и страницы в <code>docs/</code>; режим <code>update</code> вызывает implement.</td></tr>
+<tr><td>Проверки и качество</td><td><code>/keystone:security</code></td><td>Аудит OWASP, prompt injection, race conditions. Итог: Security gate pass / warn / fail.</td></tr>
+<tr><td></td><td><code>/keystone:review</code></td><td>Ревью без правок; валидатор в чистом контексте перепроверяет каждую находку.</td></tr>
+<tr><td></td><td><code>/keystone:qa</code>, <code>/keystone:qa-check</code></td><td>Сценарии ручного тестирования со ссылками на <code>I-n</code> и их прогон (вы или агент).</td></tr>
+<tr><td></td><td><code>/keystone:ask</code></td><td>Отвечает только по доказательствам, иначе <code>INSUFFICIENT INFORMATION</code>.</td></tr>
+<tr><td>Сборка и выкладка</td><td><code>/keystone:dockerize</code>, <code>/keystone:ci</code></td><td>Docker и CI-пайплайн из того, что реально есть в проекте; пишут после показа файлов и «да».</td></tr>
+<tr><td>Уроки и знания</td><td><code>/keystone:roadmap</code></td><td><code>docs/roadmap.md</code> с вехами <code>M-n</code>.</td></tr>
+<tr><td></td><td><code>/keystone:evolve</code>, <code>/keystone:transfer</code></td><td>Превращают повторяющиеся уроки (свои или из другого проекта) в правила <code>.claude/rules/</code> после «да».</td></tr>
+<tr><td></td><td><code>/keystone:reference</code>, <code>/keystone:distill</code></td><td>Справочник проекта; превращение книги или документов в скилл.</td></tr>
+</table></div>
+
 </section>
 
 <!-- ===================== CHECKLISTS ===================== -->
@@ -501,7 +518,7 @@ claude plugin install keystone@keystone</pre>
 <details class="faq"><summary>push запрещён</summary><div>Пока есть активный план, <code>git push</code> и <code>gh pr create</code> закрыты. Открывает их <code>/keystone:verify</code> с вердиктом PASS (<code>Status: verified</code>) или <code>/keystone:verify accept</code> после PASS-UNPROVEN. Если план больше не нужен — <code>Status: abandoned</code>. Не снимай гейт, чтобы обойти FAIL: сначала <code>/keystone:fix</code> или <code>/keystone:implement</code>.</div></details>
 <details class="faq"><summary>Stop-хук напоминает о задачах</summary><div>План в <code>implementing</code>, а в <code>## Tasks</code> остались <code>[ ]</code> без <code>BLOCKED:</code>. Варианты: продолжить задачи; дописать <code>BLOCKED: причина</code> в конец строки той, что выполнить нельзя; либо сказать одной строкой, что ты сделал паузу или ждёшь ответа, и завершить ход. Напоминание приходит один раз за ход и вопросам человеку не мешает.</div></details>
 <details class="faq"><summary>Скилл /keystone:* не виден</summary><div>Плагин не установлен или не включён. Проверь <code>claude plugin list</code>: должен быть <code>keystone</code> в состоянии enabled. Если нет — выполни <code>claude plugin marketplace add sattva2020/keystone</code> и <code>claude plugin install keystone@keystone</code> (или запусти <code>claude --plugin-dir …</code>), затем открой новую сессию: список скиллов запоминается на старте.</div></details>
-<details class="faq"><summary>Нужен ли AI Factory?</summary><div>Нет. Keystone 0.6.0 — самостоятельный плагин, все восемь скиллов (в том числе plan, implement, fix, verify) работают без него. AI Factory нужен только если ты хочешь писать планы через <code>/aif-plan</code>: для этого есть замороженный адаптер.</div></details>
+<details class="faq"><summary>Нужен ли AI Factory?</summary><div>Нет. Keystone — самостоятельный плагин, все 23 скилла работают без него. Если в проекте уже есть файлы AI Factory (<code>.ai-factory/*</code>), Keystone читает их как запасной источник, когда нет нативных <code>CLAUDE.md</code>, <code>docs/architecture.md</code> и <code>.claude/rules</code>. Что взято из AI Factory и почему — в <a href="ai-factory.ru.md">ai-factory.ru.md</a>.</div></details>
 <details class="faq"><summary>Агент спрашивает у меня факты о коде</summary><div>Нарушение контракта grill: факты он ищет сам. Ответь «посмотри в коде» и запомни пример — это повод поправить скилл.</div></details>
 <details class="faq"><summary>План говорит «intent is draft, not accepted»</summary><div>Так и задумано: ты ещё не подписал intent. Прочитай его и выполни <code>/keystone:intent accept &lt;путь&gt;/intent.md</code>, затем снова планируй. Или выбери «Plan anyway» — в Authority появится пометка.</div></details>
 <details class="faq"><summary>Check вернул FAIL, но я считаю, что план нормальный</summary><div>FAIL — это missing, нарушение MUST-правила или покрытие ниже 90 %. Partial считается как 0.5: добавь в план проверку, которая доказывает поведение, а не присутствие. Если расхождение в самом intent — поправь его (запись в Decisions log) и запусти check снова.</div></details>

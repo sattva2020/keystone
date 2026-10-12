@@ -16,8 +16,25 @@ Derived files (upstream path → Keystone path):
 | `aif-implement/SKILL.md` (and its logging guide) | `skills/implement/SKILL.md`, `skills/implement/references/LOGGING.md` |
 | `aif-fix/SKILL.md` | `skills/fix/SKILL.md` |
 | `aif-verify/SKILL.md` | `skills/verify/SKILL.md`, `skills/verify/references/CHECKS.md`, `agents/verifier.md` |
+| `aif/SKILL.md` (project setup, without skills.sh installs and config.yaml) | `skills/setup/` |
+| `aif-security-checklist/` (SKILL.md, references, `scripts/audit.sh`) | `skills/security/` |
+| `aif-architecture/` | `skills/architecture/` |
+| `aif-docs/` | `skills/docs/` |
+| `aif-review/` (SKILL.md, references/VALIDATOR.md, references/SEVERITY.md), `aif-improve/references/CHECK-MODE.md` | `skills/review/`, `agents/review-validator.md` |
+| `aif-dockerize/` (SKILL.md, references, templates) | `skills/dockerize/` |
+| `aif-ci/` (SKILL.md, references, templates) | `skills/ci/` |
+| `aif-explore/SKILL.md` (research mode) | `skills/intent/SKILL.md` |
+| `aif-qa/` (SKILL.md, references, templates) | `skills/qa/` |
+| `aif-qa-check/` (SKILL.md, templates) | `skills/qa-check/` |
+| `aif-roadmap/SKILL.md` | `skills/roadmap/` |
+| `aif-reference/` (SKILL.md, references/EXAMPLES.md) | `skills/reference/` |
+| `aif-distillation/` (SKILL.md, references, examples, `scripts/material-prep.py`) | `skills/distill/` |
+| `aif-evolve/SKILL.md` (lessons → `.claude/rules/` instead of skill-context) | `skills/evolve/` |
+| `aif-transfer/SKILL.md` | `skills/transfer/` |
+| `aif-grounded/SKILL.md` | `skills/ask/` |
 
-Each derived file carries the comment `<!-- derived from ai-factory@2.19.0 … (MIT); see THIRD_PARTY_NOTICES.md -->`.
+Each derived Markdown file and script carries the comment `<!-- derived from ai-factory@2.19.0 … (MIT); see THIRD_PARTY_NOTICES.md -->` (a `#` comment in scripts);
+templates copied as-is are covered by the row of their skill.
 
 MIT License text (applies to the derived portions):
 

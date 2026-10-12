@@ -26,8 +26,8 @@ function svg(c) {
     ['Plan', 'intent.md'], ['Design', 'spec.md'], ['Build', 'plan.md → diff'],
     ['Test', 'checks + verifier'], ['Deploy', 'merged PR'], ['Maintain', 'incident → intent'],
   ];
-  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" role="img" aria-label="Keystone user flow mapped onto the AI-native SDLC playbook">`;
-  s += `<rect width="1200" height="640" rx="18" fill="${c.bg}"/>`;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820" role="img" aria-label="Keystone user flow mapped onto the AI-native SDLC playbook">`;
+  s += `<rect width="1200" height="820" rx="18" fill="${c.bg}"/>`;
   s += `<text x="40" y="46" ${F} font-size="22" font-weight="800" fill="${c.title}">How Keystone runs the AI-native SDLC playbook</text>`;
   s += `<text x="40" y="68" ${F} font-size="12.5" fill="${c.sub}">Top: the playbook's stages (Anthropic). Below: what you type in Claude Code. Every stage ends with a committed file.</text>`;
   // playbook row
@@ -69,10 +69,30 @@ function svg(c) {
   s += box(c, COL(3), yS + 8, W, 54, 'report', ['Level: S · checks'], false);
   s += `<text x="${COL(4) + 6}" y="${yS + 32}" ${F} font-size="11.5" fill="${c.sub}">a bug → /keystone:fix (S: fix now,</text>`;
   s += `<text x="${COL(4) + 6}" y="${yS + 48}" ${F} font-size="11.5" fill="${c.sub}">regression test as a new file)</text>`;
+  // toolbox lane: run on demand, or pulled in by the chain
+  const yT = 560;
+  s += laneLabel(c, yT, 158, 'tools', 'on demand, or pulled');
+  s += `<text x="56" y="${yT + 58}" ${F} font-size="11" fill="${c.sub}">in by the chain</text>`;
+  const TB = [
+    ['/keystone:setup', ['once per project:', 'CLAUDE.md · rules · MCP']],
+    ['/keystone:architecture', ['docs/architecture.md', '→ gate in verify']],
+    ['/keystone:docs', ['update from implement', 'when docs — yes']],
+    ['security · review', ['L: security gate;', 'review + validator']],
+    ['dockerize · ci', ['Docker, compose,', 'GitHub / GitLab CI']],
+    ['evolve · transfer', ['lessons → .claude/rules', 'after your yes']],
+  ];
+  TB.forEach(([t, l], i) => { s += box(c, COL(i), yT + 8, W, 64, t, l); });
+  const TB2 = [
+    ['/keystone:roadmap', ['milestones M-n;', 'intent → Roadmap: M-n']],
+    ['ask · reference', ['evidence-only answers;', 'docs/references/']],
+    ['/keystone:distill', ['book, docs, URL', '→ a Claude Code skill']],
+    ['qa · qa-check', ['test cases → run:', 'human or agent']],
+  ];
+  TB2.forEach(([t, l], i) => { s += box(c, COL(i), yT + 86, W, 64, t, l); });
   // footer
-  s += `<line x1="40" y1="566" x2="1160" y2="566" stroke="${c.edge}" stroke-width="1"/>`;
-  s += `<text x="40" y="592" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Design is folded into the plan</tspan> — no separate spec.md; every plan row cites an intent line (I-n). Grill runs inside intent; check runs inside plan.</text>`;
-  s += `<text x="40" y="614" ${F} font-size="12.5" fill="${c.text}"><tspan ${M} font-weight="700">/keystone-status</tspan> any time: plan, tasks, gates and cost by stage — answered without a model call. Lift a gate: Status: abandoned or KEYSTONE_GATES=off.</text>`;
+  s += `<line x1="40" y1="746" x2="1160" y2="746" stroke="${c.edge}" stroke-width="1"/>`;
+  s += `<text x="40" y="772" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Design is folded into the plan</tspan> — no separate spec.md; every plan row cites an intent line (I-n). Grill runs inside intent; check runs inside plan.</text>`;
+  s += `<text x="40" y="794" ${F} font-size="12.5" fill="${c.text}"><tspan ${M} font-weight="700">/keystone-status</tspan> any time: plan, tasks, gates and cost by stage — answered without a model call. Lift a gate: Status: abandoned or KEYSTONE_GATES=off.</text>`;
   return s + '</svg>';
 }
 writeFileSync(`${out}/flow-dark.svg`, svg(T.dark));

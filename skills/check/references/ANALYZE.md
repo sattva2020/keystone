@@ -135,8 +135,10 @@ tests. One finding per `partial`/`missing` I-n, plus one status line per I-n (in
 note: intent status not `accepted`; `Written after plan:` present (the caller reports `git log` evidence of intent.md changing after the plan's
 first commit; you have no shell) → `rework signal`.
 
-**K.2: `rule-violation`** — read `CLAUDE.md`, `AGENTS.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md` (those that
-exist). A plan step that breaks a MUST / MUST NOT line is a blocker. Quote the rule and the plan step. Also: the
+**K.2: `rule-violation`** — read `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md` (layer dependency rules),
+`.claude/rules/**/*.md` (a rule with `paths:` applies only to files it matches), `AGENTS.md`; fallback only for AI Factory
+projects without them (fallback, if they exist): `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+A plan step that breaks a MUST / MUST NOT line is a blocker. Quote the rule and the plan step. Also: the
 `Project rules check:` line missing or claiming "none" while a violation exists.
 
 Plan work that traces to no I-n and no project rule is `out_of_scope` (4.6), naming the task.

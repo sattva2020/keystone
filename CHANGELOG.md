@@ -3,6 +3,36 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] — 2026-10-12
+
+### Added
+- **15 new skills**, 23 in total (see [`docs/skills.md`](docs/skills.md)):
+  - project context: `setup`, `architecture`, `docs`;
+  - checks and quality: `security`, `review`, `qa`, `qa-check`, `ask`;
+  - build and ship: `dockerize`, `ci`;
+  - lessons and knowledge: `roadmap`, `evolve`, `transfer`, `reference`, `distill`.
+- **`review-validator` agent**: a read-only second opinion in a clean context for every `review` finding.
+- **Native project context**: `CLAUDE.md`, `docs/architecture.md` and `.claude/rules/` are read first; the
+  `.ai-factory/*` files are a fallback when they are absent.
+- **`setup` and `AGENTS.md`**: with an `AGENTS.md` and no `CLAUDE.md`, the new `CLAUDE.md` imports it with `@AGENTS.md`
+  instead of shutting it off.
+- **Architecture and security gates in `verify`**: the grep checks from `docs/architecture.md` and the result of
+  `Security gate`.
+- **Research mode in `intent`**: on L, when the "how" is unclear, a `research.md` is written before the grill.
+- **Rules proposals in `implement`**: up to three new rules for `.claude/rules/` at the end, written only after a "yes".
+- **Roadmap link**: an intent may carry `Roadmap: M-n`; `verify` after PASS offers to mark the milestone.
+- User-flow image with the tools rows, a skills reference ([`docs/skills.md`](docs/skills.md)) and a page on what was
+  taken from AI Factory ([`docs/ai-factory.md`](docs/ai-factory.md)), both with Russian versions.
+
+### Changed
+- Reports and summaries render as Markdown (tables, bold labels, lists) instead of code blocks; the grill decision list is a `# | Decision | Answer` table.
+- `docs`, `dockerize`, `ci`, `qa-check` and `reference` run on Sonnet.
+
+### Fixed
+- AI Factory bugs that were not ported: a repeated setup overwrote existing files (now it only adds, after a "yes");
+  `audit.sh` was called by a wrong path and its `((ISSUES++))` stopped the script under `set -e`; the `.git` grep filter
+  dropped any path containing "git".
+
 ## [0.7.0] — 2026-10-12
 
 ### Added
