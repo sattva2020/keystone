@@ -30,10 +30,17 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 `$ARGUMENTS` = `<intent path> <plan path>`, or `<plan path>` only, or nothing.
 - Two paths: use them. A path may be a task folder — then `intent.md` / `plan.md` inside it.
 - One path (plan): take the intent from the plan's `Authority:` line, if there is one. No Authority line → no intent;
-  say so, skip `intent-gap` and the I-n lines (Coverage then reads `n/a`).
+  say so, skip `intent-gap` and the I-n lines (Coverage then reads `n/a`). **Decisions instead of an intent file:** when
+  Authority or `## Original Request` points to a numbered grill decision list (`D1…`) rather than a file, check that
+  list as the intent (`D1 covered — …`), and head the report `Intent: reconstructed from the plan's D-list, not a signed
+  intent.md` — the verdict is then advisory, and recommend `/keystone:intent` to record it.
 - Nothing: the active plan. It is: the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. (`paths.specs` comes from
   the fallback `.ai-factory/config.yaml` when it exists.) Its intent from Authority.
+- Fallback for AI Factory projects: no plan under docs/keystone/ or paths.specs → `.ai-factory/plans/*.md`, the file
+  named after the current git branch first, else the newest; say which file was taken.
 - No plan found: print `FAIL: plan not found` and stop.
+- On an **approved** plan the report only reports: changes to the plan are applied after the user's answer (Step 4),
+  never directly.
 
 Read the plan **completely**. Note what is done (`- [x]`, never touched), the `## Original Request` (the scope anchor,
 never touched), the Settings line, the Requirements Reconciliation table, the Risks, the Tasks and the Commit Plan.

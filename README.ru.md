@@ -41,6 +41,8 @@ claude plugin marketplace add sattva2020/keystone
 claude plugin install keystone@keystone
 ```
 
+Обновление: `claude plugin marketplace update keystone`, затем `claude plugin update keystone@keystone`, затем **новая сессия** — открытая сессия держит ту копию, которую загрузила.
+
 Разовая проба без установки: `claude --plugin-dir <путь-к-репозиторию>`.
 
 Требования: Claude Code 2.1.218 или новее (skills с `background`) и Node.js в `PATH` для хуков. Моду

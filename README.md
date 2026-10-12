@@ -41,6 +41,8 @@ claude plugin marketplace add sattva2020/keystone
 claude plugin install keystone@keystone
 ```
 
+Update: `claude plugin marketplace update keystone`, then `claude plugin update keystone@keystone`, then start a **new session** — an open session keeps the copy it loaded.
+
 Try it without installing: `claude --plugin-dir <path-to-this-repo>`.
 
 Requirements: Claude Code 2.1.218 or newer (skills with `background`), and Node.js on `PATH` for the hooks. The mod

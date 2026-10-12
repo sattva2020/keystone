@@ -20,7 +20,9 @@ Look only at what you can see cheaply (the task text, file names, one or two sea
 | **M** | one obvious approach; several files; no open user decisions; no data migration, no auth/security, no other team's module | `/keystone:plan <task>` → Approve → `/keystone:implement` → `/keystone:verify` (bug: `/keystone:fix`, plan-first mode) |
 | **L** | several decisions the user owns, **or** data/schema/migration, **or** security/auth/payments, **or** a module owned by others, **or** an unclear "done" | `/keystone:intent` → `/keystone:plan <intent>` (runs `/keystone:check`) → Approve → fresh session → `/keystone:implement` → `/keystone:verify` |
 
-Any single L sign makes it L. Unsure between two levels → propose the higher one and say why in one line.
+Any single L sign makes it L. Unsure between two levels → propose the higher one and say why in one line. Decisions
+already closed in a grill still count as "several decisions the user owns" — they belong in a signed intent, so the
+level stays L. Production, secrets and other people's access are L however small the code change is.
 
 No `CLAUDE.md` in the project (root or `.claude/`)? Add one line to the answer: "No CLAUDE.md — `/keystone:setup`
 creates it (stack, commands, rules) after your yes." Do not block and do not run it; on S add nothing else.

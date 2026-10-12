@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.8.0');
+  assert.equal(p.version, '0.8.1');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -342,4 +342,9 @@ test('security P0: Top 10:2025, agent/supply-chain, Refs, UNASSESSED, mapping re
   has('skills/security/references/CHECKLIST.md', 'A03:2025', 'A10:2025');
   has('skills/security/references/PROMPT-INJECTION.md', 'LLM08:2026');
   has('skills/security/scripts/audit.sh', 'sk-ant-', 'UNASSESSED');
+});
+
+test('session audit 12.10: check falls back to .ai-factory/plans and a D-list intent; start keeps grilled decisions at L', () => {
+  has('skills/check/SKILL.md', '.ai-factory/plans/*.md', 'reconstructed from the plan', 'never directly');
+  has('skills/start/SKILL.md', 'Decisions already closed in a grill', 'Production, secrets');
 });

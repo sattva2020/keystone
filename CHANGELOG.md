@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] — 2026-10-12
+
+### Fixed
+- `check` finds a plan under `.ai-factory/plans/` (current branch first) in AI Factory projects; a grill decision
+  list (`D1…`) in the plan stands in for a missing `intent.md`, with an advisory verdict; an approved plan is changed
+  only after the user's answer.
+- `start` keeps decisions already closed in a grill, production, secrets and other people's access at level L.
+- Release note: Claude Code runs a plugin from a versioned cache — start a **new session** after
+  `claude plugin update keystone@keystone`; an already open session may keep the older copy.
+
 ## [0.8.0] — 2026-10-12
 
 ### Added
