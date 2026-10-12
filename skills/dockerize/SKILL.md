@@ -144,7 +144,9 @@ health-check,rollback,backup}.sh` from the templates per `references/DEPLOY-SCRI
 ## Step 9 — Summary
 
 Summarize created and updated files in the format of `references/SUMMARY-FORMAT.md`; offer, in one line, `/keystone:docs`
-(document the setup) and `/keystone:ci` (pipeline). Do not invoke them. End with `Blocked on me:` · `Changed:` · `Found:`.
+(document the setup) and `/keystone:ci` (pipeline); if the project deploys on Dokploy and `.mcp.json` has no `dokploy`
+server, mention the Dokploy MCP (`npx -y @sattva/dokploy-mcp@latest`, https://github.com/sattva2020/dokploy-mcp) that
+`/keystone:setup` adds after a yes. Do not invoke them. End with `Blocked on me:` · `Changed:` · `Found:`.
 
 ## Ownership
 

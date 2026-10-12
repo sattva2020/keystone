@@ -222,6 +222,9 @@ Status проходит `draft → approved → implementing → verified`, а `
 - **Счётчик стоимости** — после каждого хода прирост стоимости сессии прибавляется к этапу, который вы запускали
   (`/keystone:plan`, `check`, `implement`…), для активного плана; `implement` и `verify` получают измеренные цифры для
   строки `cost:`.
+- **Следующая команда** — после хода Keystone в пустом поле ввода появляется серая подсказка следующего шага с уже
+  подставленным путём к плану (`/keystone:implement docs/keystone/…/plan.md`, потом `/keystone:verify …`); Tab или →
+  вставляет её.
 
 Моду нужен Claude Code 2.1.287+ в терминале или 2.1.286+ в Desktop. В `claude -p` хуки работают, но ничего не рисуется.
 
@@ -238,6 +241,11 @@ Status проходит `draft → approved → implementing → verified`, а `
   Keystone его не ставит и не настраивает. Если инструменты memlab есть в сессии, `grill`, `intent`, `plan`, `check` и
   `fix` используют `search_decisions` / `search_code` для прошлых решений и мест в коде, а `fix` записывает урок через
   `add_note`. Без memlab всё работает как раньше.
+
+- **[Dokploy MCP](https://github.com/sattva2020/dokploy-mcp) (по желанию, `@sattva/dokploy-mcp`).** Весь API Dokploy
+  через 4 инструмента-шлюза (~1% контекста): деплой, логи, домены, базы, бэкапы. Если проект деплоится на Dokploy,
+  `/keystone:setup` предложит его в проектный `.mcp.json` (`${DOKPLOY_URL}`, `${DOKPLOY_API_KEY}`), а
+  `/keystone:dockerize` упомянет в итоге.
 
 ## На чём основан
 

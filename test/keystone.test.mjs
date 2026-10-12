@@ -214,7 +214,7 @@ test('mod: hooks.json loads the keystone module next to the settings hooks', () 
   assert.deepEqual(h.modules, ['./keystone.ts']);
   assert.ok(h.hooks.PreToolUse && h.hooks.Stop);
   const m = read('hooks/keystone.ts');
-  for (const s of ["name: 'keystone-status'", "on('turn.complete'", "on('prompt.submit'", '$.session.usage()', 'Keystone cost meter'])
+  for (const s of ["name: 'keystone-status'", "on('turn.complete'", "on('prompt.submit'", '$.session.usage()', 'Keystone cost meter', "on('prompt.suggest'", 'export function nextCommand'])
     assert.ok(m.includes(s), s);
 });
 
@@ -322,4 +322,9 @@ test('output is Markdown, not a code-block wall: grill summary table, rendering 
     const t = read(`skills/${s}/SKILL.md`);
     if (t.includes('Blocked on me') && s !== 'grill') assert.ok(t.includes('**Output rendering.**'), `${s}: rendering rule`);
   }
+});
+
+test('setup proposes the Dokploy MCP by signal, with ${VAR} only', () => {
+  has('skills/setup/references/STACK-SIGNALS.md', '@sattva/dokploy-mcp@latest', 'DOKPLOY_API_KEY');
+  has('skills/dockerize/SKILL.md', 'github.com/sattva2020/dokploy-mcp');
 });

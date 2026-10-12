@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [0.8.0] — 2026-10-12
 
 ### Added
+- **Dokploy MCP** ([`@sattva/dokploy-mcp`](https://github.com/sattva2020/dokploy-mcp)): `setup` proposes it when the project deploys on Dokploy.
+- **Next-command suggestion (mod)**: after a Keystone turn the prompt box offers the next command with the plan path; Tab takes it.
 - **15 new skills**, 23 in total (see [`docs/skills.md`](docs/skills.md)):
   - project context: `setup`, `architecture`, `docs`;
   - checks and quality: `security`, `review`, `qa`, `qa-check`, `ask`;
@@ -36,6 +38,8 @@ All notable changes to this project are documented here. The format follows
 ## [0.7.0] — 2026-10-12
 
 ### Added
+- **Dokploy MCP** ([`@sattva/dokploy-mcp`](https://github.com/sattva2020/dokploy-mcp)): `setup` proposes it when the project deploys on Dokploy.
+- **Next-command suggestion (mod)**: after a Keystone turn the prompt box offers the next command with the plan path; Tab takes it.
 - **Mod** (TypeScript, `hooks/keystone.ts`): `/keystone-status` answered without a model call; a status line
   `Keystone · L · implementing · 13/14 · $9.60`; a cost meter that adds each turn's cost to the stage you ran and hands
   `implement` / `verify` the measured numbers for their `cost:` line. Tests: `claude plugin test .`.
@@ -55,6 +59,8 @@ All notable changes to this project are documented here. The format follows
 Keystone is now a standalone Claude Code plugin.
 
 ### Added
+- **Dokploy MCP** ([`@sattva/dokploy-mcp`](https://github.com/sattva2020/dokploy-mcp)): `setup` proposes it when the project deploys on Dokploy.
+- **Next-command suggestion (mod)**: after a Keystone turn the prompt box offers the next command with the plan path; Tab takes it.
 - Eight skills: `start`, `grill`, `intent`, `plan`, `check`, `implement`, `fix`, `verify`.
 - Hook gates (`hooks/gate.mjs`): no code edits while the active plan is `draft`; no edits to committed tests during a
   fix; a Stop reminder while plan tasks are open; no `git push` / `gh pr create` before `/keystone:verify`.
@@ -76,6 +82,8 @@ Keystone is now a standalone Claude Code plugin.
 ## [0.5.0]
 
 ### Added
+- **Dokploy MCP** ([`@sattva/dokploy-mcp`](https://github.com/sattva2020/dokploy-mcp)): `setup` proposes it when the project deploys on Dokploy.
+- **Next-command suggestion (mod)**: after a Keystone turn the prompt box offers the next command with the plan path; Tab takes it.
 - Claude Code plugin form of the extension, plus an AI Factory adapter (`adapters/ai-factory`).
 - S / M / L levels that size the process to the change.
 

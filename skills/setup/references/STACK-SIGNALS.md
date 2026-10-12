@@ -39,6 +39,7 @@ A command not found in a file is written "not found", never invented.
 | `pg`/`postgres`/`psycopg`, Prisma, Drizzle, Supabase, `DATABASE_URL` in `.env.example` | `postgres` | `npx -y @modelcontextprotocol/server-postgres` | `DATABASE_URL` |
 | `playwright`, `cypress`, `puppeteer`, `e2e/` or browser tests | `playwright` | `npx -y @playwright/mcp@latest` | none |
 | any third-party libraries in a manifest | `context7` | `npx -y @upstash/context7-mcp` | none (optional key per its docs, as `${CONTEXT7_API_KEY}`) |
+| `dokploy` in compose labels, README, CI or deploy scripts; `DOKPLOY_URL` in `.env.example` | `dokploy` | `npx -y @sattva/dokploy-mcp@latest` with `"DOKPLOY_MODE": "gateway"` (4 tools, ~1% context) | `DOKPLOY_URL`, `DOKPLOY_API_KEY` |
 | needs advanced file operations (rare) | `filesystem` | `npx -y @modelcontextprotocol/server-filesystem .` | none |
 
 Shape: `"env": {"GITHUB_TOKEN": "${GITHUB_TOKEN}"}`. Only `${VAR}` references — never a value. After the diff list the

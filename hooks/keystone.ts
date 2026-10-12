@@ -78,6 +78,14 @@ export function gatesFor(p: Plan): string[] {
   return g
 }
 
+// The command the plan's state asks for next, with the plan path filled in (Tab takes it from the prompt box).
+export function nextCommand(p: Plan): string | null {
+  if (p.status === 'draft') return `/keystone:plan ${p.file}`
+  if (p.status === 'approved') return `/keystone:implement ${p.file}`
+  if (p.status === 'implementing') return `/keystone:${p.total - p.done - p.blocked > 0 ? 'implement' : 'verify'} ${p.file}`
+  return null
+}
+
 const usd = (n: number) => `$${n.toFixed(2)}`
 export const costLine = (l: Ledger) => {
   const parts = Object.entries(l).filter(([, v]) => v > 0.005).map(([k, v]) => `${k} ${usd(v)}`)
@@ -110,6 +118,7 @@ export const register: Register = (on) => {
   let stage = 'other'
   let lastUsd: number | undefined
   let lastPlan: Plan | null = null // verify ends a plan (Status: verified); its own turn is still billed to it
+  let next: string | null = null // next Keystone command, offered as the dim suggestion after a Keystone turn
 
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'keystone-status', description: 'Keystone: active plan, gates and cost by stage (no model call)' })
@@ -154,6 +163,13 @@ export const register: Register = (on) => {
       await $.store.set(ledgerKey(p), l)
     }
     await refresh($)
+    const active = await activePlan($)
+    next = stage !== 'other' && active ? nextCommand(active) : null
+    if (next) void $.prompt.suggest({ text: next })
     return out
   }).catch(($, e, next) => next(e))
+
+  // the engine's own guess after a Keystone turn gives way to the plan's next command
+  on('prompt.suggest', { origin: { kind: 'suggestion' } }, async ($, e, nxt) => nxt(next ? { ...e, text: next } : e))
+    .catch(($, e, nxt) => nxt(e))
 }

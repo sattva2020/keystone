@@ -1,5 +1,5 @@
 import { test, expect, mock } from 'claude-code/testing'
-import { parsePlan, statusText, costLine, gatesFor } from './keystone.ts'
+import { parsePlan, statusText, costLine, gatesFor, nextCommand } from './keystone.ts'
 
 const PLAN = [
   '# Plan: reminders', '',
@@ -50,4 +50,12 @@ test('/keystone-status answers without a model turn', async ($, on) => {
   expect(text).toContain('tasks 2/4')
   expect(text).toContain('BLOCKED 1')
   expect(text).toContain('plan $2.50 · check $1.00 · total $3.50')
+})
+
+test('next command follows the plan status, with the plan path', async () => {
+  const p = parsePlan('docs/keystone/x/plan.md', PLAN)!
+  expect(nextCommand(p)).toBe('/keystone:implement docs/keystone/x/plan.md')
+  expect(nextCommand({ ...p, done: 3, blocked: 1 })).toBe('/keystone:verify docs/keystone/x/plan.md')
+  expect(nextCommand({ ...p, status: 'approved' })).toBe('/keystone:implement docs/keystone/x/plan.md')
+  expect(nextCommand({ ...p, status: 'draft' })).toBe('/keystone:plan docs/keystone/x/plan.md')
 })

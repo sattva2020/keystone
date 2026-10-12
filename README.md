@@ -223,6 +223,8 @@ Keystone ships a small TypeScript [mod](https://code.claude.com/docs/en/plugins/
 - **Cost meter** — after every turn the session's cost delta is added to the stage you ran (`/keystone:plan`,
   `check`, `implement`, …) for the active plan; `implement` and `verify` receive the measured numbers for their
   `cost:` line.
+- **Next command** — after a Keystone turn the empty prompt box shows the next step with the plan path filled in
+  (`/keystone:implement docs/keystone/…/plan.md`, then `/keystone:verify …`); press Tab or → to take it.
 
 Mods need Claude Code 2.1.287+ (terminal) or 2.1.286+ (Desktop). In `claude -p` the hooks run but nothing is drawn.
 
@@ -239,6 +241,11 @@ Mods need Claude Code 2.1.287+ (terminal) or 2.1.286+ (Desktop). In `claude -p` 
   Keystone does not install or configure it. When memlab's tools are present in a session, `grill`, `intent`, `plan`,
   `check` and `fix` use `search_decisions` / `search_code` for prior decisions and code locations, and `fix` records the
   lesson with `add_note`. Without memlab everything works as before.
+
+- **[Dokploy MCP](https://github.com/sattva2020/dokploy-mcp) (optional, `@sattva/dokploy-mcp`).** The whole Dokploy API
+  through 4 gateway tools (~1% of the context): deploy, logs, domains, databases, backups. When the project deploys on
+  Dokploy, `/keystone:setup` proposes it for the project `.mcp.json` (`${DOKPLOY_URL}`, `${DOKPLOY_API_KEY}`), and
+  `/keystone:dockerize` mentions it in its summary.
 
 ## Built on
 
