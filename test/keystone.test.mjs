@@ -279,7 +279,7 @@ test('0.8 I-11: every new ported .md carries the attribution and its skill is li
   const notices = read('THIRD_PARTY_NOTICES.md');
   const walk = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
   for (const s of ['setup', 'security', 'architecture', 'docs', 'review', 'dockerize', 'ci', 'qa', 'qa-check', 'roadmap', 'reference', 'distill', 'evolve', 'transfer', 'ask']) {
-    for (const f of walk(`skills/${s}`).filter((f) => f.endsWith('.md'))) assert.match(read(f), /derived from ai-factory@2\.19\.0 .*\(MIT\)/, f);
+    for (const f of walk(`skills/${s}`).filter((f) => f.endsWith('.md'))) assert.match(read(f), /derived from ai-factory@2\.19\.0 .*\(MIT\)|^<!-- original Keystone file \(MIT\) -->/, f);
     assert.ok(notices.includes('`skills/' + s + '/`'), `skills/${s}/ in NOTICES`);
   }
   assert.match(read('agents/review-validator.md'), /derived from ai-factory@2\.19\.0/);
@@ -332,4 +332,14 @@ test('setup proposes the Dokploy MCP by signal, with ${VAR} only', () => {
 test('stand 12.10 K6: setup writes CLAUDE.md last with links to written files only; review reads a digit-only hash as a ref', () => {
   has('skills/setup/SKILL.md', '`CLAUDE.md` last', 'never retry the same write');
   has('skills/review/SKILL.md', 'abbreviated commit hash → ref');
+});
+
+test('security P0: Top 10:2025, agent/supply-chain, Refs, UNASSESSED, mapping references', () => {
+  const s = read('skills/security/SKILL.md');
+  assert.doesNotMatch(s, /2021/);
+  for (const x of ['agent', 'supply-chain', 'Refs:', 'UNASSESSED', 'Security gate: pass | warn | fail']) assert.ok(s.includes(x), `SKILL.md: ${x}`);
+  for (const f of ['MAPPING', 'AGENT-MCP', 'SUPPLY-CHAIN']) assert.ok(existsSync(join(root, `skills/security/references/${f}.md`)), f);
+  has('skills/security/references/CHECKLIST.md', 'A03:2025', 'A10:2025');
+  has('skills/security/references/PROMPT-INJECTION.md', 'LLM08:2026');
+  has('skills/security/scripts/audit.sh', 'sk-ant-', 'UNASSESSED');
 });

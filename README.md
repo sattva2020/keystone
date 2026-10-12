@@ -154,7 +154,7 @@ All 23 commands, grouped. Parameters are in brackets; `|` is a choice.
 
 | Command | What it does |
 |---|---|
-| `/keystone:security [category\|path\|plan] \| ignore <id> <reason>` | OWASP, prompt-injection and race-condition audit; `Security gate: pass\|warn\|fail` |
+| `/keystone:security [category\|agent\|supply-chain\|path\|plan] \| ignore <id> <reason>` | OWASP Top 10:2025 + LLM Top 10 2026, agent/MCP and supply-chain audit, findings mapped to CWE/ASVS/ISO; `Security gate: pass\|warn\|fail` |
 | `/keystone:review [PR\|ref\|empty = staged]` | review without edits; a clean-context validator rechecks every finding |
 | `/keystone:qa [--all] [change-summary\|test-plan\|test-cases] [plan\|ref]` | change summary, test plan and manual scenarios linked to `I-n` |
 | `/keystone:qa-check [human\|agent] [plan\|qa folder\|branch]` | runs the `qa` scenarios; pass / fail / blocked with evidence |

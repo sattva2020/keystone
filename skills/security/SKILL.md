@@ -1,7 +1,7 @@
 ---
 name: security
-description: "Keystone: security audit on OWASP Top 10, LLM prompt injection and race conditions — whole project, a path, a category or the diff of a task. Every finding has severity, file:line, how to exploit it and a fix; ignored items live in docs/keystone/security-ignores.md with reason, date and author; ends with a machine-readable line `Security gate: pass | warn | fail` (fail only on an unignored critical/high finding). Read-only for code. Use for 'security check', 'is this secure', 'before deploy', auth/payments/user-input changes, or `ignore <id> <reason>`."
-argument-hint: "[auth|injection|xss|csrf|secrets|api|infra|prompt-injection|race-condition | <path> | <plan path>] | ignore <id> <reason>"
+description: "Keystone: security audit on OWASP Top 10:2025, LLM Top 10 2026 / prompt injection, agent and MCP configuration, supply chain and race conditions — whole project, a path, a category or the diff of a task. Every finding has severity, file:line, how to exploit it and a fix; ignored items live in docs/keystone/security-ignores.md with reason, date and author; ends with a machine-readable line `Security gate: pass | warn | fail` (fail only on an unignored critical/high finding). Read-only for code. Use for 'security check', 'is this secure', 'before deploy', auth/payments/user-input changes, or `ignore <id> <reason>`."
+argument-hint: "[auth|injection|xss|csrf|secrets|api|infra|prompt-injection|race-condition|agent|supply-chain | <path> | <plan path>] | ignore <id> <reason>"
 allowed-tools: Read Glob Grep Write Edit Bash(npm audit*) Bash(pip-audit*) Bash(cargo audit*) Bash(grep *) Bash(git diff*) Bash(git log*) Bash(git rev-list*) Bash(git config user.name) Bash(bash ${CLAUDE_SKILL_DIR}/scripts/audit.sh)
 model: opus
 effort: high
@@ -11,7 +11,7 @@ disable-model-invocation: false
 
 # Keystone · security
 
-Audit against OWASP Top 10 (2021), LLM prompt injection and race conditions. **Read-only for code and tests.** The only
+Audit against OWASP Top 10:2025, OWASP LLM Top 10 2026 (prompt injection), agent/MCP configuration, supply chain and race conditions. **Read-only for code and tests.** The only
 file this skill may write is `docs/keystone/security-ignores.md` (the `ignore` flow). Fixing a finding is
 `/keystone:fix` (or an edit inside `/keystone:implement`), never this skill. Other Keystone skills call it: `plan` for L changes that
 touch security, `verify` as a gate.
@@ -36,7 +36,7 @@ Then **always read** `docs/keystone/security-ignores.md` before any audit. If it
 | Argument | Scope |
 |---|---|
 | empty | whole project: all categories in `${CLAUDE_SKILL_DIR}/references/CHECKLIST.md` |
-| `auth`, `injection`, `xss`, `csrf`, `secrets`, `api`, `infra`, `prompt-injection`, `race-condition` | that category only |
+| `auth`, `injection`, `xss`, `csrf`, `secrets`, `api`, `infra`, `prompt-injection`, `race-condition`, `agent` (`references/AGENT-MCP.md`), `supply-chain` (`references/SUPPLY-CHAIN.md`) | that category only |
 | a path (file or directory) | all categories, only code under the path |
 | a plan path (`…/plan.md`) or an active plan with no other argument | **diff of the task** — see below |
 | `ignore <id> <reason>` | add an ignore entry, then stop — no audit, no gate line |
@@ -52,7 +52,7 @@ touches an entry point, a query, a permission check or an LLM call. For a diff s
 1. Run `bash ${CLAUDE_SKILL_DIR}/scripts/audit.sh` once for a whole-project or `infra`/`secrets` scope (read-only; skip for a diff
    scope unless dependencies or `.env` handling changed). Its output is a lead, not a finding: confirm every hit in the code.
 2. Walk the categories of the scope in `${CLAUDE_SKILL_DIR}/references/CHECKLIST.md`. Read the code; grep starters only find candidates.
-   Read `AUTH.md`, `PROMPT-INJECTION.md` or `RACE.md` (same folder) when the scope includes that category and the code needs a pattern
+   Read `AUTH.md`, `PROMPT-INJECTION.md`, `RACE.md`, `AGENT-MCP.md`, `SUPPLY-CHAIN.md` or `MAPPING.md` (same folder) when the scope includes that category and the code needs a pattern
    comparison. Skip categories the project cannot have (no LLM calls → no prompt injection) and say so in one line.
 3. A finding needs evidence: file:line you read, and a concrete way it is exploited. No exploit path → not a finding (note it as a
    hardening suggestion, severity low).
@@ -83,7 +83,8 @@ Items below are excluded from /keystone:security audits and from the security ga
 
 1. **Findings** — one block each, ordered critical → low, ids `S-1…`:
    `S-1 [critical] <title> — <file>:<line>` then `Exploit:` (Repro: request / input / sequence an attacker uses), `Impact:` (one line),
-   `Fix:` (the smallest concrete change, with the safe pattern from the references). Never print secrets, tokens or credential values —
+   `Fix:` (the smallest concrete change, with the safe pattern from the references), `Refs: <OWASP id> · <CWE-n> · <ASVS 5.0 chapter if clear> · <ISO 27001:2022 A.8.x if clear>`
+   (taken from `${CLAUDE_SKILL_DIR}/references/MAPPING.md`; omit a part you cannot map, never invent an id). Never print secrets, tokens or credential values —
    name the variable and the location only.
 2. **Ignored** — table: item, reason, date, author; then `N items ignored. Review them periodically.`
 3. **Gate line** — last of the report body, exactly one of:
@@ -91,16 +92,20 @@ Items below are excluded from /keystone:security audits and from the security ga
    - `Security gate: warn — <medium/low findings, stale ignores, incomplete evidence (what could not be checked)>`
    - `Security gate: pass`
    Rules: **fail** only when an unignored critical or high finding remains. **warn**: only medium/low findings, stale ignores, or
-   incomplete audit evidence (a tool unavailable, code not readable). **pass**: the audit completed and nothing unignored remains.
+   incomplete audit evidence (a tool unavailable, code not readable, any `UNASSESSED:` line). **pass**: the audit completed and nothing unignored remains.
+   A tool that could not run (no network, missing binary — `audit.sh` prints these as `UNASSESSED: <what>`) is reported in the
+   report as `UNASSESSED: <what>` and makes the gate at least `warn`; it is never a silent `pass`.
 4. **Summary** (always, three lines): `Blocked on me: <what I need from you, or none>` · `Changed: <files written — at most the
    ignore-list, or nothing>` · `Found: <counts by severity; ignored count>`.
+
+The report supports ISO/IEC 27001 evidence (Annex A.8.25–8.29) but does not certify compliance.
 
 On `fail`, the next step is `/keystone:fix` for the first critical/high finding. For `ignore`, report only `Changed:` and the new row.
 
 ## Rules
 
 - Never edit code, tests, config or the plan. Never run the application, exploit code against a live service, or install packages.
-- Run only the read-only audit commands in `allowed-tools`; if `npm audit` and friends need the network and fail, that is `warn`
-  (incomplete evidence), not `pass`.
+- Run only the read-only audit commands in `allowed-tools`; if `npm audit` and friends need the network and fail, that is `UNASSESSED` → `warn`,
+  not `pass`. `gitleaks` (history scan) runs only through `audit.sh` when installed.
 - A security gate from `/keystone:verify` consumes only the gate line and the S-ids: keep the line format exact.
 - Context is heavy after an audit. Consider `/clear` or `/compact` before continuing with other tasks.

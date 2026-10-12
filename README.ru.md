@@ -153,7 +153,7 @@ plan/grill/check сессий ставьте `/effort high` на сессию.
 
 | Команда | Что делает |
 |---|---|
-| `/keystone:security [категория\|путь\|план] \| ignore <id> <причина>` | аудит OWASP, prompt injection и race conditions; `Security gate: pass\|warn\|fail` |
+| `/keystone:security [категория\|agent\|supply-chain\|путь\|план] \| ignore <id> <причина>` | аудит по OWASP Top 10:2025 и LLM Top 10 2026, агенты/MCP и цепочка поставок, ссылки на CWE/ASVS/ISO; `Security gate: pass\|warn\|fail` |
 | `/keystone:review [PR\|ref\|пусто = staged]` | ревью без правок; валидатор в чистом контексте перепроверяет каждую находку |
 | `/keystone:qa [--all] [change-summary\|test-plan\|test-cases] [план\|ref]` | сводка изменений, план тестов и ручные сценарии со ссылками на `I-n` |
 | `/keystone:qa-check [human\|agent] [план\|папка qa\|ветка]` | прогоняет сценарии `qa`; pass / fail / blocked с доказательством |

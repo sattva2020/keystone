@@ -27,6 +27,7 @@ All notable changes to this project are documented here. The format follows
   taken from AI Factory ([`docs/ai-factory.md`](docs/ai-factory.md)), both with Russian versions.
 
 ### Changed
+- `security`: OWASP Top 10:2025 (new A03 Software Supply Chain Failures, A10 Mishandling of Exceptional Conditions), OWASP GenAI LLM Top 10 2026, new categories `agent` (MCP, hooks, permissions) and `supply-chain` (GitHub Actions, lockfiles); every finding carries `Refs:` (OWASP · CWE · ASVS 5.0 · ISO 27001:2022 A.8.x, see `references/MAPPING.md`); `audit.sh` detects provider keys and reports `UNASSESSED` instead of a silent pass.
 - Reports and summaries render as Markdown (tables, bold labels, lists) instead of code blocks; the grill decision list is a `# | Decision | Answer` table.
 - `docs`, `dockerize`, `ci`, `qa-check` and `reference` run on Sonnet.
 
@@ -74,6 +75,7 @@ Keystone is now a standalone Claude Code plugin.
 - Optional memlab MCP integration (`search_decisions`, `search_code`, `add_note`) when the server is present.
 
 ### Changed
+- `security`: OWASP Top 10:2025 (new A03 Software Supply Chain Failures, A10 Mishandling of Exceptional Conditions), OWASP GenAI LLM Top 10 2026, new categories `agent` (MCP, hooks, permissions) and `supply-chain` (GitHub Actions, lockfiles); every finding carries `Refs:` (OWASP · CWE · ASVS 5.0 · ISO 27001:2022 A.8.x, see `references/MAPPING.md`); `audit.sh` detects provider keys and reports `UNASSESSED` instead of a silent pass.
 - `plan`, `check`, `implement`, `fix` and `verify` are ported from AI Factory 2.19.0 (MIT) and reworked; see
   `THIRD_PARTY_NOTICES.md`.
 - `verify` no longer edits intent or plan; `accept` refuses when either changed after `verify.md`.
