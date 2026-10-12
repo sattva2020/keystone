@@ -141,10 +141,20 @@ Status проходит `draft → approved → implementing → verified`, а `
 
 ## Интеграции
 
-- **memlab MCP (необязательно).** Если сервер подключён, скиллы используют `search_decisions` и `search_code` для
-  прошлых решений и поиска кода, а `add_note` — для записи решений проекта. Без него всё работает.
-- **Адаптер AI Factory (заморожен).** Для проектов, где план пишет `/aif-plan`, `adapters/ai-factory` встраивает
-  правила Keystone в `/aif-plan`, `/aif-implement` и `/aif-verify`. Установка:
+- **[memlab](https://github.com/sattva2020/memlab) (необязательно, отдельный плагин).** Память проекта: поиск по коду
+  и записям решений. Ставится рядом с Keystone:
+
+  ```text
+  /plugin marketplace add sattva2020/memlab
+  /plugin install memlab@memlab
+  ```
+
+  Keystone его не ставит и не настраивает. Если инструменты memlab есть в сессии, `grill`, `intent`, `plan`, `check` и
+  `fix` используют `search_decisions` / `search_code` для прошлых решений и мест в коде, а `fix` записывает урок через
+  `add_note`. Без memlab всё работает как раньше.
+- **Адаптер AI Factory (заморожен) — только если план всё ещё пишет `/aif-plan`.** `adapters/ai-factory` встраивает
+  правила Keystone в `/aif-plan`, `/aif-implement` и `/aif-verify` из AI Factory. Если работаете через `/keystone:*`,
+  он не нужен. Установка:
   `ai-factory extension add <repo>/adapters/ai-factory`. Новые механики появляются только в плагине.
 
 ## На чём основан

@@ -141,11 +141,20 @@ Method, tables and limits: [`docs/benchmarks.md`](docs/benchmarks.md).
 
 ## Integrations
 
-- **memlab MCP (optional).** When a memlab server is connected, the skills use `search_decisions` and `search_code`
-  for prior decisions and code locations, and `add_note` to record project decisions. Without it everything still
-  works.
-- **AI Factory adapter (frozen).** For projects where `/aif-plan` writes the plan, `adapters/ai-factory` injects the
-  Keystone rules into `/aif-plan`, `/aif-implement` and `/aif-verify`. Install with
+- **[memlab](https://github.com/sattva2020/memlab) (optional, a separate plugin).** Project memory: code and
+  decision search over a symbol graph. Install it next to Keystone:
+
+  ```text
+  /plugin marketplace add sattva2020/memlab
+  /plugin install memlab@memlab
+  ```
+
+  Keystone does not install or configure it. When memlab's tools are present in a session, `grill`, `intent`, `plan`,
+  `check` and `fix` use `search_decisions` / `search_code` for prior decisions and code locations, and `fix` records the
+  lesson with `add_note`. Without memlab everything works as before.
+- **AI Factory adapter (frozen) — only if you still plan with `/aif-plan`.** `adapters/ai-factory` injects the
+  Keystone rules into AI Factory's `/aif-plan`, `/aif-implement` and `/aif-verify`. You do not need it when you use
+  `/keystone:*`. Install with
   `ai-factory extension add <repo>/adapters/ai-factory`. New mechanics land only in the plugin.
 
 ## Built on
