@@ -20,6 +20,10 @@ problem, confirm the reported behavior, implement the fix, then verify the same 
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
 and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 ## Workflow
 
 Keep going without asking while the next step needs no human decision; stop only before a destructive action, an irreversible external action, or an action outside the repository — and say which.
@@ -184,8 +188,8 @@ together and recommend `/keystone:verify <plan>` in a new session.
 Suggest `/clear` to free context if needed.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
-the **very last thing** in the answer: any "next / recommend / what to do" goes inside `Blocked on me:` (or `Found:`),
-nothing after the block.
+followed only by the `Next:` line (see Next step): decisions for a human go inside `Blocked on me:`, the command to run
+is the `Next:` line, nothing else after it.
 
 ```text
 Blocked on me: <what needs a human decision or action, incl. next step | none>

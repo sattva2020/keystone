@@ -17,6 +17,10 @@ an explicit answer.
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
 and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 ## Core idea
 
 (Cost: two Opus agents. The validator is mandatory here; in upstream AI Factory it was the optional `+check`.)

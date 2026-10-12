@@ -3,6 +3,19 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.8.2] — 2026-10-12
+
+### Added
+- **What to run next**: every skill ends its answer with `Next: <exact command with paths>` (or `Next: nothing now —
+  waiting for <event>; then <command>`); `/keystone-status` prints the same `Next:` line; new page
+  [`docs/scenarios.md`](docs/scenarios.md) (and `.ru`) — plan status → next command, and 14 everyday scenarios.
+- `grill` run directly says its decisions are not saved yet and routes them to `/keystone:intent` or `/keystone:start`.
+
+### Fixed
+- `security` `audit.sh` (found by `/keystone:verify`): secret names matched case-insensitively (`BRAVE_API_KEY` in
+  `.mcp.json`), `sk-` keys after a hyphen (`${VAR:-sk-…}`) and `sk-proj-` / `sk-svcacct-` keys with `_` or `-`,
+  real npm vulnerabilities are no longer reported as UNASSESSED; an executable test runs the script on temp folders.
+
 ## [0.8.1] — 2026-10-12
 
 ### Fixed

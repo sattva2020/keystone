@@ -41,8 +41,6 @@ retries or tool-call recursion (cost and denial of service). Look for `while (tr
 LLM09:2026 (vector / embeddings): shared index across tenants, no ACL on retrieved chunks, embedding endpoints open to users.
 
 ## Direct Prompt Injection (code patterns)
-
-## Direct Prompt Injection
 ```typescript
 // ❌ VULNERABLE: User input directly in system prompt
 const prompt = `You are a helpful assistant. Answer about: ${userInput}`;

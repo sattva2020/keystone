@@ -14,6 +14,10 @@ disable-model-invocation: true
 Turn source material into a useful skill. The output is not a summary dump: it is an operational skill that captures the best
 practices, decision rules, workflows, checks, and examples from the material.
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 ## Step 0 — project context and destination
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`; `AGENTS.md`.

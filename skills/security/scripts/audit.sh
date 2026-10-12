@@ -30,11 +30,11 @@ EXCLUDES=(--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exc
 
 # 1. Check for secrets in code and config (provider key shapes; values are never printed, only file:line)
 echo "📝 Checking for hardcoded secrets..."
-PROVIDER='ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|ghs_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-ant-[A-Za-z0-9_-]{10,}|sk-(proj-)?[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{10,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
+PROVIDER='ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|ghs_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-ant-[A-Za-z0-9_-]{10,}|(^|[^A-Za-z0-9])sk-(proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{10,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
 # generic: a quoted literal of 12+ chars assigned to a secret-like name; placeholders and ${VAR} references are skipped
 GENERIC='(password|passwd|secret|api_?key|token|private_key)["'"'"']?\s*[:=]\s*["'"'"'][^"'"'"'$ {}<>]{12,}["'"'"']'
 SECRETS=$( { grep -rInE "${INCLUDES[@]}" "${EXCLUDES[@]}" "$PROVIDER" . 2>/dev/null
-  grep -rInE "${INCLUDES[@]}" "${EXCLUDES[@]}" --exclude-dir=test --exclude-dir=tests --exclude-dir=__tests__ \
+  grep -rIinE "${INCLUDES[@]}" "${EXCLUDES[@]}" --exclude-dir=test --exclude-dir=tests --exclude-dir=__tests__ \
     --exclude="*.test.*" --exclude="*.spec.*" "$GENERIC" . 2>/dev/null | \
     grep -viE "example|placeholder|changeme|your[_-]|xxxx|dummy|process\.env|os\.environ|getenv"; } | \
   cut -d: -f1,2 | sort -u | head -20 || true)
@@ -94,7 +94,10 @@ if [ -f package.json ]; then
   NPM_OUT=$(npm audit --audit-level=high 2>&1); NPM_RC=$?
   if [ $NPM_RC -eq 0 ]; then
     echo -e "${GREEN}✅ No high/critical vulnerabilities${NC}"
-  elif echo "$NPM_OUT" | grep -qiE "ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|network|offline|audit endpoint"; then
+  elif echo "$NPM_OUT" | grep -qiE "[0-9]+ (low|moderate|high|critical)? ?(severity )?vulnerabilit"; then
+    echo -e "${RED}⚠️  Vulnerabilities found - run 'npm audit' for details${NC}"
+    ISSUES=$((ISSUES+1))
+  elif echo "$NPM_OUT" | grep -qiE "ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|offline|audit endpoint"; then
     unassessed "dependency audit (no network)"
   elif echo "$NPM_OUT" | grep -q "ENOLOCK"; then
     unassessed "dependency audit (no package-lock.json)"

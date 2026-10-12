@@ -18,6 +18,10 @@ If confidence is not 100, **do not guess**. Output a short "what's missing" chec
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
 and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 This skill is read-only: it never edits files. A question that turns into a change goes to `/keystone:start <task>`.
 
 ## Step 1: Classify the request

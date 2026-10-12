@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.8.1');
+  assert.equal(p.version, '0.8.2');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -347,4 +347,29 @@ test('security P0: Top 10:2025, agent/supply-chain, Refs, UNASSESSED, mapping re
 test('session audit 12.10: check falls back to .ai-factory/plans and a D-list intent; start keeps grilled decisions at L', () => {
   has('skills/check/SKILL.md', '.ai-factory/plans/*.md', 'reconstructed from the plan', 'never directly');
   has('skills/start/SKILL.md', 'Decisions already closed in a grill', 'Production, secrets');
+});
+
+test('every skill ends with an explicit Next: line; grill run directly routes its decisions; status shows Next', () => {
+  for (const s of SKILLS) has(`skills/${s}/SKILL.md`, '**Next step (mandatory).**');
+  has('skills/grill/SKILL.md', 'Run directly by the user', 'Next: /keystone:intent <topic>');
+  has('hooks/keystone.ts', 'Next: ${nextCommand(p)');
+  for (const f of ['docs/scenarios.md', 'docs/scenarios.ru.md']) has(f, '/keystone-status', '/keystone:verify accept');
+});
+
+test('audit.sh behaviour: provider and uppercase env secrets found, ${VAR} and plain words clean', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { mkdtempSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const script = join(root, 'skills/security/scripts/audit.sh');
+  const run = (file, body) => {
+    const d = mkdtempSync(join(tmpdir(), 'ks-audit-'));
+    writeFileSync(join(d, file), body);
+    return spawnSync('bash', [script], { cwd: d, encoding: 'utf8' }).stdout;
+  };
+  assert.match(run('.mcp.json', '{"env":{"GITHUB_TOKEN":"ghp_' + 'A'.repeat(36) + '"}}'), /\.mcp\.json:1/);
+  assert.match(run('.mcp.json', '{"env":{"BRAVE_API_KEY":"BSAq7Zx9LmN2pR4tV6wY8"}}'), /\.mcp\.json:1/);
+  assert.doesNotMatch(run('.mcp.json', '{"env":{"GITHUB_TOKEN":"${GITHUB_TOKEN}"}}'), /\.mcp\.json:1/);
+  assert.doesNotMatch(run('a.js', 'const s = "see risk-assessmentframeworkversion2";'), /a\.js:1/);
+  assert.match(run('.mcp.json', '{"env":{"OPENAI_API_KEY":"${OPENAI_API_KEY:-sk-AbCdEfGhIjKlMnOpQrStUvWx}"}}'), /\.mcp\.json:1/);
+  assert.match(run('config.yml', 'OPENAI_API_KEY: sk-proj-Ab_Cd-EfGhIjKlMnOpQrStUvWxYz012345\n'), /config\.yml:1/);
 });

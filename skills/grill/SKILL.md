@@ -14,6 +14,10 @@ of the decision tree has been visited and **nothing is silently assumed** — no
 point: a decision nobody asked about becomes a guess in the plan and a bug in the code. Facts are your job; decisions
 are the user's. (Contract agreed in lee-to/ai-factory#151; depth as in the design-tree grilling practice.)
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 ## Input
 
 `$ARGUMENTS` is the idea, plan or question. Empty → grill the topic of the current conversation: say in one line what
@@ -100,6 +104,11 @@ normalized list is what gets confirmed. Do not act on the result before it is co
 
 Returns to the caller: the confirmed `D#` list + `Open:` list + facts used (with sources) + the number of rounds and
 questions asked. **Writes nothing to disk** — the caller owns its artifact (`intent.md`, plan, fix plan).
+
+**Run directly by the user** (no caller): after the confirmation the decisions exist only in this chat, so the last
+line routes them into an artifact — `Next: /keystone:intent <topic> — D1…Dn above` for L, `Next: /keystone:start <topic>
+— D1…Dn above` when the level is unclear, or `Next: nothing now — waiting for <event>; then /keystone:start <topic>`
+when the user chose to wait. Say in one line that the list is not saved until that command runs.
 
 ## Project memory (memlab, optional)
 

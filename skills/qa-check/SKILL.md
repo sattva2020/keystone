@@ -20,6 +20,10 @@ browser automation.
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
 and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 The skill does not assume a framework, package manager or agent runtime. In agent mode it uses the appropriate available
 execution surface for each case: live browser automation, CLI commands, project test runners, HTTP/API calls, database-safe
 read checks, file/document inspection, or other non-destructive automated verification.

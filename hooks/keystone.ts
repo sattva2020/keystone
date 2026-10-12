@@ -94,13 +94,14 @@ export const costLine = (l: Ledger) => {
 }
 
 export function statusText(p: Plan | null, l: Ledger): string {
-  if (!p) return 'No active Keystone plan — no gates. Start with /keystone:start <task>.'
+  if (!p) return 'No active Keystone plan — no gates.\nNext: /keystone:start <task> (not sure which command? see docs/scenarios.md)'
   return [
     `Keystone plan: ${p.file}`,
     `Level ${p.level} · Mode ${p.mode} · Status ${p.status} · tasks ${p.done}/${p.total}${p.blocked ? ` · BLOCKED ${p.blocked}` : ''}`,
     `Done means: ${p.doneMeans ?? '— (missing in the header)'}`,
     `Gates: ${gatesFor(p).join('; ')}. Lift: Status: abandoned or KEYSTONE_GATES=off.`,
     `Cost by stage (this machine): ${costLine(l)}`,
+    `Next: ${nextCommand(p) ?? 'nothing in this plan — /keystone:start <task> for the next one'}`,
   ].join('\n')
 }
 

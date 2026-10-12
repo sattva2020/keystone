@@ -20,6 +20,10 @@ read `${CLAUDE_SKILL_DIR}/references/PLAN-FORMAT.md` before writing the plan.
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
 and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 Do not skip a step: re-read the step list before you finish and confirm each applicable one is done.
 
 ## Step 0: Level, input, project context

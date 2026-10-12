@@ -127,6 +127,13 @@ long multi-turn plan, grill and check sessions set `/effort high` for the sessio
 Keystone never asks about tests, logging or docs. The plan infers them from the repository and writes a `Settings:`
 line in its header; you can change it at Approve.
 
+## What to run next
+
+Every Keystone answer ends with a `Next:` line — the exact command with paths, or "nothing now — waiting for …".
+The same command appears as the dim prompt suggestion (Tab takes it), and `/keystone-status` shows it any time.
+For every situation — a plan in draft, a verify FAIL, "I only ran grill", "back after a break", "waiting for a deploy" —
+see **[What to run next — scenarios](docs/scenarios.md)**.
+
 ## Commands
 
 All 23 commands, grouped. Parameters are in brackets; `|` is a choice.

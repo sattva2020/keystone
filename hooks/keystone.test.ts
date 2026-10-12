@@ -50,6 +50,7 @@ test('/keystone-status answers without a model turn', async ($, on) => {
   expect(text).toContain('tasks 2/4')
   expect(text).toContain('BLOCKED 1')
   expect(text).toContain('plan $2.50 · check $1.00 · total $3.50')
+  expect(text).toContain('Next: /keystone:implement docs/keystone/2026-10-12-reminders/plan.md')
 })
 
 test('next command follows the plan status, with the plan path', async () => {

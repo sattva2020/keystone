@@ -10,6 +10,10 @@ allowed-tools: Read Glob Grep Bash(git *) AskUserQuestion Task
 Ceremony must match the change. Anthropic's best practices: "If you could describe the diff in one sentence, skip the
 plan." The playbook's full chain (intent → plan → code → verify) pays off only when decisions are open.
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 ## 1. Size it (agent proposes, human confirms)
 
 Look only at what you can see cheaply (the task text, file names, one or two searches). Then propose a level:

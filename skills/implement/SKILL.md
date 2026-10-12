@@ -16,6 +16,10 @@ built. Progress lives in the plan's checkboxes and in git, so a new session can 
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
 and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 Keep going without asking while the next step needs no human decision; stop only before a destructive action, an irreversible external action, or an action outside the repository — and say which.
 
 ## Step 0: Find the plan and load context
@@ -170,8 +174,8 @@ Do not run verify yourself. If boxes remain `[ ]` without `BLOCKED:`, the Stop h
 `Status: abandoned` in the plan header or `KEYSTONE_GATES=off`). No summary document, no report file.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
-the **very last thing** in the answer: any "next / recommend / what to do" goes inside `Blocked on me:`, nothing after
-the block. Put the recommendation `/keystone:verify <plan path>` in a **new session** (`/clear`) there.
+followed only by the `Next:` line: decisions for a human go inside `Blocked on me:`, and the last line is
+`Next: /clear, then /keystone:verify <plan path>` (or `Next: /keystone:implement <plan path>` when tasks remain).
 
 ```text
 Blocked on me: <what needs a human decision or action; next step: /keystone:verify <plan path> in a new session | none>

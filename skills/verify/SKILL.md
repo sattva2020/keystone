@@ -20,6 +20,10 @@ skill runs the commands, collects the verdict, and writes the record. **Write/Ed
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
 and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Found:` lines become three bullets with bold labels.
 
+**Next step (mandatory).** The answer always ends with one line `Next: <the exact command with paths>` — e.g.
+`Next: /keystone:verify docs/keystone/2026-10-12-x/plan.md` — or, when nothing is to be run now,
+`Next: nothing now — waiting for <event>; then <command>`. Never end on a caveat or an open-ended question.
+
 **No decisions through verify.** If the user asks to put a decision or change into the intent or the plan, do not edit
 anything: answer that this is `/keystone:intent <path>` (intent) or `/keystone:plan <plan path>` (plan), and that verify
 must be run again afterwards. Never attribute to the user an edit the agent made.
@@ -202,8 +206,9 @@ PASS (or `accept` was just recorded), offer: `Milestone M-<n> done? Tick it with
 into a project rule.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
-the **very last thing** in the answer: the recommendation (former `Next:`) goes inside `Blocked on me:` (or `Found:`),
-nothing after the block.
+followed only by the `Next:` line: PASS → `Next: push and open the PR` (L: `/keystone:review` first); PASS-UNPROVEN →
+`Next: /keystone:verify accept <plan path>` or the missing check; FAIL → `Next: /keystone:implement <plan path>` (or
+`/keystone:fix <finding>`); after a fix plan or a fixed FAIL, `/keystone:evolve` may follow later.
 
 ```text
 Blocked on me: <what needs a human decision, incl. recommended next step | none>
