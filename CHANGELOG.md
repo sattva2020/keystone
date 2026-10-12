@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows
 ## [0.9.1] — 2026-10-12
 
 ### Changed
-- Every skill prints its final  command in a fenced code block, so the app shows a copy button on it; the
+- Every skill prints its final `Next:` command in a fenced code block, so the app shows a copy button on it; the
   command is never tagged as shell, which would offer to run it.
 
 ## [0.9.0] — 2026-10-12
