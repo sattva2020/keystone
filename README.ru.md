@@ -46,33 +46,60 @@ claude plugin install keystone@keystone
 Требования: Claude Code 2.1.218 или новее (skills с `background`) и Node.js в `PATH` для хуков. Скиллы плагина имеют
 префикс `keystone:`, поэтому личные скиллы из `~/.claude/skills` их не перекрывают.
 
+## Как это работает
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/flow-light.svg">
+  <img src="assets/flow-light.svg" alt="Путь пользователя Keystone по этапам плейбука AI-native SDLC: Plan → Design → Build → Test → Deploy → Maintain" width="100%">
+</picture>
+
+Keystone следует [плейбуку Anthropic AI-native SDLC](https://claude.com/resources/articles/the-ai-native-sdlc-playbook):
+
+| Этап плейбука | Чем заканчивается | В Keystone |
+|---|---|---|
+| 1. Plan | `intent.md` | `/keystone:intent` — grill спрашивает все решения, которые за вами, и записывает intent вашими словами; вы делаете `accept` |
+| 2. Design | `spec.md` | встроен в план: `/keystone:plan` пишет требования и дизайн и до утверждения запускает `/keystone:check` (анализатор + валидатор в чистом контексте) |
+| 3. Build | `plan.md`, затем дифф | Approve, `/clear`, `/keystone:implement`: задача за задачей; пока план в draft, правки кода закрыты (хук) |
+| 4. Test | проверки + проверяющий в чистом контексте | `/keystone:verify`: сборка, тесты, линтер, затем независимый проверяющий: PASS · PASS-UNPROVEN · FAIL |
+| 5. Deploy | смёрженный PR | `git push` / `gh pr create` закрыты, пока verify не прошёл (хук): агент доходит до ворот, но не проходит их |
+| 6. Maintain | инцидент → новый `intent.md` | `/keystone:fix` (сначала регрессионный тест) или новый `/keystone:intent`, если находка крупнее |
+
+Не каждой задаче нужны все шесть этапов: сначала `/keystone:start` определяет размер. **S** — правка и проверка.
+**M** — короткий план, реализация, проверка. **L** — вся цепочка выше.
+
 ## Как это выглядит
 
 Задача уровня L, сокращённо:
 
 ```text
 > /keystone:start напоминания о просроченных счетах
-  Level: L — несколько решений пользователя, данные и уведомления. Предлагаю: intent → plan → check → implement → verify.
+  Уровень L — решения за вами, затронуты данные и уведомления.
+  Дальше: /keystone:intent → /keystone:plan → /clear → /keystone:implement → /keystone:verify
 > да
-> /keystone:intent
-  Допрос, раунд 1/3: кто создаёт напоминание — система или пользователь? (рекомендую: система) ...
-  ...
-  Записан docs/keystone/2026-10-12-invoice-reminders/intent.md — 9 строк, I-1…I-9. Подтверждаете?
-> accept
+> /keystone:intent напоминания о просроченных счетах
+  (grill идёт внутри intent)
+  Q1 — Кто создаёт напоминание: система или пользователь?   ➡️ Рекомендую: система — у счёта уже есть due_date (src/billing/invoice.ts:41)
+  Q2 — …
+  …
+  Записан docs/keystone/2026-10-12-invoice-reminders/intent.md — I-1…I-9. Прочитайте целиком и поправьте.
+> /keystone:intent accept docs/keystone/2026-10-12-invoice-reminders/intent.md
 > /keystone:plan docs/keystone/2026-10-12-invoice-reminders/intent.md
-  Сверка: I-1…I-9 → 14 строк плана. Rules check: 1 конфликт (логирование) — снят.
-  Risks: 1) повторная отправка при ретрае 2) часовой пояс «просрочки» 3) отписка пока не хранится
-  План записан: Level: L · Mode: feature · Status: draft. Approve?
-> /keystone:check
-  Coverage: 9/9 строк intent (100%). Находки: 2 реальные — задача 4 зависит от задачи 6; «snooze» в задаче 8 не просили.
-  Правим план? > да
-> Approve plan            (Status: draft → approved)
-> /clear → /keystone:implement
-  Задачи 1–14, отмечено 13. 1 BLOCKED: staging SMTP недоступен.
-  Blocked on me: staging SMTP. Changed: 11 файлов. Found: в схеме нет флага отписки.
+  Settings (по репо): tests — yes · logging — standard · docs — no
+  Done means: npm test зелёный; для счёта с просрочкой 1 день появляется строка напоминания
+  Risks: повторная отправка при ретрае · часовой пояс «просрочки» · отписка пока не хранится
+  Запускаю /keystone:check (анализатор + валидатор в чистых контекстах)…
+  Покрытие 9/9 (100%) · 2 находки: задача 4 зависит от задачи 6; «snooze» в задаче 8 не просили. Применить? > да
+  Утвердить план? > Approve        (Status: draft → approved, базовый коммит)
+> /clear
+> /keystone:implement
+  Задачи 1–14: сделано 13, 1 BLOCKED: staging SMTP недоступен.
+  Blocked on me: staging SMTP.  Changed: 11 файлов.  Found: в схеме нет флага отписки.
 > /keystone:verify
-  I-1…I-9: ok 7 · not proven 2 (доставка email). unrequested: нет.
-  Вердикт: PASS-UNPROVEN → docs/keystone/2026-10-12-invoice-reminders/verify.md
+  Done means: 1 ok, 1 not proven (доставка email). I-1…I-9: ok 7 · not proven 2. Unrequested: нет.
+  Вердикт: PASS-UNPROVEN → verify.md. git push закрыт, пока не докажете или не сделаете /keystone:verify accept.
+> /keystone-status
+  Level L · implementing · задачи 13/14 · BLOCKED 1 · стоимость: plan $4.10 · check $3.20 · implement $2.30   (без вызова модели)
 ```
 
 ## Уровни
@@ -139,6 +166,19 @@ Status проходит `draft → approved → implementing → verified`, а `
 
 Методика, таблицы и ограничения: [`docs/benchmarks.md`](docs/benchmarks.md) (на английском).
 
+## Статус и стоимость (мод)
+
+Рядом с хуками Keystone ставит небольшой [мод](https://code.claude.com/docs/en/plugins/mods) на TypeScript:
+
+- **`/keystone-status`** — активный план, уровень, статус, сделанные задачи, число `BLOCKED`, `Done means`, какие гейты
+  включены и сколько стоил каждый этап. Отвечает локально, без вызова модели.
+- **Строка состояния** — `Keystone · L · implementing · 13/14 · $9.60` под полем ввода.
+- **Счётчик стоимости** — после каждого хода прирост стоимости сессии прибавляется к этапу, который вы запускали
+  (`/keystone:plan`, `check`, `implement`…), для активного плана; `implement` и `verify` получают измеренные цифры для
+  строки `cost:`.
+
+Моду нужен Claude Code 2.1.287+ в терминале или 2.1.286+ в Desktop. В `claude -p` хуки работают, но ничего не рисуется.
+
 ## Интеграции
 
 - **[memlab](https://github.com/sattva2020/memlab) (необязательно, отдельный плагин).** Память проекта: поиск по коду
@@ -152,10 +192,6 @@ Status проходит `draft → approved → implementing → verified`, а `
   Keystone его не ставит и не настраивает. Если инструменты memlab есть в сессии, `grill`, `intent`, `plan`, `check` и
   `fix` используют `search_decisions` / `search_code` для прошлых решений и мест в коде, а `fix` записывает урок через
   `add_note`. Без memlab всё работает как раньше.
-- **Адаптер AI Factory (заморожен) — только если план всё ещё пишет `/aif-plan`.** `adapters/ai-factory` встраивает
-  правила Keystone в `/aif-plan`, `/aif-implement` и `/aif-verify` из AI Factory. Если работаете через `/keystone:*`,
-  он не нужен. Установка:
-  `ai-factory extension add <repo>/adapters/ai-factory`. Новые механики появляются только в плагине.
 
 ## На чём основан
 

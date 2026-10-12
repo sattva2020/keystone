@@ -3,6 +3,23 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] — 2026-10-12
+
+### Added
+- **Mod** (TypeScript, `hooks/keystone.ts`): `/keystone-status` answered without a model call; a status line
+  `Keystone · L · implementing · 13/14 · $9.60`; a cost meter that adds each turn's cost to the stage you ran and hands
+  `implement` / `verify` the measured numbers for their `cost:` line. Tests: `claude plugin test .`.
+- **Implementation notes**: an append-only `## Implementation notes` section in `plan.md` — `implement` writes one line
+  per decision the plan did not spell out (what, why, evidence); `verify` lists unexplained deviations.
+- **User flow** diagram mapped onto Anthropic's AI-native SDLC playbook (`assets/flow-*.svg`) and a stage-by-stage table in the README.
+
+### Changed
+- README: memlab is a separate plugin with its own install commands; the "See it in action" example now shows grill
+  inside intent, `accept` as a full command and `check` run by `plan`.
+
+### Removed
+- The AI Factory adapter is no longer part of the public repository.
+
 ## [0.6.0]
 
 Keystone is now a standalone Claude Code plugin.

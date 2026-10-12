@@ -12,7 +12,6 @@ const front = (p) => read(p).split('---')[1];
 const body = (p) => read(p).split('\n').filter((l) => !l.includes('derived from ai-factory@')).join('\n');
 const SKILLS = ['check', 'fix', 'grill', 'implement', 'intent', 'plan', 'start', 'verify'];
 const AGENTS = ['analyzer.md', 'validator.md', 'verifier.md'];
-const AD = 'adapters/ai-factory/';
 const allSkillFiles = () => SKILLS.flatMap((s) => {
   const refs = existsSync(join(root, 'skills', s, 'references')) ? readdirSync(join(root, 'skills', s, 'references')).map((f) => `skills/${s}/references/${f}`) : [];
   return [`skills/${s}/SKILL.md`, ...refs];
@@ -21,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.6.0');
+  assert.equal(p.version, '0.7.0');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -165,12 +164,6 @@ test('start routes to the Keystone skills and handles a lingering active plan', 
     assert.ok(t.includes(s), s);
 });
 
-test('I-11: AI Factory adapter frozen and still well-formed', () => {
-  const m = json(AD + 'extension.json');
-  assert.equal(m.name, 'keystone-aif');
-  for (const inj of m.injections) assert.ok(existsSync(join(root, AD, inj.file)), inj.file);
-  assert.match(read(AD + 'injections/plan.md'), /\/keystone:check <intent path> <plan path>/);
-});
 
 test('I-19…I-23: Done means, keep going / stop, three-part summary, Repro/Unconfirmed, effort', () => {
   const plan = read('skills/plan/SKILL.md') + read('skills/plan/references/PLAN-FORMAT.md');

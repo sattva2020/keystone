@@ -46,33 +46,60 @@ Try it without installing: `claude --plugin-dir <path-to-this-repo>`.
 Requirements: Claude Code 2.1.218 or newer (skills with `background`), and Node.js on `PATH` for the hooks. Plugin
 skills are namespaced `keystone:`, so your personal skills in `~/.claude/skills` do not shadow them.
 
+## How it works
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/flow-light.svg">
+  <img src="assets/flow-light.svg" alt="Keystone user flow mapped onto the AI-native SDLC playbook: Plan → Design → Build → Test → Deploy → Maintain" width="100%">
+</picture>
+
+Keystone follows [Anthropic's AI-native SDLC playbook](https://claude.com/resources/articles/the-ai-native-sdlc-playbook):
+
+| Playbook stage | Ends with | In Keystone |
+|---|---|---|
+| 1. Plan | `intent.md` | `/keystone:intent` — grill asks every decision that is yours, then writes intent in your words; you `accept` it |
+| 2. Design | `spec.md` | folded into the plan: `/keystone:plan` writes requirements + design and runs `/keystone:check` (fresh-context analyzer + validator) before you approve |
+| 3. Build | `plan.md`, then the diff | Approve, `/clear`, `/keystone:implement`: task by task; no code while the plan is draft (hook) |
+| 4. Test | checks + fresh-context verifier | `/keystone:verify`: runs your build/test/lint, then an independent verifier: PASS · PASS-UNPROVEN · FAIL |
+| 5. Deploy | merged PR | `git push` / `gh pr create` stay closed until verify passes (hook) — the agent can act up to the gate, not past it |
+| 6. Maintain | incident → new `intent.md` | `/keystone:fix` (regression test first), or a new `/keystone:intent` when the finding is bigger |
+
+Not every change needs all six: `/keystone:start` sizes it first. **S** — edit and check. **M** — short plan, implement,
+verify. **L** — the whole chain above.
+
 ## See it in action
 
 An L-level task, abridged:
 
 ```text
 > /keystone:start add reminders for overdue invoices
-  Level: L — several user-owned decisions, touches data and notifications. Proposing: intent → plan → check → implement → verify.
+  Level: L — several decisions are yours, touches data and notifications.
+  Next: /keystone:intent → /keystone:plan → /clear → /keystone:implement → /keystone:verify
 > yes
-> /keystone:intent
-  Grill, round 1: Who creates a reminder, the system or the user? (recommended: system) ...
-  ...
-  Wrote docs/keystone/2026-10-12-invoice-reminders/intent.md — 9 lines, I-1…I-9. Sign off?
-> accept
+> /keystone:intent add reminders for overdue invoices
+  (grill runs inside intent)
+  Q1 — Who creates a reminder, the system or the user?   ➡️ Recommended: system — invoices already carry due_date (src/billing/invoice.ts:41)
+  Q2 — …
+  …
+  Wrote docs/keystone/2026-10-12-invoice-reminders/intent.md — I-1…I-9. Read it whole and correct me.
+> /keystone:intent accept docs/keystone/2026-10-12-invoice-reminders/intent.md
 > /keystone:plan docs/keystone/2026-10-12-invoice-reminders/intent.md
-  Reconciliation: I-1…I-9 → 14 plan rows. Rules check: 1 conflict (logging) — resolved.
-  Risks: 1) duplicate sends on retry 2) timezone of "overdue" 3) opt-out is not stored yet
-  Plan written: Level: L · Mode: feature · Status: draft. Approve?
-> /keystone:check
-  Coverage: 9/9 intent lines (100%). Findings: 2 real — task 4 depends on task 6; "snooze" in task 8 was not requested.
-  Edit the plan? > yes
-> Approve plan            (Status: draft → approved)
-> /clear → /keystone:implement
-  Tasks 1–14 done, 13 checked. 1 BLOCKED: staging SMTP not reachable.
-  Blocked on me: staging SMTP. Changed: 11 files. Found: opt-out flag missing in schema.
+  Settings (inferred): tests — yes · logging — standard · docs — no
+  Done means: npm test green; a reminder row appears for an invoice 1 day overdue
+  Risks: duplicate sends on retry · timezone of "overdue" · opt-out not stored yet
+  Running /keystone:check (analyzer + validator, clean contexts)…
+  Coverage: 9/9 (100%) · 2 findings: task 4 depends on task 6; "snooze" in task 8 was not requested. Apply? > yes
+  Approve plan? > Approve        (Status: draft → approved, baseline commit)
+> /clear
+> /keystone:implement
+  Tasks 1–14: 13 done, 1 BLOCKED: staging SMTP not reachable.
+  Blocked on me: staging SMTP.  Changed: 11 files.  Found: no opt-out flag in the schema.
 > /keystone:verify
-  I-1…I-9: ok 7 · not proven 2 (email delivery). unrequested: none.
-  Verdict: PASS-UNPROVEN → docs/keystone/2026-10-12-invoice-reminders/verify.md
+  Done means: 1 ok, 1 not proven (email delivery). I-1…I-9: ok 7 · not proven 2. Unrequested: none.
+  Verdict: PASS-UNPROVEN → verify.md. git push stays closed until you prove it or /keystone:verify accept.
+> /keystone-status
+  Level L · implementing · tasks 13/14 · BLOCKED 1 · cost: plan $4.10 · check $3.20 · implement $2.30   (no model call)
 ```
 
 ## Choose your level
@@ -139,6 +166,19 @@ Measured on a real-world Next.js + NestJS + Supabase monorepo, in fresh isolated
 
 Method, tables and limits: [`docs/benchmarks.md`](docs/benchmarks.md).
 
+## Status and cost (mod)
+
+Keystone ships a small TypeScript [mod](https://code.claude.com/docs/en/plugins/mods) next to its hooks:
+
+- **`/keystone-status`** — the active plan, its level, status, tasks done, `BLOCKED` count, `Done means`, which gates are
+  on, and the cost of each stage. Answered locally, without a model call.
+- **Status line** — `Keystone · L · implementing · 13/14 · $9.60` under the prompt.
+- **Cost meter** — after every turn the session's cost delta is added to the stage you ran (`/keystone:plan`,
+  `check`, `implement`, …) for the active plan; `implement` and `verify` receive the measured numbers for their
+  `cost:` line.
+
+Mods need Claude Code 2.1.287+ (terminal) or 2.1.286+ (Desktop). In `claude -p` the hooks run but nothing is drawn.
+
 ## Integrations
 
 - **[memlab](https://github.com/sattva2020/memlab) (optional, a separate plugin).** Project memory: code and
@@ -152,10 +192,6 @@ Method, tables and limits: [`docs/benchmarks.md`](docs/benchmarks.md).
   Keystone does not install or configure it. When memlab's tools are present in a session, `grill`, `intent`, `plan`,
   `check` and `fix` use `search_decisions` / `search_code` for prior decisions and code locations, and `fix` records the
   lesson with `add_note`. Without memlab everything works as before.
-- **AI Factory adapter (frozen) — only if you still plan with `/aif-plan`.** `adapters/ai-factory` injects the
-  Keystone rules into AI Factory's `/aif-plan`, `/aif-implement` and `/aif-verify`. You do not need it when you use
-  `/keystone:*`. Install with
-  `ai-factory extension add <repo>/adapters/ai-factory`. New mechanics land only in the plugin.
 
 ## Built on
 

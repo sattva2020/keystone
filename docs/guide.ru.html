@@ -405,11 +405,6 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
 <li>Строка <code>Keystone Chain:</code> есть в отчёте дословно, даже когда всё в порядке; <code>verify.md</code> закоммичен отдельно.</li></ul>
 </div></details>
 
-<details class="skill"><summary><span class="pill inj">адаптер</span><span class="name">keystone-aif (заморожен)</span><span class="what">Для проектов, где план пишет /aif-plan. Новые механики только в плагине.</span></summary><div class="body">
-<ul><li>Адаптер встраивает правила Keystone в <code>/aif-plan</code>, <code>/aif-implement</code> и <code>/aif-verify</code> (уровни, строки сверки по <code>I-n</code>, Rules check, Risks, <code>BLOCKED:</code>, строка <code>Keystone Chain:</code>).</li>
-<li>Лежит в <code>adapters/ai-factory/</code>; ставится в домашнюю папку (см. «Где что»). Для работы плагина не нужен.</li>
-<li>Если стоит расширение <code>aif-ext-sattva</code>, его строка <code>Implementation Notes Coverage:</code> по-прежнему идёт в отчёт verify дословно.</li></ul>
-</div></details>
 </section>
 
 <!-- ===================== CHECKLISTS ===================== -->
@@ -478,8 +473,7 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
 <tr><td>Хуки (гейты)</td><td><code>hooks/gate.mjs</code>, <code>hooks/hooks.json</code></td></tr>
 <tr><td>Артефакты задачи в проекте</td><td><code>docs/keystone/&lt;дата&gt;-&lt;slug&gt;/</code>: <code>intent.md</code>, <code>plan.md</code>, <code>verify.md</code>. В проекте с AI Factory — в <code>paths.specs</code></td></tr>
 <tr><td>Атрибуция</td><td><code>THIRD_PARTY_NOTICES.md</code> — что портировано из AI Factory 2.19.0 (MIT)</td></tr>
-<tr><td>Адаптер AI Factory (заморожен)</td><td><code>adapters/ai-factory/</code> — <code>extension.json</code> (<code>keystone-aif</code>) и вставки <code>injections/</code></td></tr>
-<tr><td>Тесты</td><td><code>npm test</code>, <code>claude plugin validate .</code>, <code>test/smoke-install.sh &lt;проект AIF&gt;</code>; headless-стенд — <code>test/harness/README.md</code>, сводки — <code>docs/test-reports/</code></td></tr>
+<tr><td>Тесты</td><td><code>npm test</code>, <code>claude plugin validate .</code>, <code>claude plugin test .</code>; headless-стенд — <code>test/harness/README.md</code>, сводки — <code>docs/test-reports/</code></td></tr>
 </table></div>
 
 <h3>Установить плагин (скиллы <code>/keystone:*</code>)</h3>
@@ -489,17 +483,13 @@ claude plugin install keystone@keystone</pre>
 <h3>Разовая проба без установки</h3>
 <pre>claude --plugin-dir <path-to-repo></pre>
 
-<h3>Адаптер AI Factory (заморожен, только для проектов с <code>/aif-plan</code>)</h3>
-<p class="muted">Ставить в <b>домашнюю папку</b>: личные скиллы <code>~/.claude/skills</code> перекрывают проектные с тем же именем.</p>
-<pre>cd ~ &amp;&amp; ai-factory extension add <repo>/adapters/ai-factory</pre>
-
 <h3>Тесты</h3>
 <pre>npm test</pre>
 <pre>claude plugin validate .</pre>
-<pre>bash test/smoke-install.sh &lt;проект AIF&gt;</pre>
+<pre>claude plugin test .</pre>
 <ul><li><code>npm test</code> — тексты скиллов, атрибуция, дословные блоки AI Factory, все ветки хуков;</li>
 <li><code>claude plugin validate .</code> — манифесты;</li>
-<li><code>test/smoke-install.sh</code> — установка и удаление адаптера на копии проекта.</li></ul>
+<li><code>claude plugin test .</code> — тесты мода (TypeScript).</li></ul>
 </section>
 
 <!-- ===================== FAQ ===================== -->

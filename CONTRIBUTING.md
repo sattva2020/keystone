@@ -22,7 +22,7 @@ A change to a `SKILL.md` or an agent is a behavior change. In the issue or PR de
 ```bash
 npm test                  # skill texts, attribution, verbatim AI Factory blocks, every hook branch
 claude plugin validate .  # manifests (needs a recent Claude Code CLI)
-bash test/smoke-install.sh <an AI Factory project>   # adapter install and removal on a copy
+claude plugin test .      # the TypeScript mod's tests
 ```
 
 Hooks are plain Node (ESM) with no dependencies; keep them that way. Files in this repository are written in English;

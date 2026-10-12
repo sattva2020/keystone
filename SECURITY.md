@@ -10,7 +10,6 @@
   approve anything. `KEYSTONE_GATES=off` disables it.
 - **Skills and agents** are prompts. They use only the tools Claude Code already grants the session. The optional memlab
   integration calls an MCP server you configured yourself.
-- **Adapter.** `adapters/ai-factory` only edits AI Factory skill text when you install it.
 
 ## Reporting a vulnerability
 
