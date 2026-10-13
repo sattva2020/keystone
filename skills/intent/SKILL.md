@@ -22,6 +22,12 @@ copy button on a code block. Never tag it ```bash: a `/keystone:*` command is no
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question.
 
+**File links.** Every file you write or point the user to lives inside the session's working directory
+(the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
+that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+subproject. A file that must live outside it gets its absolute path. Check the link before showing it: the app opens
+links only from the working directory.
+
 Chain: `intent.md` → plan → code + tests → verify. There is **no separate spec stage**: the plan is the spec.
 This skill captures only *what and why*; *how* belongs to the plan.
 
@@ -74,6 +80,10 @@ Author: <git user.name or the user's name> · Created: <YYYY-MM-DD> · Status: d
 Source: <idea | ticket URL | incident/alert link>
 <Written after plan: <path> — only for a retrospective intent>
 <Roadmap: M-<n> — optional; only when docs/roadmap.md exists and the task belongs to a milestone>
+Goal check: <matches | narrowed — confirmed <date>: "<user's words>" | replaced — confirmed <date>: "<user's words>">
+
+## Original goal
+<the user's first request for this change, verbatim — never edited, never paraphrased>
 
 ## Problem
 <what hurts today, for whom, how often — originator's words>
@@ -98,8 +108,17 @@ Source: <idea | ticket URL | incident/alert link>
 
    `Roadmap: M-<n>` is optional: add it only when `docs/roadmap.md` exists and the task belongs to that milestone
    (ask in one line if unclear); `/keystone:verify` then offers to tick the milestone via `/keystone:roadmap`.
-   The template is mandatory: Status, Problem, Desired outcome, Affected users and systems, Constraints, Open questions,
-   Decisions log. I-n numbers ascend in order of appearance.
+   The template is mandatory: Status, Goal check, Original goal, Problem, Desired outcome, Affected users and systems,
+   Constraints, Open questions, Decisions log.
+
+   **Goal check (anti-substitution).** `# Intent:` names the user's goal, not a workaround. Compare the Desired outcome
+   with `## Original goal`: if together they still deliver it, `Goal check: matches`. If they deliver less (narrowed) or
+   something else (replaced) — e.g. the user asked for automatic clicks and the outcome is a reminder to click — ask one
+   explicit question before saving: "You asked for <X>. This intent delivers only <Y>, because <Z>. <X> stays undone.
+   Confirm?" Record the answer verbatim in `Goal check:` and as a decision. Without a confirmed answer the intent stays
+   `draft`. A limit of the agent (it cannot enter a password, pass a login, solve a CAPTCHA) is never a reason to narrow
+   silently: offer the ways that still reach X first (a script the user configures with his own access, partial
+   automation), and only then the narrowing. I-n numbers ascend in order of appearance.
 
    **IDs.** Desired outcome and Constraint lines share one sequence `I-1, I-2, …`. IDs are never renumbered or reused:
    a new line gets the next free number; a dropped line stays struck through (`~~I-4 …~~ dropped <date>: <why>`).
@@ -117,7 +136,8 @@ Source: <idea | ticket URL | incident/alert link>
 
 Set `Status: accepted` on the given intent.md. `/keystone:intent accept <path>` typed by the human **is** the explicit
 confirmation — do not ask again. If accept was invoked by another skill or agent rather than the human, ask first. If Open questions still contain an item that changes
-the scope (what is in or out), refuse and list it.
+the scope (what is in or out), refuse and list it. If `Goal check:` is `narrowed` or `replaced` without a confirmed
+answer in the user's words, refuse and ask that question first.
 
 ## Rules
 

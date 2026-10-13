@@ -60,3 +60,13 @@ test('next command follows the plan status, with the plan path', async () => {
   expect(nextCommand({ ...p, status: 'approved' })).toBe('/keystone:implement docs/keystone/x/plan.md')
   expect(nextCommand({ ...p, status: 'draft' })).toBe('/keystone:plan docs/keystone/x/plan.md')
 })
+
+test('release mode: a verified plan with open ## Release steps stays in view and points to implement', async () => {
+  const rel = PLAN.replace('implementing', 'verified').replace('- [ ] 3. email — BLOCKED: no staging SMTP', '- [x] 3. email').replace('- [ ] 4. ui', '- [x] 4. ui') + '\n## Release\n- [ ] R1. merge into main and push — check: CI green\n- [ ] R2. deploy — check: /health 200\n'
+  const p = parsePlan('docs/keystone/x/plan.md', rel)!
+  expect(p.status).toBe('verified')
+  expect(p.release).toBe(2)
+  expect(nextCommand(p)).toBe('/keystone:implement docs/keystone/x/plan.md')
+  expect(gatesFor(p).join(' ')).toContain('release mode')
+  expect(parsePlan('p', PLAN.replace('implementing', 'verified'))).toBe(null)
+})

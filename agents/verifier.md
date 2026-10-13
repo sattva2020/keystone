@@ -31,7 +31,10 @@ through merge commits from other branches or parallel sessions are not part of t
 
 ## 3. Task completion audit
 
-First check the plan header's `Done means:` line: each outcome in it gets `ok` / `not proven` / `wrong` before anything else.
+First, the **original goal**: compare the intent's `## Original goal` (or the plan's `## Original Request`) with what the
+diff delivers, independent of the I-n lines, and print `Original goal: met | partially | not met — <why>`. `partially` or
+`not met` without a confirmed `Goal check: narrowed | replaced` line in the intent is a `wrong` row.
+Then check the plan header's `Done means:` line: each outcome in it gets `ok` / `not proven` / `wrong`.
 
 Go through **every task** in the plan, every row of `## Requirements Reconciliation`, and every intent `I-n`
 (struck-through lines excluded).

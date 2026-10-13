@@ -22,6 +22,12 @@ copy button on a code block. Never tag it ```bash: a `/keystone:*` command is no
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question.
 
+**File links.** Every file you write or point the user to lives inside the session's working directory
+(the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
+that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+subproject. A file that must live outside it gets its absolute path. Check the link before showing it: the app opens
+links only from the working directory.
+
 Keep going without asking while the next step needs no human decision; stop only before a destructive action, an irreversible external action, or an action outside the repository — and say which.
 
 ## Step 0: Find the plan and load context
@@ -37,6 +43,8 @@ Keep going without asking while the next step needs no human decision; stop only
      external or hard-to-undo step (merge into main, push, deploy, a production job or migration) needs an explicit yes
      right before it (AskUserQuestion, one step per question); a smoke check only the human can do becomes
      `BLOCKED: needs the human`. Tick each `R<n>` after its check passes and commit the ticks as `docs(release): <slug>`.
+     Commit the ticks so far right before a push step, so that push carries them; the push's own tick stays a local
+     commit that ships with the next push — say so in one line, never ask a separate push just for ticks.
      The Status stays `verified`. Never touch `## Tasks` or code in release mode.
    - `verified` with no open `## Release` steps / `abandoned` → STOP and say so.
 3. **Settings** are mandatory. Read the header line `Settings: tests — … · logging — … · docs — …`:

@@ -29,6 +29,12 @@ copy button on a code block. Never tag it ```bash: a `/keystone:*` command is no
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question.
 
+**File links.** Every file you write or point the user to lives inside the session's working directory
+(the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
+that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+subproject. A file that must live outside it gets its absolute path. Check the link before showing it: the app opens
+links only from the working directory.
+
 Claude Code loads `.claude/rules/*.md` by itself, so a lesson written there reaches every later session with no extra
 layer. **Keystone has no per-skill override layer and its skills are never edited** — a plugin's files are replaced on
 update. Everything evolve learns becomes a **project rule**.

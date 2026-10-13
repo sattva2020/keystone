@@ -13,6 +13,7 @@ export type Plan = {
   done: number
   total: number
   blocked: number
+  release: number // open `- [ ] R<n>.` steps in ## Release (run after verify)
   doneMeans?: string
 }
 export type Ledger = Record<string, number> // stage → USD
@@ -52,25 +53,28 @@ export function parsePlan(file: string, raw: string): Plan | null {
   const lines = raw.replace(/\r/g, '').split('\n')
   const header = lines.find((l) => /^Level:/.test(l)) ?? lines.find((l) => /^Status:/.test(l)) ?? ''
   const status = header.match(/\bStatus:\s*([a-z]+)/i)?.[1]?.toLowerCase() ?? ''
-  if (!ACTIVE.has(status)) return null
-  let inTasks = false, done = 0, total = 0, blocked = 0
+  let inTasks = false, inRelease = false, done = 0, total = 0, blocked = 0, release = 0
   for (const l of lines) {
-    if (/^## /.test(l)) { inTasks = /^## Tasks\b/.test(l); continue }
+    if (/^## /.test(l)) { inTasks = /^## Tasks\b/.test(l); inRelease = /^## Release\b/.test(l); continue }
+    if (inRelease && /^\s*- \[ \]/.test(l)) release++
     if (!inTasks) continue
     if (/^\s*- \[x\]/i.test(l)) { done++; total++ }
     else if (/^\s*- \[ \]/.test(l)) { total++; if (l.includes('BLOCKED:')) blocked++ }
   }
+  // a verified plan stays in view only while its ## Release steps are open (release mode)
+  if (!ACTIVE.has(status) && !(status === 'verified' && release > 0)) return null
   return {
     file: slash(file),
     level: header.match(/\bLevel:\s*([SML])\b/)?.[1] ?? '?',
     mode: header.match(/\bMode:\s*([a-z]+)/i)?.[1]?.toLowerCase() ?? 'feature',
     status,
-    done, total, blocked,
+    done, total, blocked, release,
     doneMeans: lines.find((l) => /^Done means:/.test(l))?.replace(/^Done means:\s*/, ''),
   }
 }
 
 export function gatesFor(p: Plan): string[] {
+  if (p.status === 'verified') return [`release mode: ${p.release} step(s) in ## Release, each merge / push / deploy after your yes`]
   const g = ['push/PR closed until /keystone:verify']
   if (p.status === 'draft') g.unshift('code edits closed until Approve')
   if (p.mode === 'fix' && p.status === 'implementing') g.push('committed tests locked (fix)')
@@ -80,6 +84,7 @@ export function gatesFor(p: Plan): string[] {
 
 // The command the plan's state asks for next, with the plan path filled in (Tab takes it from the prompt box).
 export function nextCommand(p: Plan): string | null {
+  if (p.status === 'verified') return `/keystone:implement ${p.file}`
   if (p.status === 'draft') return `/keystone:plan ${p.file}`
   if (p.status === 'approved') return `/keystone:implement ${p.file}`
   if (p.status === 'implementing') return `/keystone:${p.total - p.done - p.blocked > 0 ? 'implement' : 'verify'} ${p.file}`

@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.2');
+  assert.equal(p.version, '0.9.3');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -479,4 +479,21 @@ test('release gap: release steps live in ## Release, verify ignores them, implem
   has('agents/verifier.md', '`## Release` lines');
   has('docs/scenarios.md', 'release mode');
   has('docs/scenarios.ru.md', 'режим релиза');
+});
+
+test('goal substitution guard: original goal kept verbatim, limits are not decisions, check and verify compare with it', () => {
+  has('skills/intent/SKILL.md', '## Original goal', 'Goal check:', 'stays undone', 'A limit of the agent');
+  has('skills/grill/SKILL.md', 'Goal and today', 'A limit is not a decision.', 'Words against a decision.', 'is context, not a fact');
+  has('skills/check/references/ANALYZE.md', 'K.3: `goal-drift`');
+  has('skills/check/SKILL.md', 'no kept `goal-drift`');
+  has('agents/verifier.md', 'Original goal: met | partially | not met');
+  has('skills/verify/SKILL.md', 'Original goal: met | partially | not met');
+});
+
+test('file links: every skill writes inside the session working directory and links relative to it', () => {
+  for (const d of readdirSync(join(root, 'skills'))) has(`skills/${d}/SKILL.md`, '**File links.**', 'relative to that directory', 'never the main checkout');
+});
+
+test('release mode: ticks ride the next push, no separate push question for them', () => {
+  has('skills/implement/SKILL.md', 'never ask a separate push just for ticks');
 });

@@ -165,3 +165,11 @@ test('review: the project root follows the edited file (worktree with its own pl
   assert.equal(decide({ hook_event_name: 'PreToolUse', cwd: main, tool_name: 'Edit', tool_input: { file_path: join(wt, 'src/a.ts') } }, ENV), null);
   assert.ok(denied(decide({ hook_event_name: 'PreToolUse', cwd: main, tool_name: 'Edit', tool_input: { file_path: join(main, 'src/a.ts') } }, ENV)));
 });
+
+test('release gap: a verified plan with open ## Release steps does not block push or Stop', () => {
+  const root = project({ '2026-10-13-x': 'Level: M · Mode: feature · Status: verified' },
+    { tasks: '- [x] 1. a\n- [x] 2. b\n\n## Release\n- [ ] R1. merge into main and push — check: CI green\n- [ ] R2. deploy — check: /health 200' });
+  assert.equal(pre(root, 'Bash', { command: 'git push origin main' }), null);
+  assert.equal(stop(root), null);
+  assert.equal(pre(root, 'Edit', { file_path: join(root, 'src/a.ts') }), null);
+});

@@ -3,6 +3,23 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.9.3] — 2026-10-13
+
+### Added
+- **Goal substitution guard.** `intent.md` keeps the user's first request verbatim in `## Original goal` and a
+  `Goal check:` line; narrowing or replacing the goal needs the user's confirmed words. `grill` asks how the job is done
+  today, treats an agent limit (password, login, CAPTCHA) as a design problem rather than a reason to drop the goal, and
+  re-asks decisions borrowed from earlier tasks. `check` reports `goal-drift`; `verify` starts with
+  `Original goal: met | partially | not met`.
+- **Release mode in the status line.** A `verified` plan with open `## Release` steps stays in view in
+  `/keystone-status`, and the suggested next command is `/keystone:implement <plan>`.
+
+### Fixed
+- **File links that did not open.** Every skill writes its files inside the session's working directory (in a worktree,
+  the worktree) and links them relative to it; a file outside gets an absolute path.
+- **Release ticks.** Release mode commits the ticks before a push step so the push carries them, instead of asking for
+  a separate push.
+
 ## [0.9.2] — 2026-10-13
 
 ### Fixed

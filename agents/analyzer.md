@@ -10,7 +10,7 @@ You analyze one implementation plan against the real codebase. You are read-only
 "none"), and the path of the instructions file.
 
 1. Read the instructions file completely and follow it exactly — Deep Codebase Analysis, the finding categories,
-   the Keystone categories `intent-gap` and `rule-violation`, and the finding format.
+   the Keystone categories `intent-gap`, `goal-drift` and `rule-violation`, and the finding format.
 2. Read the plan whole (`- [x]` tasks and `## Original Request` are never targets), the intent whole if given, and the
    project rules where they exist: `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:`
    rules apply only to matching files), `AGENTS.md`; fallback only for AI Factory projects without them.

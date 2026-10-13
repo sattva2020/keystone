@@ -26,6 +26,12 @@ copy button on a code block. Never tag it ```bash: a `/keystone:*` command is no
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question.
 
+**File links.** Every file you write or point the user to lives inside the session's working directory
+(the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
+that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+subproject. A file that must live outside it gets its absolute path. Check the link before showing it: the app opens
+links only from the working directory.
+
 **No decisions through verify.** If the user asks to put a decision or change into the intent or the plan, do not edit
 anything: answer that this is `/keystone:intent <path>` (intent) or `/keystone:plan <plan path>` (plan), and that verify
 must be run again afterwards. Never attribute to the user an edit the agent made.
@@ -81,7 +87,9 @@ lint warning, an unfinished-work marker (TODO / FIXME / HACK) or an undocumented
 Call the agent (Agent tool, `subagent_type: "keystone:verifier"`). Its prompt contains **only** facts, no opinion:
 plan path, intent path, base ref, the Step-2 lines (incl. the Architecture and Security gate lines), and the project-rules file list. It returns one line per task,
 Reconciliation row and `I-n`, then `Unrequested`, `Settings`, `Rules gate`, the count line and the `Keystone Chain` line.
-Its first checked line is `Done means:` — every outcome there gets ok / not proven / wrong.
+Its first line is `Original goal: met | partially | not met` — the user's verbatim goal against the diff, independent of
+the intent; `partially`/`not met` without a confirmed `Goal check:` in the intent is `wrong` (PASS is impossible). Then
+`Done means:` — every outcome there gets ok / not proven / wrong.
 Before writing verify.md, **cross-check every `ok` and `wrong` line** against the cited `file:line` (open it and confirm
 it says what the line claims); on a mismatch, correct the line and mark it `(corrected by verify)`. Every `wrong` line
 must carry `Repro: <input / command where the failure shows>`; the verifier also returns an `Unconfirmed — <what could

@@ -23,6 +23,12 @@ copy button on a code block. Never tag it ```bash: a `/keystone:*` command is no
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question.
 
+**File links.** Every file you write or point the user to lives inside the session's working directory
+(the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
+that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+subproject. A file that must live outside it gets its absolute path. Check the link before showing it: the app opens
+links only from the working directory.
+
 ## Core idea
 
 (Cost: two Opus agents. The validator is mandatory here; in upstream AI Factory it was the optional `+check`.)
@@ -125,7 +131,8 @@ Items in the first five groups are prose with no labelled fields: (1) behavioura
 the plan stays as is; (2) optional note — a short code citation `path:line`; (3) plan anchor — `Task #X` ("after Task #X"
 for new tasks); (4) suggested edit — concrete. Dependencies use the short form
 `Task #X should depend on Task #Y. Reason: …`. Omit empty groups. `verdict` is `PASS` only with no `missing` I-n, no
-kept rule violation and Coverage ≥ 90 %; otherwise `FAIL`. With no intent: drop the I-n lines and write
+kept rule violation, no kept `goal-drift` and Coverage ≥ 90 %; otherwise `FAIL`. A kept `goal-drift` is shown first:
+"The plan delivers <Y>, you asked for <X>" — the fix is `/keystone:intent`, not a plan edit. With no intent: drop the I-n lines and write
 `Coverage: n/a · verdict:` by the other two conditions.
 
 No findings at all: `Plan looks solid — no significant gaps.` plus the I-n lines and the Coverage line.

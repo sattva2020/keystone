@@ -135,6 +135,11 @@ tests. One finding per `partial`/`missing` I-n, plus one status line per I-n (in
 note: intent status not `accepted`; `Written after plan:` present (the caller reports `git log` evidence of intent.md changing after the plan's
 first commit; you have no shell) → `rework signal`.
 
+**K.3: `goal-drift`** — only when an intent file is given. Compare the intent's `## Original goal` (verbatim user
+request) with its Desired outcome and with the plan. If the outcome delivers less than or something other than the
+original goal and the header has no confirmed `Goal check: narrowed | replaced — confirmed …` line, report one
+`goal-drift` finding quoting both. An intent with no `## Original goal`: compare with the plan's `## Original Request`.
+
 **K.2: `rule-violation`** — read `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md` (layer dependency rules),
 `.claude/rules/**/*.md` (a rule with `paths:` applies only to files it matches), `AGENTS.md`; fallback only for AI Factory
 projects without them (fallback, if they exist): `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
@@ -146,7 +151,7 @@ Plan work that traces to no I-n and no project rule is `out_of_scope` (4.6), nam
 ## Finding format (one block per finding, numbered `F1…`)
 
 ```
-### F<n> (group: missing|improvements|removals|out_of_scope|intent-gap|rule-violation)
+### F<n> (group: missing|improvements|removals|out_of_scope|intent-gap|goal-drift|rule-violation)
 Plan anchor: Task #X (or "after Task #X", or "I-n")
 Quote: "<verbatim line from the plan or from the code file, with path:line>"
 Evidence: <what the code or the plan shows — behavioural impact if the plan stays as is>

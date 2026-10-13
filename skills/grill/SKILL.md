@@ -20,6 +20,12 @@ copy button on a code block. Never tag it ```bash: a `/keystone:*` command is no
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question.
 
+**File links.** Every file you write or point the user to lives inside the session's working directory
+(the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
+that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+subproject. A file that must live outside it gets its absolute path. Check the link before showing it: the app opens
+links only from the working directory.
+
 ## Input
 
 `$ARGUMENTS` is the idea, plan or question. Empty → grill the topic of the current conversation: say in one line what
@@ -33,6 +39,8 @@ decision is not grilled — one simple fork is an ordinary question.
 List every decision the user owns, with its prerequisites. Walk each of these areas and add a node for anything that
 is not already decided by the user's own words (closed nodes from earlier in the conversation stay closed):
 
+0. **Goal and today** — restate the goal in the user's own words and keep it fixed; ask how they do it today, step by step
+   (one pass over everything or one by one, how often, what annoys them) before designing schedules, timers or UI.
 1. **Scope** — what is in, what is explicitly out, what is "later".
 2. **Users and roles** — who uses it, who must not, who is affected without using it.
 3. **Behaviour** — the main flow step by step, inputs, outputs, states.
@@ -45,6 +53,15 @@ is not already decided by the user's own words (closed nodes from earlier in the
 9. **Integration** — which existing modules, APIs, jobs, notifications are touched; what must not break.
 10. **Trade-offs** — speed vs. completeness, build vs. reuse, cost, performance targets.
 11. **Done** — observable success criteria, how it will be checked, rollout and rollback, deadlines.
+
+**A limit is not a decision.** When the goal hits something the agent cannot do (enter a password, log in, pass a
+CAPTCHA or 2FA), do not ask "do it or drop it?". List the options that still reach the goal first (a script on the
+user's server with access he configures himself, a saved session, partial automation with a fallback), with their risks,
+and only then the option that narrows the goal. Never recommend dropping the core goal; dropping it is the user's call,
+asked as "You asked for X; this gives only Y; X stays undone — confirm?".
+
+**Words against a decision.** If the user's words contradict a closed decision (he talks about "clicking" while a
+decision says "no clicking"), stop and re-ask that decision before going on.
 
 A large change typically yields 15–25 user decisions across several rounds; a small one fewer. Do not pad the tree,
 but do not stop at the obvious ones either — ask about the hard parts the user may not have considered.
@@ -115,5 +132,7 @@ when the user chose to wait. Say in one line that the list is not saved until th
 ## Project memory (memlab, optional)
 
 If the memlab MCP tools are available in this session (`search_decisions`, `search_code`), call `search_decisions` on
-the topic before the first round. A prior decision found there is a fact: cite it (`path:line`) and do not ask it
-again; a conflict between the new idea and a prior decision becomes a question for the user. No memlab — skip this.
+the topic before the first round. A prior decision of the same task is a fact: cite it (`path:line`) and do not ask it
+again. A decision from another, earlier task is context, not a fact: when the new request touches the same goal, re-ask
+it with the citation ("On <date> you chose <X> for <task> — still so here?"); a conflict between the new idea and a prior
+decision becomes a question for the user. No memlab — skip this.
