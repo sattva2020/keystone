@@ -98,5 +98,5 @@ Level: <S|M|L> · checks: <command → result> · cost: $<X> (from /cost) | cost
 ```
 
 You cannot see your own spend; ask the user to paste `/cost` if they want the number, otherwise write `not measured`.
-Reference costs measured on the test bench (2026-10-11): small edit $3.9–10.2, plan from ready requirements $6, full
-chain with a separate spec $30 — the reason S and M exist.
+Reference costs measured on the test bench (2026-10-11): small edit USD 3.9–10.2, plan from ready requirements USD 6, full
+chain with a separate spec USD 30 — the reason S and M exist.

@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.3');
+  assert.equal(p.version, '0.9.4');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -496,4 +496,8 @@ test('file links: every skill writes inside the session working directory and li
 
 test('release mode: ticks ride the next push, no separate push question for them', () => {
   has('skills/implement/SKILL.md', 'never ask a separate push just for ticks');
+});
+
+test('no $<digit> in skills: Claude Code reads it as an argument placeholder and substitutes the user\'s words', () => {
+  for (const d of readdirSync(join(root, 'skills'))) assert.doesNotMatch(read(`skills/${d}/SKILL.md`), /\$\d/, d);
 });

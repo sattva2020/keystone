@@ -85,8 +85,8 @@ block renders as a monospace wall); one blank line between questions:
 Ask a round as plain text in this format. Use AskUserQuestion only when the round has at most 4 questions
 and all of them have discrete options (recommended option first). Never re-ask a decision the user already answered.
 **Verify facts in recommendations.** Every recommendation that contains a fact (price, limit, version, name, path) is
-checked against a source in the repo or the docs and cites it; a mismatch with the source is stated aloud (lesson: $49
-was suggested where the spec said $49.99). Do not announce the topics or the number of later rounds. **Never recommend an answer that widens the scope beyond what
+checked against a source in the repo or the docs and cites it; a mismatch with the source is stated aloud (lesson: 49 USD
+was suggested where the spec said 49.99 USD). Do not announce the topics or the number of later rounds. **Never recommend an answer that widens the scope beyond what
 the user said** ("only e-chat" stays only e-chat) — scope widening is the user's call, asked as a question if at all.
 Concretely: the recommended answer never adds a channel, platform, integration, audience, feature or rollout step the
 user has not mentioned, and never removes one the user named (no "skip snooze" when the user listed snooze). The

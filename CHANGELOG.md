@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.9.4] — 2026-10-13
+
+### Fixed
+- **Dollar amounts in skill text.** Claude Code reads `$<digit>` in a skill as an argument placeholder, so the cost
+  references in `start` (`$3.9`, `$6`, `$30`) and the price lesson in `grill` (`$49`) were replaced by words of the
+  user's request. Amounts are now written as `USD 3.9`; a test keeps `$<digit>` out of every skill.
+
 ## [0.9.3] — 2026-10-13
 
 ### Added
