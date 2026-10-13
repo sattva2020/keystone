@@ -6,7 +6,8 @@ to attach (files in [`img/`](img/), 1600×900). Every tweet fits the 280-charact
 Most images come from live output. `cards.mjs` runs the real `hooks/gate.mjs` on a throwaway repo, runs the real
 `npm test`, and feeds a sample plan to the mod's own `statusText()`. The benchmark card uses the numbers from
 [`docs/benchmarks.md`](../../benchmarks.md). To regenerate the images: `node docs/social/twitter/cards.mjs`. To show
-the gates live in a terminal (good for a screen recording): `bash docs/social/twitter/demo-gates.sh`.
+the gates live in a terminal (good for a screen recording): `bash docs/social/twitter/demo-gates.sh`. To post a
+thread through the X API: `node docs/social/twitter/post.mjs <1-7>` (dry run), then add `--post`.
 
 Repo link used below: https://github.com/sattva2020/keystone
 
