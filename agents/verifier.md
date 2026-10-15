@@ -90,6 +90,23 @@ verification evidence`, not only plan-to-code agreement.
   file). Formatting noise from a formatter is not unrequested; new logic, new files, new dependencies are. Files of the
   task folder (plan.md, intent.md, verify.md) are never unrequested.
 
+## 5a. Weakened tests and prior decisions
+
+- **Weakened tests.** Read `git diff <base> -- <changed test files>`. Every check that got looser is a line
+  `Weakened test: <file:line> — <what was loosened> — <task / row that asks for it | no reason recorded>`: a deleted
+  assert or expect, a removed or skipped test (`skip`, `xit`, `todo`, `.only` elsewhere), an exception or a wider
+  alternative added to a pattern (`(?<!…)`, `|…`), a strict matcher swapped for a looser one, a lowered threshold, an
+  allow-list that grew. Also text in the changed files that satisfies a test's wording but not its meaning (lesson: a
+  paragraph saying "Not a fallback" passed a test that every `.ai-factory/` mention be a fallback). A loosening a task
+  or row explicitly asks for is fine and is named on that row; any other stays on the `Weakened test` line.
+- **Prior decisions.** Take the changed paths and the key terms of the change (directories, file names, tool and
+  product names). Grep the accepted intents of other task folders (`docs/keystone/*/intent.md` with `Status: accepted`:
+  their `I-n` lines and confirmed decisions) and `docs/notes/*.md` for them. A change that contradicts an accepted
+  decision is a line `Decision: <intent path:I-n | note path> — contradicted by <file:line> — <how>`, unless this
+  task's plan or intent names that decision and supersedes it (then it is fine; say so on the row). Lesson: a release
+  made the stages read another planner's per-skill files on every run although an accepted I-8 said
+  "`.ai-factory/*` only as a fallback"; every test was green.
+
 ## 5b. Adversarial pass on changed logic
 
 For every changed function that computes or branches, build 2-3 concrete inputs, including boundary ones (zero, empty,
@@ -128,6 +145,8 @@ Keystone verify: <plan path> · base <ref>
 …
 Unrequested: <file — what> | none
 Leftovers / env: <file:line — what> | none
+Weakened tests: <Weakened test: … lines> | none
+Decisions: <Decision: … lines> | none
 Settings: ok | violated — …
 Rules gate: pass | fail — <k> violations in <r> rules | not checkable
 rule <source:line> — pass | fail — <file:line>; … | n/a — <why>

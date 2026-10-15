@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.11');
+  assert.equal(p.version, '0.9.12');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -578,4 +578,12 @@ test('0.9.10: every committing skill honours a commitlint scope-enum', () => {
 
 test('0.9.11: no skill or agent reads AI Factory skill-context or SECURITY.md', () => {
   for (const f of [...allSkillFiles(), ...AGENTS.map((a) => `agents/${a}`)]) assert.doesNotMatch(read(f), /skill-context|\.ai-factory\/SECURITY\.md/, f);
+});
+
+test('0.9.12: verify flags weakened tests and contradicted prior decisions', () => {
+  has('agents/verifier.md', '## 5a. Weakened tests and prior decisions', '`Weakened test: <file:line> — <what was loosened>',
+    'satisfies a test\'s wording but not its meaning', '`docs/keystone/*/intent.md` with `Status: accepted`',
+    '`Decision: <intent path:I-n | note path> — contradicted by <file:line> — <how>`', 'Weakened tests: <Weakened test: … lines> | none', 'Decisions: <Decision: … lines> | none');
+  has('skills/verify/SKILL.md', 'A green test run proves nothing about a test the diff loosened', '`Weakened tests: none` (or each tied to a task); `Decisions: none`',
+    'or a `Weakened test` line no task asks for', 'a `Decision:` line,');
 });

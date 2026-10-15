@@ -122,6 +122,9 @@ Rules you enforce when reading the output (the verifier knows them, you check th
 - A row whose evidence starts with `BLOCKED:` is open work, never `ok`.
 - Formatting noise is not `unrequested`; new logic, files or dependencies without a task / row / `I-n` are.
 - Build or test failing in Step 2 → every row it covers is at best `wrong`.
+- A green test run proves nothing about a test the diff loosened: each `Weakened test` line without a task / row that
+  asks for it keeps the verdict at PASS-UNPROVEN until the human accepts it. A `Decision:` line (the change contradicts
+  an accepted decision of an earlier intent or note that this plan does not supersede) is a FAIL.
 
 Example of the verifier's lines (shape only):
 
@@ -162,10 +165,10 @@ Strict mode (L by default, or `--strict`) additionally requires: every task `ok`
 (tests are required there unless `tests — no`), lint clean, no unfinished-work markers and no undocumented env
 variables in the changed files, Rules gate `pass`. Anything short of that is `wrong` or `not proven` as in Step 2.
 
-- **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Settings: ok`; `Rules gate` not `fail`; `Architecture gate` not `fail`; `Security gate` not an unignored `fail`.
+- **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Weakened tests: none` (or each tied to a task); `Decisions: none`; `Settings: ok`; `Rules gate` not `fail`; `Architecture gate` not `fail`; `Security gate` not an unignored `fail`.
 - **PASS-UNPROVEN** — no `missing` / `wrong` / `unrequested`, `Settings: ok`, Rules gate not `fail`, but at least one
-  `not proven` or `BLOCKED` row.
-- **FAIL** — anything else: a `missing`, `wrong` or `unrequested` line, `Settings: violated`, `Rules gate: fail`, `Architecture gate: fail`, an unignored `Security gate: fail`.
+  `not proven` or `BLOCKED` row, or a `Weakened test` line no task asks for.
+- **FAIL** — anything else: a `missing`, `wrong` or `unrequested` line, a `Decision:` line, `Settings: violated`, `Rules gate: fail`, `Architecture gate: fail`, an unignored `Security gate: fail`.
 
 ## Step 5 — record
 

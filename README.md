@@ -202,7 +202,7 @@ Gates apply only while there is an **active plan**: the `plan.md` in the newest 
 | plan is `draft` | code edits outside the task folder until the plan is approved |
 | fix is `implementing` | edits to test files already committed in `HEAD` (a new regression test file is fine) |
 | plan is `implementing` and `## Tasks` has `[ ]` without `BLOCKED:` | ending the turn: one reminder, it never blocks a question to you |
-| any active plan | `git push` and `gh pr create` until `/keystone:verify` returns PASS, or `/keystone:verify accept` |
+| an active plan whose commits the push ships (commits touching its task folder) | `git push` and `gh pr create` until `/keystone:verify` returns PASS, or `/keystone:verify accept`; a push that carries none of the plan's work passes |
 
 **Release after verify.** Because push opens only on a verified plan, release steps never sit in `## Tasks` — the plan
 keeps them in `## Release` (`R1`, `R2`, …). Verify does not count them as open work; on PASS its `Next:` points to
@@ -210,7 +210,7 @@ keeps them in `## Release` (`R1`, `R2`, …). Verify does not count them as open
 or deploy, and keeps the plan `verified`. This follows the playbook's rule: *"The agent does everything up to the
 production gate and nothing past it."*
 
-To lift a gate, set `Status: abandoned` in the plan header, or run with `KEYSTONE_GATES=off`. The hooks are plain Node
+To lift a gate, set `Status: abandoned` in the plan header, or start Claude Code with the environment variable `KEYSTONE_GATES=off` (a prefix on one command does not reach the hook). The hooks are plain Node
 scripts (`hooks/gate.mjs`) and read only the hook payload and the plan files.
 
 ## Files

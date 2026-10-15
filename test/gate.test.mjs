@@ -150,7 +150,7 @@ test('review: Status/Mode come from the header line only; Stop counts only ## Ta
 
 test('review: push regex — global options caught, --dry-run allowed', () => {
   const root = project({ '2026-10-12-x': 'Status: implementing' });
-  for (const c of ['git -C ../x push', 'git -c core.x=y push origin', 'git --no-pager push', 'cd a && git push -u origin b'])
+  for (const c of ['git -C . push', 'git -c core.x=y push origin', 'git --no-pager push', 'cd a && git push -u origin b'])
     assert.ok(denied(pre(root, 'Bash', { command: c })), c);
   for (const c of ['git push --dry-run', 'git status', 'git log --oneline'])
     assert.equal(pre(root, 'Bash', { command: c }), null, c);
@@ -172,4 +172,26 @@ test('release gap: a verified plan with open ## Release steps does not block pus
   assert.equal(pre(root, 'Bash', { command: 'git push origin main' }), null);
   assert.equal(stop(root), null);
   assert.equal(pre(root, 'Edit', { file_path: join(root, 'src/a.ts') }), null);
+});
+
+test('push gate: only a push that ships the active plan\'s commits is closed', () => {
+  const root = project({ '2026-10-14-x': 'Status: implementing' });
+  const remote = mkdtempSync(join(tmpdir(), 'ks-remote-'));
+  spawnSync('git', ['init', '-q', '--bare', remote]);
+  git(root, 'remote', 'add', 'origin', remote);
+  git(root, 'branch', '-M', 'main');
+  git(root, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
+  git(root, 'fetch', '-q', 'origin');
+  const commit = (file) => { writeFileSync(join(root, file), String(Math.random())); git(root, 'add', '-A'); git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', file); };
+  mkdirSync(join(root, 'src'), { recursive: true });
+  commit('src/release.ts');
+  const P = 'git' + ' push';
+  assert.equal(pre(root, 'Bash', { command: `${P} origin main` }), null, 'unrelated release passes');
+  assert.equal(pre(root, 'Bash', { command: `git -C ${root} push origin HEAD:main` }), null, '-C repo, src:dst refspec');
+  commit('docs/keystone/2026-10-14-x/verify.md'); // the plan's task folder
+  assert.ok(denied(pre(root, 'Bash', { command: P })), 'a commit touching the plan folder is still closed');
+  assert.ok(denied(pre(root, 'PowerShell', { command: `${P} origin main` })));
+  assert.ok(denied(pre(root, 'Bash', { command: `${P} --all origin` })), '--all ships every branch');
+  assert.ok(denied(pre(root, 'Bash', { command: `${P} origin no-such-branch` })), 'unknown ref → closed');
+  assert.match(pre(root, 'Bash', { command: P }).hookSpecificOutput.permissionDecisionReason, /start Claude Code with KEYSTONE_GATES=off/);
 });

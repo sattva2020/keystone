@@ -5,6 +5,25 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.12] — 2026-10-15
+
+### Added
+- **verify:** the verifier lists every test the diff loosened (deleted or skipped asserts, exceptions added to a
+  pattern, looser matchers, text that meets a test's wording but not its meaning) as `Weakened test:` — a green run says
+  nothing about a loosened test, so an untied one keeps the verdict at PASS-UNPROVEN until you accept it. It also greps
+  accepted intents of earlier tasks and `docs/notes` for decisions the change contradicts; a `Decision:` line is a FAIL
+  unless this task's plan supersedes that decision. Both come from 0.9.10, which loosened a test and broke an accepted
+  decision with every test green.
+
+### Fixed
+- **Push gate:** it closed every push while the newest plan of the repo was active, so another session's unfinished
+  plan blocked unrelated releases (0.9.10 and 0.9.11 had to be pushed by hand). Now a push is closed only when a commit
+  it ships, not yet on any remote, touches the active plan's task folder — implement commits the plan with every task,
+  so the plan's own work stays gated. The refs come from the command (`git push <remote> <src>[:<dst>]`, `--all`,
+  `-C <dir>`); an unknown ref keeps the gate closed.
+- The gate hint no longer says "run with KEYSTONE_GATES=off" as if a command prefix worked: the hook reads Claude
+  Code's own environment, so it has to be set before Claude Code starts.
+
 ## [0.9.11] — 2026-10-15
 
 ### Removed
