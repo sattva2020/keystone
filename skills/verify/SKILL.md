@@ -80,7 +80,9 @@ Two more gates join the same lines:
 - **Security gate.** On L whose plan has the `Threats:` block or a `/keystone:security` task (security/auth/payments/PII),
   `/keystone:security` must have been run for this diff: take its `Security gate: pass | warn | fail` line from that
   run in this session, or run it now with the Skill tool (`/keystone:security <plan path>`) and read the line from its answer. `fail` without a matching entry in `docs/keystone/security-ignores.md` → verdict FAIL; none run →
-  `not proven`. Not a security change → `n/a`. Strictness: **L is strict by default** (`--strict` for M) — then a
+  `not proven`. The same applies when the plan has no `Threats:` block but the diff itself changes RLS policies,
+  grants or roles, auth or session code, or permission checks: that is a security change, so no audit run →
+  `Security gate: not proven — <files>`, never `n/a`. Not a security change → `n/a`. Strictness: **L is strict by default** (`--strict` for M) — then a
 lint warning, an unfinished-work marker (TODO / FIXME / HACK) or an undocumented env variable in the changed files is
 `wrong`, and a `not run` check is `not proven`; in normal mode they are reported as open work only.
 
@@ -169,8 +171,7 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
    and the plan: `git add <plan folder>/verify.md <plan>` and `git commit -m "docs(verify): <slug>"`. Check
    `git diff --cached --stat` lists exactly those two files before committing. The push gate (hook) opens now.
 3. **PASS-UNPROVEN** → status unchanged, `git push` stays closed. Commit `verify.md` alone (`docs(verify): <slug>`).
-   Tell the human: prove the open rows (tests, a run) and verify again, or `/keystone:verify accept` to take them
-   consciously.
+   The human chooses in **Step 6**: prove the open rows now and verify again, or accept them consciously.
 4. **FAIL** → status unchanged; commit `verify.md` alone. Recommend `/keystone:fix verify` — it takes every finding
    from this `verify.md` (each failing `rule` line with all its `file:line`, every `wrong` line, `Settings: violated`,
    an Architecture gate `fail`) and fixes them in one pass, so verify runs once more, not once per finding — or
@@ -181,6 +182,35 @@ Re-verifying: each run overwrites `verify.md` and gets its own commit, so the hi
 If the working tree has unrelated uncommitted changes, do not stage them — add the two files by path, never `-A`.
 When there is nothing to commit (verify.md identical to the committed one), say `verify.md unchanged` and skip the
 commit.
+
+## Step 6 — the choice (AskUserQuestion)
+
+A verdict that leaves a decision ends with a menu, not with one command — the human picks, then goes on. Print the
+report and the three-heading summary first, then call AskUserQuestion once. Options, recommended first and marked
+`(Recommended)`:
+
+- **FAIL** — `Fix every finding now — /keystone:fix verify` · `Finish an unfinished task — /keystone:implement <plan>`
+  (only when a row is `missing`) · `Stop here`.
+- **PASS-UNPROVEN** — one `Prove now: <check>` option for each group of open rows that can be proven before
+  production (a test to run, a read-only query against the database, `/keystone:security <plan>` for a security
+  row, a local run) · `Accept as unproven (<n> rows: <short list>)` · on L `Run /keystone:review first` ·
+  `Stop here`. A `Prove now` option goes first whenever one exists. **Accept is never first** when an open row or the
+  Security gate concerns security (RLS, grants, auth, permissions) — then the security check is the recommendation.
+- **PASS** with open `## Release` steps — `Release: /keystone:implement <plan>` (on L `Run /keystone:review first`
+  goes first) · `Stop here`.
+
+After the choice:
+- `Prove now` with a read-only check (tests, a read-only query, a GET) → run it in this turn, quote the output, and
+  re-run the verifier only on the rows it covers (the evidence changed); anything that writes or needs production →
+  hand it to the human as the `Next:` command.
+- `Accept as unproven` → the click is the confirmation the Accept section asks for (it names the rows); go to
+  **Accept** without asking again.
+- Any other option → its command becomes the `Next:` line, nothing else is run (fix, implement, review and security
+  are separate commands the human starts).
+- AskUserQuestion unavailable (`claude -p`, CI) → no menu: print the options as a numbered list and put the first one
+  in `Next:`.
+
+PASS without release steps ends with `Next:` as before — there is nothing to choose.
 
 ## Accept — `/keystone:verify accept`
 
@@ -230,8 +260,8 @@ into a project rule.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
 followed only by the `Next:` line: PASS with open `## Release` steps → `Next: /keystone:implement <plan path>` (release
-mode; on L `/keystone:review` first); PASS without them → `Next: push and open the PR` (L: `/keystone:review` first); PASS-UNPROVEN →
-`Next: /keystone:verify accept <plan path>` or the missing check; FAIL → `Next: /keystone:fix verify` (defects in the diff, all
+mode; on L `/keystone:review` first); PASS without them → `Next: push and open the PR` (L: `/keystone:review` first); PASS-UNPROVEN → the option chosen in Step 6 (a
+`Prove now` check before `/keystone:verify accept <plan path>`); FAIL → `Next: /keystone:fix verify` (defects in the diff, all
 findings in one pass) or `/keystone:implement <plan path>` (a task never finished); after a fix plan or a fixed FAIL, `/keystone:evolve` may follow later.
 
 ```text

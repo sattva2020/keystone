@@ -5,6 +5,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.7] — 2026-10-15
+
+### Changed
+- **Verify ends with a choice, as AI Factory's verify does.** After a FAIL, PASS-UNPROVEN or PASS with release steps,
+  verify opens an AskUserQuestion menu with the recommended option first, instead of a single `Next:` command. For
+  PASS-UNPROVEN a `Prove now: <check>` option comes before accept; a read-only check runs in the same turn, and
+  choosing accept is the accept confirmation.
+
+### Fixed
+- **Accept offered before a security check.** With open rows about RLS, grants, auth or permissions, accept is never
+  the recommended option.
+- **Security gate `n/a` on RLS changes.** A diff that changes RLS policies, grants, auth or permission checks is a
+  security change even when the plan has no `Threats:` block; without a `/keystone:security` run the gate is
+  `not proven`.
+
 ## [0.9.6] — 2026-10-15
 
 ### Fixed
@@ -17,15 +32,6 @@ All notable changes to this project are documented here. The format follows
   gave `Next:` with a path relative to that repository; the fresh session starts in its own working directory and found
   nothing. Every skill now gives a path in the `Next:` command that opens from the session's working directory — the
   absolute path for a file outside it.
-
-## [0.9.5] — 2026-10-14
-
-### Added
-- **Next buttons, file links, handoff (mod).** Buttons above the prompt with the plan's next command; clickable file
-  paths relative to the session folder; `/keystone-handoff` moves a task to a clean session when the context grows.
-
-### Fixed
-- **File links stay inside the session folder** even when a path contains an inner `..`.
 
 ## [0.9.4] — 2026-10-13
 

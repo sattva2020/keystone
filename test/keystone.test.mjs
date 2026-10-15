@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.6');
+  assert.equal(p.version, '0.9.7');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -519,4 +519,9 @@ test('verify/fix loop: Rules gate lists every rule and violation; fix verify tak
   has('agents/verifier.md', 'One line per rule', 'never stop at the first violation');
   has('skills/verify/SKILL.md', 'Next: /keystone:fix verify', 'Code unchanged since the last FAIL');
   has('skills/fix/SKILL.md', '### Verify findings mode', 'fix all of them in one pass');
+});
+
+test('verify choice: menu after the verdict, prove before accept, security never accept-first, RLS without Threats not n/a', () => {
+  has('skills/verify/SKILL.md', '## Step 6 — the choice (AskUserQuestion)', 'Prove now: <check>',
+    '**Accept is never first**', 'the click is the confirmation', 'never `n/a`');
 });
