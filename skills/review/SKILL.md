@@ -51,7 +51,6 @@ links only from the working directory.
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`
 (rules with `paths:` apply only to matching files); `AGENTS.md`. FALLBACK only when the project uses AI Factory and those
 are absent: `.ai-factory/{DESCRIPTION,ARCHITECTURE,RULES}.md` and `.ai-factory/rules/*.md` (all fallback).
-Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-review/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules.
 MUST / MUST NOT lines are project rules. If an active plan exists (newest `docs/keystone/*/plan.md` with Status draft,
 approved or implementing), read it and its intent — the review is also judged against what was asked.
 
@@ -80,7 +79,7 @@ For an S change, which has no plan and so no verify: only the project rules, not
    <ref>...HEAD` (invalid → ask: check staged instead / cancel). No ref → staged; nothing staged → the working tree;
    still nothing → the branch against its base (`git merge-base HEAD main`, or `master`). Empty → `Nothing to check.`
 2. **Rules.** The MUST / MUST NOT lines from Step 0 (`CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`
-   dependency rules, `.claude/rules/**/*.md` with their `paths:`, `AGENTS.md`, `.ai-factory/skill-context/aif-review/SKILL.md`; fallback files only for AI Factory
+   dependency rules, `.claude/rules/**/*.md` with their `paths:`, `AGENTS.md`; fallback files only for AI Factory
    projects). None found → `Rules gate: not checkable — no MUST / MUST NOT rules`, suggest `/keystone:setup`, stop.
 3. **Check — the same way as the Rules gate of `agents/verifier.md`.** List the rules first, then check each rule
    across every changed file before moving to the next. One line per rule:

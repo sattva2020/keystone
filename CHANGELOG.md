@@ -5,6 +5,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.11] — 2026-10-15
+
+### Removed
+- **0.9.10 was a mistake in direction, reverted here:** plan, implement, fix, verify, review and check (with the
+  verifier and the analyzer) read AI Factory's per-skill files `.ai-factory/skill-context/*/SKILL.md` on every run, and
+  security and verify's Security gate read `.ai-factory/SECURITY.md`. That made Keystone's stages depend on another
+  tool's internal files. Stages again read only Keystone's own files (`.claude/rules`, `docs/keystone/security-ignores.md`).
+
+### Changed
+- Tests are strict again: no `/aif-` anywhere in skills, and no skill or agent mentions `skill-context` or
+  `.ai-factory/SECURITY.md`.
+
+### Kept from 0.9.10
+- **Commit scope:** implement, intent, plan, fix, verify and setup pick a scope allowed by a commitlint `scope-enum`.
+
 ## [0.9.10] — 2026-10-15
 
 ### Added

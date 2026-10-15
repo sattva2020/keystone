@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.10');
+  assert.equal(p.version, '0.9.11');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -53,7 +53,7 @@ test('plan, implement, fix run only on explicit /keystone:* (no clash with aif-*
 test('I-15: no AI Factory leftovers in skills (attribution lines excepted)', () => {
   for (const f of allSkillFiles()) {
     const t = body(f);
-    assert.doesNotMatch(t, /(?<!skill-context)\/aif-|HANDOFF_MODE|Handoff|TaskList|TaskGet|ultra|spec.md/, f);
+    assert.doesNotMatch(t, /\/aif-|HANDOFF_MODE|Handoff|TaskList|TaskGet|ultra|spec.md/, f);
     if (f !== 'skills/implement/SKILL.md') assert.doesNotMatch(t, /TaskCreate|TaskUpdate/, `${f}: live task list only in implement`);
     if (/config\.yaml/.test(t)) assert.match(t, /paths\.specs/, `${f}: config.yaml only for paths.specs`);
   }
@@ -571,22 +571,11 @@ test('0.9.9: verify asks about context drift and offers the owning command', () 
     '`/keystone:setup`', '`.claude/rules` → `/keystone:evolve`', 'Context drift: <file — what is stale, owning command> | none');
 });
 
-test('0.9.10: AI Factory skill-context lessons are read as project rules by each stage', () => {
-  const map = { plan: 'aif-plan', implement: 'aif-implement', fix: 'aif-fix', verify: 'aif-verify', review: 'aif-review', check: 'aif-improve' };
-  for (const [s, a] of Object.entries(map)) has(`skills/${s}/SKILL.md`, `\`.ai-factory/skill-context/${a}/SKILL.md\``, 'Not a fallback');
-  has('skills/check/references/ANALYZE.md', '`.ai-factory/skill-context/aif-improve/SKILL.md`');
-  has('agents/verifier.md', '`.ai-factory/skill-context/aif-verify/SKILL.md`');
-  has('agents/analyzer.md', '`.ai-factory/skill-context/aif-improve/SKILL.md`');
-});
-
-test('0.9.10: security ignores are read from .ai-factory/SECURITY.md too and written where the project keeps them', () => {
-  has('skills/security/SKILL.md', 'both ignore-lists before any audit', '`.ai-factory/SECURITY.md`', 'write where the project already keeps its ignores');
-  has('skills/security/references/DO-NOT-FLAG.md', '`.ai-factory/SECURITY.md`');
-  has('skills/verify/SKILL.md', 'matching entry in `docs/keystone/security-ignores.md` or, in an AI Factory project, `.ai-factory/SECURITY.md`');
-  has('agents/verifier.md', '`docs/keystone/security-ignores.md` and `.ai-factory/SECURITY.md`');
-});
-
 test('0.9.10: every committing skill honours a commitlint scope-enum', () => {
   for (const s of ['verify', 'implement', 'intent', 'plan', 'fix', 'setup'])
     has(`skills/${s}/SKILL.md`, '**Commit scope.**', '`commitlint.config.*`', '`scope-enum`', 'never a scope the hook rejects');
+});
+
+test('0.9.11: no skill or agent reads AI Factory skill-context or SECURITY.md', () => {
+  for (const f of [...allSkillFiles(), ...AGENTS.map((a) => `agents/${a}`)]) assert.doesNotMatch(read(f), /skill-context|\.ai-factory\/SECURITY\.md/, f);
 });

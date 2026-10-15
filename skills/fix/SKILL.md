@@ -96,7 +96,6 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
    `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
    projects without them.
    Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
-   Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-fix/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules.
    Use them to avoid fixes that violate project structure or conventions; MUST / MUST NOT lines
    there are project rules. Infer the Settings (tests: a runner or test files exist; logging: an existing logger; docs: `docs/`
    or a README with usage sections) — they are written into the plan, never asked.

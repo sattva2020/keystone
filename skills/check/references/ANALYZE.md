@@ -150,7 +150,6 @@ original goal and the header has no confirmed `Goal check: narrowed | replaced �
 **K.2: `rule-violation`** — read `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md` (layer dependency rules),
 `.claude/rules/**/*.md` (a rule with `paths:` applies only to files it matches), `AGENTS.md`; fallback only for AI Factory
 projects without them (fallback, if they exist): `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
-Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-improve/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules.
 A plan step that breaks a MUST / MUST NOT line is a blocker. Quote the rule and the plan step. Also: the
 `Project rules check:` line missing or claiming "none" while a violation exists.
 

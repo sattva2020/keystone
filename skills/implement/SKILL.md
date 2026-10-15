@@ -74,7 +74,6 @@ Keep going without asking while the next step needs no human decision; stop only
    `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
    projects without them.
    Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
-   Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-implement/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules.
    MUST / MUST NOT lines there override general habits. Follow the stack, import patterns, file
    placement and module boundaries they describe.
 5. **Context:** if the plan's `## Requirements Reconciliation` cites an `intent.md`, read it once — it explains *why*;

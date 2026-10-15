@@ -15,4 +15,4 @@ A candidate that matches a row is dropped — unless the "flag only if" conditio
 | CI triggers only maintainers can fire: `workflow_dispatch`, `push` to a protected branch, `schedule`, `release` | No external attacker can start the run | the workflow also runs on `pull_request_target`, `issue_comment` or a fork PR |
 | Dev-only tooling not shipped (scripts, local dev-server config, `devDependencies`, Storybook) | Outside the production attack surface | it is exposed publicly or its output reaches the build |
 | Missing hardening with no path to an attacker's goal (a header, a rate limit on an internal job) | No exploit path | a concrete abuse sequence exists — then rate it by SEVERITY.md |
-| Item in `docs/keystone/security-ignores.md` or, in an AI Factory project, `.ai-factory/SECURITY.md` | The team decided | the entry is older than 12 months or its reason no longer holds (then `ignored — stale`) |
+| Item in `docs/keystone/security-ignores.md` | The team decided | the entry is older than 12 months or its reason no longer holds (then `ignored — stale`) |

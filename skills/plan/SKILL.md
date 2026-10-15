@@ -90,7 +90,6 @@ words that came with the path; if there were none, the intent's Problem line is 
 `.claude/rules/**/*.md` (a rule with `paths:` frontmatter applies only to matching files); `AGENTS.md` if present.
 Fallback only if the project uses AI Factory and those files are absent.
 Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
-Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-plan/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules.
 MUST / MUST NOT lines there are
 project rules. Use this context when exploring, writing task text (correct
 technologies) and planning file structure (follow project conventions and layer boundaries). Treat explicit rules as
