@@ -82,7 +82,9 @@ function pushTarget(cmd, base) {
   if (!m || !/push\b/.test(m[0])) return { dir: base, refs: ['HEAD'] }; // gh pr create ships HEAD
   const dirs = [...m[0].matchAll(/-C\s+("[^"]+"|'[^']+'|\S+)/g)].map((x) => x[1].replace(/^["']|["']$/g, ''));
   const dir = dirs.length ? resolve(base, dirs[dirs.length - 1]) : base;
-  const words = cmd.slice(m.index + m[0].length).split(/[|;&]/)[0].trim().split(/\s+/).filter(Boolean);
+  // redirections (2>&1, > log, < in) are not refs; cut them before splitting on | ; &
+  const rest = cmd.slice(m.index + m[0].length).replace(/\d*>&\d*|\d*>>?\s*\S+|<\s*\S+/g, ' ');
+  const words = rest.split(/[|;&]/)[0].trim().split(/\s+/).filter(Boolean);
   if (words.some((w) => w === '--all' || w === '--mirror')) return { dir, refs: ['--branches'] };
   const args = words.filter((w) => !w.startsWith('-')).map((w) => w.replace(/^["']|["']$/g, ''));
   const refs = args.slice(1).map((r) => r.replace(/^\+/, '').split(':')[0]).filter(Boolean);

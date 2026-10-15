@@ -188,6 +188,8 @@ test('push gate: only a push that ships the active plan\'s commits is closed', (
   const P = 'git' + ' push';
   assert.equal(pre(root, 'Bash', { command: `${P} origin main` }), null, 'unrelated release passes');
   assert.equal(pre(root, 'Bash', { command: `git -C ${root} push origin HEAD:main` }), null, '-C repo, src:dst refspec');
+  assert.equal(pre(root, 'Bash', { command: `${P} origin main 2>&1 | tail -1` }), null, 'redirections are not refs');
+  assert.equal(pre(root, 'Bash', { command: `${P} origin main > out.log 2> err.log` }), null, 'file redirections are not refs');
   commit('docs/keystone/2026-10-14-x/verify.md'); // the plan's task folder
   assert.ok(denied(pre(root, 'Bash', { command: P })), 'a commit touching the plan folder is still closed');
   assert.ok(denied(pre(root, 'PowerShell', { command: `${P} origin main` })));

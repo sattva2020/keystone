@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.13] — 2026-10-15
+
+### Fixed
+- **Push gate:** a redirection after the push (`2>&1`, `> log`) was read as a ref, `git log` failed on it and the gate
+  stayed closed; redirections are cut before the refs are read. 0.9.12 was never published — 0.9.13 ships it.
+
 ## [0.9.12] — 2026-10-15
 
 ### Added
