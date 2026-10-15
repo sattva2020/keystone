@@ -5,6 +5,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.10] — 2026-10-15
+
+### Added
+- **AI Factory lessons:** plan, implement, fix, verify (and the verifier's Rules gate), review and check (and the
+  analyzer) read `.ai-factory/skill-context/aif-<stage>/SKILL.md` when it exists — plan → aif-plan, implement →
+  aif-implement, fix → aif-fix, verify → aif-verify, review → aif-review, check → aif-improve. Not a fallback: it is
+  read next to `.claude/rules`, and its MUST / MUST NOT lines are project rules.
+- **security:** the ignore-list of an AI Factory project, `.ai-factory/SECURITY.md`, is read together with
+  `docs/keystone/security-ignores.md` (by the audit and by verify's Security gate); `ignore` writes where the project
+  already keeps its ignores.
+- **Commit scope:** implement, intent, plan, fix, verify and setup read a commitlint `scope-enum`
+  (`.commitlintrc*`, `commitlint.config.*`, `commitlint` in `package.json`) and pick an allowed scope instead of
+  `docs(verify)` and the like.
+
+### Changed
+- The I-15 leftovers test allows `/aif-` only inside the path `skill-context/aif-…`.
+
 ## [0.9.9] — 2026-10-15
 
 ### Added

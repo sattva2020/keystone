@@ -143,6 +143,9 @@ Goal check: <matches | narrowed — confirmed <date>: "<user's words>" | replace
 6. **Finish the review step — always, in the same turn.** Show the path and ask the human to **read the file whole and
    correct what Claude got wrong** (the playbook's key review step). Do not mark it accepted yourself. Suggest committing
    by the project's commit convention (e.g. `docs(intent): <slug>`).
+   **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
+   `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
+   if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(intent)`).
 7. **If another command interrupts** before step 6 is done, the file stays `Status: draft`; finish step 6 as soon as
    that command ends. Every `/keystone:*` skill that finds a `draft` or uncommitted intent for the change it works on
    says so in one line first.

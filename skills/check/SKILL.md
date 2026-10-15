@@ -77,7 +77,8 @@ Read the plan **completely**. Note what is done (`- [x]`, never touched), the `#
 never touched), the Settings line, the Requirements Reconciliation table, the Risks, the Tasks and the Commit Plan.
 Project rules (those that exist): `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md`
 (`paths:` rules apply only to matching files), `AGENTS.md`; fallback only for AI Factory projects without them:
-fallback files `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`. Intent
+fallback files `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-improve/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules. Intent
 status not `accepted`, or intent.md changed after the plan's first commit (`git log`) → remember it for the Notes line.
 
 ## Step 2 — analyze

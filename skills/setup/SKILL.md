@@ -228,6 +228,9 @@ Selected → tell the user the commands to run, in that order (or invoke them if
 changed, offer a commit following the project's convention (`chore: keystone setup` when none is evident):
 "Commit these files? Yes / No". Commit only on "Yes", only the files this run wrote (`git add <paths>`, never
 `git add -A`).
+**Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
+`package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
+if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (none: `chore: keystone setup`).
 
 ## Do not
 

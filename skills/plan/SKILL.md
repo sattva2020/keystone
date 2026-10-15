@@ -90,6 +90,7 @@ words that came with the path; if there were none, the intent's Problem line is 
 `.claude/rules/**/*.md` (a rule with `paths:` frontmatter applies only to matching files); `AGENTS.md` if present.
 Fallback only if the project uses AI Factory and those files are absent.
 Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-plan/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules.
 MUST / MUST NOT lines there are
 project rules. Use this context when exploring, writing task text (correct
 technologies) and planning file structure (follow project conventions and layer boundaries). Treat explicit rules as
@@ -269,6 +270,9 @@ block, no task.
 
 Set `Status: approved` in the plan header. Make the baseline commit of intent and plan by the project's commit
 convention (the chain is the audit trail; stage only the task folder). Then tell the user:
+**Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
+`package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
+if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(plan)`).
 
 - implement in a **fresh session** — a new conversation or `/clear` (not `/compact`) — with
   `/keystone:implement <plan path>`; Sonnet is enough for a plan this explicit;

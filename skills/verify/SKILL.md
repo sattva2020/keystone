@@ -64,6 +64,7 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref]`, or `accept`, or empty (= t
   only for AI Factory projects without them.
   Fallback files: `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`. MUST / MUST NOT lines
   there are project rules.
+  Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-verify/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules.
 - A plan in the fallback AI Factory format (`.ai-factory/plans/<x>.md`, no task folder): `verify.md` goes next to the intent when the
   plan has an `Authority:` line or a link to an intent; otherwise `<plan>.verify.md`.
 - `accept` → jump to **Accept** below.
@@ -93,7 +94,7 @@ Two more gates join the same lines:
   `Architecture gate: pass | fail — <rule, file:line> | n/a` (n/a = no such file or no rules in it).
 - **Security gate.** On L whose plan has the `Threats:` block or a `/keystone:security` task (security/auth/payments/PII),
   `/keystone:security` must have been run for this diff: take its `Security gate: pass | warn | fail` line from that
-  run in this session, or run it now with the Skill tool (`/keystone:security <plan path>`) and read the line from its answer. `fail` without a matching entry in `docs/keystone/security-ignores.md` → verdict FAIL; none run →
+  run in this session, or run it now with the Skill tool (`/keystone:security <plan path>`) and read the line from its answer. `fail` without a matching entry in `docs/keystone/security-ignores.md` or, in an AI Factory project, `.ai-factory/SECURITY.md` → verdict FAIL; none run →
   `not proven`. The same applies when the plan has no `Threats:` block but the diff itself changes RLS policies,
   grants or roles, auth or session code, or permission checks: that is a security change, so no audit run →
   `Security gate: not proven — <files>`, never `n/a`. Not a security change → `n/a`. Strictness: **L is strict by default** (`--strict` for M) — then a
@@ -186,6 +187,9 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
    `git diff --cached --stat` lists exactly those two files before committing. The push gate (hook) opens now.
 3. **PASS-UNPROVEN** → status unchanged, `git push` stays closed. Commit `verify.md` alone (`docs(verify): <slug>`).
    The human chooses in **Step 6**: prove the open rows now and verify again, or accept them consciously.
+   **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
+   `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
+   if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(verify)`).
 4. **FAIL** → status unchanged; commit `verify.md` alone. Recommend `/keystone:fix verify` — it takes every finding
    from this `verify.md` (each failing `rule` line with all its `file:line`, every `wrong` line, `Settings: violated`,
    an Architecture gate `fail`) and fixes them in one pass, so verify runs once more, not once per finding — or

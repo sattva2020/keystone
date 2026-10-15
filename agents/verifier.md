@@ -20,7 +20,7 @@ Input (from the caller): plan path, intent path (if any), base ref, and the buil
 Read the plan whole (Original Request, Design, Reconciliation, Risks, Tasks), the intent whole, and the project rules:
 `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:` rules apply only to matching
 files) and `AGENTS.md` if present; fallback only for AI Factory projects without them.
-Fallback files: `.ai-factory/RULES.md`, `.ai-factory/rules/*.md` — MUST / MUST NOT lines there are project rules. If the plan has `## Original Request`, it is scope context; tasks, Reconciliation rows and
+Fallback files: `.ai-factory/RULES.md`, `.ai-factory/rules/*.md` — MUST / MUST NOT lines there are project rules. Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-verify/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules. If the plan has `## Original Request`, it is scope context; tasks, Reconciliation rows and
 `I-n` are the executable inputs.
 
 ## 2. Changed files
@@ -105,7 +105,7 @@ verify). Report it on the line of the task/row it concerns.
 - Architecture gate — if `docs/architecture.md` exists, grep the imports of CHANGED_FILES against its layer dependency
   rules. `Architecture gate: pass | fail — <rule, file:line> | n/a`.
 - Security gate — copy the caller's `Security gate: pass | warn | fail | n/a` line from the input; do not run the audit
-  yourself. A `fail` is reported as is (the caller checks `docs/keystone/security-ignores.md`).
+  yourself. A `fail` is reported as is (the caller checks `docs/keystone/security-ignores.md` and `.ai-factory/SECURITY.md`).
 - Rules gate — every MUST / MUST NOT line of the project rules against every file in CHANGED_FILES, exhaustively:
   list the rules first, then check each rule across all changed files before moving to the next. One line per rule,
   `rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`, and **every** violating `file:line`

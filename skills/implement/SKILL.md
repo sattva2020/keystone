@@ -74,6 +74,7 @@ Keep going without asking while the next step needs no human decision; stop only
    `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
    projects without them.
    Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+   Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-implement/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules.
    MUST / MUST NOT lines there override general habits. Follow the stack, import patterns, file
    placement and module boundaries they describe.
 5. **Context:** if the plan's `## Requirements Reconciliation` cites an `intent.md`, read it once — it explains *why*;
@@ -153,6 +154,9 @@ path rather than relying only on synthetic fixtures.
 **2.6 Commit.** Commit after each task, or at the points marked in `## Commit Plan` when the plan has one. Use a
 conventional commit message by the project's rules (`type(scope): subject`). Do not ask permission per commit unless the
 project requires it. Before every commit run `git diff --cached --stat` (see Drift).
+**Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
+`package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
+if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(plan)`, `docs(release)`).
 
 ## Drift → plan in the same commit (hard rule)
 

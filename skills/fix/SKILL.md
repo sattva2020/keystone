@@ -96,6 +96,7 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
    `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
    projects without them.
    Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+   Not a fallback — read it even when the files above exist: `.ai-factory/skill-context/aif-fix/SKILL.md` if it exists — the project's lessons for this stage, read next to `.claude/rules`; its MUST / MUST NOT lines are project rules.
    Use them to avoid fixes that violate project structure or conventions; MUST / MUST NOT lines
    there are project rules. Infer the Settings (tests: a runner or test files exist; logging: an existing logger; docs: `docs/`
    or a README with usage sections) — they are written into the plan, never asked.
@@ -240,6 +241,9 @@ practice prevents this class of problem, what to check in code review, what test
 regression check is green **in this session**, set `Status: verified` yourself (an allowed transition for S-fix) BEFORE
 the single commit of code and plan (`git diff --cached --stat`; the plan must be staged). Level M: commit code and plan
 together and recommend `/keystone:verify <plan>` in a new session.
+**Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
+`package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
+if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`fix(<area>)`).
 Suggest `/clear` to free context if needed.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is

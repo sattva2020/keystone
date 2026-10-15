@@ -12,7 +12,7 @@ disable-model-invocation: false
 # Keystone · security
 
 Audit against OWASP Top 10:2025, OWASP LLM Top 10 2026 (prompt injection), agent/MCP configuration, supply chain and race conditions. **Read-only for code and tests.** The only
-file this skill may write is `docs/keystone/security-ignores.md` (the `ignore` flow). Fixing a finding is
+file this skill may write is the ignore-list — `docs/keystone/security-ignores.md`, or `.ai-factory/SECURITY.md` in an AI Factory project that keeps its ignores there (the `ignore` flow). Fixing a finding is
 `/keystone:fix` (or an edit inside `/keystone:implement`), never this skill. Other Keystone skills call it: `plan` for L changes that
 touch security, `verify` as a gate.
 
@@ -57,7 +57,7 @@ Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/arc
 and the Keystone files are absent: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`,
 `.ai-factory/rules/*.md`. MUST / MUST NOT lines there are project rules; a violated security MUST is a finding.
 
-Then **always read** `docs/keystone/security-ignores.md` before any audit. If it exists, it lists the checks the team decided to ignore.
+Then **always read** both ignore-lists before any audit: `docs/keystone/security-ignores.md` and `.ai-factory/SECURITY.md` (the ignore-list of an AI Factory project, the same `| Item | Reason | Date | Author |` table). Each that exists lists checks the team decided to ignore; an item in either counts.
 
 ## Modes
 
@@ -94,9 +94,11 @@ touches an entry point, a query, a permission check or an LLM call. For a diff s
    flag it as a finding — put it under Ignored. An entry older than 12 months, or whose reason no longer holds in the code (e.g.
    "no cookies used" but the code sets a cookie), is shown as `ignored — stale, re-confirm`, and counts as a warn, not as a finding.
 
-## The ignore-list — `docs/keystone/security-ignores.md`
+## The ignore-list
 
-`/keystone:security ignore <id> <reason>`: read the file (create it with the template below if absent), refuse an entry without a
+`/keystone:security ignore <id> <reason>`: write where the project already keeps its ignores — in an AI Factory project, `.ai-factory/SECURITY.md`
+when it exists and `docs/keystone/security-ignores.md` does not; otherwise `docs/keystone/security-ignores.md`.
+Read that file (create `docs/keystone/security-ignores.md` with the template below if neither exists), refuse an entry without a
 reason, set Date = today, Author = `git config user.name` (or ask once), append the row, show the diff, confirm. Short kebab-case ids:
 `no-csrf`, `no-rate-limit`, `no-https`, `no-xss-csp`, `no-sql-injection`, `no-prompt-injection`, `no-race-condition`,
 `no-secret-rotation`, `no-auth-{route}`, `verbose-errors`, or a custom descriptive id.
