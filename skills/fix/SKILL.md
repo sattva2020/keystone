@@ -99,6 +99,17 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
    Use them to avoid fixes that violate project structure or conventions; MUST / MUST NOT lines
    there are project rules. Infer the Settings (tests: a runner or test files exist; logging: an existing logger; docs: `docs/`
    or a README with usage sections) — they are written into the plan, never asked.
+3. **Past lessons — before any code change.** Load what earlier fixes taught about this area (it does not count
+   against the Step 2 budget):
+   - memlab, when its tools are available: `search_decisions` on the error text and on the affected module or files
+     (in a git worktree pass `root` = the worktree); read the notes it returns at their `path:line`;
+   - the `.claude/rules/**/*.md` files `/keystone:evolve` wrote whose `paths:` match the files you will touch (already
+     read in 2 — look again at those);
+   - no memlab → the `## Root cause` / `## Prevention` sections of the 10 newest `Mode: fix` plans under docs/keystone/
+     (newest by the folder's date prefix); a project that uses AI Factory → also the last 10 `.ai-factory/patches/*.md`
+     by filename.
+   Prefer recurring Root cause / Prevention patterns. Name what applies in one line — `Lessons: <note or rule> — <how
+   it shapes this fix> | none found` — and write that line into task 1's evidence in the plan.
 
 ### Verify findings mode — `/keystone:fix verify`
 

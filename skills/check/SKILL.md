@@ -1,7 +1,7 @@
 ---
 name: check
 description: "Keystone: independent check of a plan before Approve — deep codebase analysis, a fresh validator, and a line for every intent line (I-1…) with Coverage % and PASS/FAIL. Finds missing or vague tasks, wrong dependencies, duplicates, unrequested work and project-rule violations; edits the plan only after the human confirms. Never edits code. Use before Approve on an L change, after a retrospective intent, or when intent.md changed after the plan."
-argument-hint: "[<intent path>] [<plan path>]"
+argument-hint: "[<intent path>] [<plan path>] [<request — what to change in the plan>]"
 allowed-tools: Read Edit Glob Grep Agent AskUserQuestion Bash(git *)
 model: opus
 effort: high
@@ -55,7 +55,10 @@ links only from the working directory.
 
 ## Step 1 — resolve the inputs
 
-`$ARGUMENTS` = `<intent path> <plan path>`, or `<plan path>` only, or nothing.
+`$ARGUMENTS` = `<intent path> <plan path>`, or `<plan path>` only, or nothing — then, optionally, a free-text
+**request**: what the user wants changed in the plan (`/keystone:check <plan> add a migration rollback task`). The
+leading words that are existing files or folders are the paths; everything from the first word that is not one is the
+request. No such text → `Request: none`.
 - Two paths: use them. A path may be a task folder — then `intent.md` / `plan.md` inside it.
 - One path (plan): take the intent from the plan's `Authority:` line, if there is one. No Authority line → no intent;
   say so, skip `intent-gap` and the I-n lines (Coverage then reads `n/a`). **Decisions instead of an intent file:** when
@@ -80,7 +83,7 @@ status not `accepted`, or intent.md changed after the plan's first commit (`git 
 ## Step 2 — analyze
 
 Launch one agent: `subagent_type: "keystone:analyzer"`. Its prompt names, as absolute paths: the plan, the intent (or
-"none"), the rule files, whether memlab MCP tools are available in this session, and the instructions `${CLAUDE_SKILL_DIR}/references/ANALYZE.md` ("read it completely and
+"none"), the rule files, the request (or "none"), whether memlab MCP tools are available in this session, and the instructions `${CLAUDE_SKILL_DIR}/references/ANALYZE.md` ("read it completely and
 follow it"). It returns findings `F1…` (groups `missing`, `improvements`, `removals`, `out_of_scope`, `intent-gap`,
 `goal-drift`, `rule-violation`), dependency lines `D1…`, and the `I-n status:` lines.
 
@@ -93,7 +96,7 @@ Number the findings `Item 1…` in group order (goal-drift, missing, improvement
 intent-gap, rule-violation), keeping the F-id and the group in each heading. If the list is empty, skip the validator: hidden = 0,
 adjusted = 0.
 
-Launch a **fresh** agent: `subagent_type: "keystone:validator"`. Pass the plan path, the intent path, the rule files,
+Launch a **fresh** agent: `subagent_type: "keystone:validator"`. Pass the plan path, the intent path, the rule files, the request,
 `${CLAUDE_SKILL_DIR}/references/VALIDATOR.md` and the items — not the analyzer's reasoning. Parse by `### Item N`
 headings. The group is always the original one; a differing `Group:` makes the block malformed.
 - `keep` → unchanged. `modify` → replace the text with `Modified-text`, adjusted += 1. `drop` → remove, hidden += 1.
@@ -119,7 +122,7 @@ Report shape (structure fixed; wording in the user's language):
 ```text
 ## Plan Check Report
 
-Plan: <path> · Intent: <path | none>
+Plan: <path> · Intent: <path | none> · Request: <text | none>
 Tasks analyzed: N
 
 ### Findings
@@ -169,8 +172,12 @@ Edit the plan with `Edit`, surgically — never regenerate it:
 - keep Reconciliation, Risks and Commit Plan in step with the tasks (≥5 tasks → a Commit Plan must exist).
 
 Finally write — or replace — the line `Coverage: <covered>/<total> = <p>% (partial counts 0.5) · verdict: <PASS|FAIL> ·
-<date>` directly after the `Project rules check:` line. After edits, recount the I-n against the edited plan. Show
-`git diff --stat` for the plan. Nothing is committed here.
+<date>` directly after the `Project rules check:` line. After edits, recount the I-n against the edited plan. Close with the
+refinement summary, counted from the edits you just made (not from the findings list):
+`Plan refined: <a> added / <c> changed / <r> removed` — added = new tasks (missing, intent-gap), changed = reworded
+tasks, moved dependencies, rule-violation and check-only intent-gap edits, removed = removals and out_of_scope; the
+answer "Nothing" → `Plan refined: none — kept as is`. Under it, `git diff --stat` for the plan. Nothing is committed
+here.
 Only check writes the `Coverage:` line; no other skill recomputes it. If the plan was edited by hand after check,
 append ` · not re-checked` to that line.
 

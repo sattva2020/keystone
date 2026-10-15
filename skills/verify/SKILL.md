@@ -218,6 +218,17 @@ report and the three-heading summary first, then call AskUserQuestion once. Opti
 - **PASS** without release steps — `Review the diff — /keystone:review` (Recommended on L) · `Security check —
   /keystone:security <plan>` (when the diff touches auth, data or user input) · `Push` · `Stop here`.
 
+**Context drift (a second question, only when found).** Verify never edits context files. Compare the diff with
+`docs/architecture.md`, `CLAUDE.md` / `.claude/CLAUDE.md` and `.claude/rules/**`: a new module, top-level folder or
+dependency direction the architecture file does not describe; a command, stack item or structure `CLAUDE.md` states
+that the diff changed; a convention the diff introduces or a rule it now contradicts on purpose. Only when a file is
+clearly stale — not merely silent about a detail — add one more question to the same AskUserQuestion call:
+`Context drift: <file> — <what is stale>. Update it now?` with one option per stale file, its owning command —
+`docs/architecture.md` → `/keystone:architecture`, `CLAUDE.md` → `/keystone:setup`, `.claude/rules` →
+`/keystone:evolve` — and `Not now`. A pick runs that skill after the Step 6 choice is done (read its SKILL.md and follow
+it; it shows a diff and writes only after a yes). No drift → no question. The final report carries
+`Context drift: <file — what is stale> | none` either way.
+
 After the choice:
 - `Prove now` with a read-only check (tests, a read-only query, a GET) → run it in this turn, quote the output, and
   re-run the verifier only on the rows it covers (the evidence changed); anything that writes or needs production →
@@ -263,6 +274,7 @@ but a clear Yes → change nothing. On Yes:
 Keystone Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>
 Open: <the not proven / BLOCKED / failed rows, one line each> | none
 Unconfirmed: <what could not be confirmed — looked in <where>, one line each | none>
+Context drift: <file — what is stale, owning command> | none
 Status: <verified | unchanged (reason)> · verify.md: <path> · commit: <sha> docs(verify): <slug>
 ```
 

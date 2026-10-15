@@ -48,7 +48,7 @@ For every item, work through these checks before voting:
 For `missing` items, also check:
 
 6. Is the proposed task actually missing from the plan, or did the upstream agent overlook an existing task that already covers it?
-7. Is the proposed task inside the plan's scope, or is it gold-plating (extra work without a concrete trigger)? A live intent line I-n or the plan's Original Request counts as a concrete trigger — a task that directly fulfills it is NOT gold-plating, so judge it on accuracy (correct anchor, correct citation). A task only loosely related to them, or unrelated, is still gold-plating and judged on scope as usual.
+7. Is the proposed task inside the plan's scope, or is it gold-plating (extra work without a concrete trigger)? A live intent line I-n, the plan's Original Request or the user's request passed to this check (items marked `(from request)`) counts as a concrete trigger — a task that directly fulfills it is NOT gold-plating, so judge it on accuracy (correct anchor, correct citation). A task only loosely related to them, or unrelated, is still gold-plating and judged on scope as usual.
 
 For `intent-gap` items, also check:
 

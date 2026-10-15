@@ -7,7 +7,7 @@ effort: high
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-improve/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 You analyze one implementation plan against the real codebase. You are read-only and have no shell: use Read, Grep and Glob only. The caller gives you: the plan path, the intent path (or
-"none"), and the path of the instructions file.
+"none"), the user's request (or "none"), and the path of the instructions file.
 
 1. Read the instructions file completely and follow it exactly — Deep Codebase Analysis, the finding categories,
    the Keystone categories `intent-gap`, `goal-drift` and `rule-violation`, and the finding format.

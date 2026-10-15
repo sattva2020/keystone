@@ -5,6 +5,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.9] — 2026-10-15
+
+### Added
+- **implement:** a live task list (TaskCreate / TaskUpdate) mirroring the plan's open checkboxes — `in_progress` when a
+  task starts, `completed` right after its box is ticked. The checkboxes stay the only state; the list is rebuilt from
+  the plan on resume.
+- **review rules:** `/keystone:review rules [ref]` checks only the MUST / MUST NOT rules over the diff, without a plan
+  (S changes): one line per rule with every violating `file:line`, as in the verifier's Rules gate, plus
+  `Suggested rule updates` that `/keystone:evolve` takes from the same session.
+- **fix:** past lessons before any code change — memlab `search_decisions` on the area, the matching `.claude/rules`
+  from evolve, or the 10 newest fix plans' Root cause / Prevention; a `Lessons:` line in task 1's evidence.
+- **check:** a free-text request after the paths (`/keystone:check <plan> <request>`), routed into the usual finding
+  groups and marked `(from request)`; the run ends with `Plan refined: N added / M changed / K removed`.
+- **verify:** a context-drift question when the diff makes `docs/architecture.md`, `CLAUDE.md` or `.claude/rules`
+  stale, offering the owning command (architecture / setup / evolve); `Context drift:` line in the final report.
+
+### Changed
+- The I-15 leftovers test allows `TaskCreate` / `TaskUpdate` in implement only (TaskList / TaskGet stay out: the
+  list is never read back as state).
+
 ## [0.9.8] — 2026-10-15
 
 ### Added

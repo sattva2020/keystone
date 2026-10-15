@@ -1,6 +1,6 @@
 {
   "name": "@sattva2020/keystone",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "description": "Keystone — intent-first workflow for Claude Code (plugin) with an AI Factory adapter.",
   "type": "module",
   "private": true,

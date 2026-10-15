@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.8');
+  assert.equal(p.version, '0.9.9');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -53,7 +53,8 @@ test('plan, implement, fix run only on explicit /keystone:* (no clash with aif-*
 test('I-15: no AI Factory leftovers in skills (attribution lines excepted)', () => {
   for (const f of allSkillFiles()) {
     const t = body(f);
-    assert.doesNotMatch(t, /\/aif-|HANDOFF_MODE|Handoff|TaskCreate|TaskUpdate|TaskList|TaskGet|ultra|spec.md/, f);
+    assert.doesNotMatch(t, /\/aif-|HANDOFF_MODE|Handoff|TaskList|TaskGet|ultra|spec.md/, f);
+    if (f !== 'skills/implement/SKILL.md') assert.doesNotMatch(t, /TaskCreate|TaskUpdate/, `${f}: live task list only in implement`);
     if (/config\.yaml/.test(t)) assert.match(t, /paths\.specs/, `${f}: config.yaml only for paths.specs`);
   }
 });
@@ -535,4 +536,37 @@ test('0.9.8: every skill ends with a menu and carries out the pick; status color
   has('skills/fix/SKILL.md', '`verify critical`', 'Write this test now');
   has('skills/check/references/VALIDATOR.md', 'Group: missing | improvements | removals | out_of_scope | intent-gap | goal-drift | rule-violation');
   has('skills/check/SKILL.md', 'in group order (goal-drift, missing');
+});
+
+test('0.9.9: implement live task list mirrors the checkboxes', () => {
+  assert.match(front('skills/implement/SKILL.md'), /allowed-tools:.*TaskCreate TaskUpdate/);
+  has('skills/implement/SKILL.md', '**Live task list — a mirror of the checkboxes.**', 'the list is never read back to decide what is done',
+    'the plan wins', 'Mark its live task `in_progress`', 'then mark its live task `completed`');
+});
+
+test('0.9.9: review rules — rules check without a plan, verifier format, suggested updates for evolve', () => {
+  has('skills/review/SKILL.md', '## Step R — Rules check without a plan (`/keystone:review rules [ref]`)',
+    '`rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`', 'never stop at the first violation',
+    '### Suggested rule updates', '/keystone:evolve');
+  assert.match(front('skills/review/SKILL.md'), /argument-hint:.*rules \[ref\]/);
+  has('agents/verifier.md', '`rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`');
+  has('skills/evolve/SKILL.md', '`### Suggested rule updates` from a `/keystone:review rules` run');
+});
+
+test('0.9.9: fix loads past lessons before changing code', () => {
+  has('skills/fix/SKILL.md', '**Past lessons — before any code change.**', '`search_decisions`', '`.claude/rules/**/*.md`',
+    '10 newest `Mode: fix` plans', '`Lessons: <note or rule>');
+});
+
+test('0.9.9: check takes a free-text request and ends with Plan refined', () => {
+  assert.match(front('skills/check/SKILL.md'), /argument-hint:.*<request/);
+  has('skills/check/SKILL.md', 'free-text **request**', 'Request: <text | none>', '`Plan refined: <a> added / <c> changed / <r> removed`');
+  has('skills/check/references/ANALYZE.md', "**4.7: The user's request", '`(from request)`');
+  has('skills/check/references/VALIDATOR.md', 'items marked `(from request)`');
+  has('agents/analyzer.md', "the user's request (or \"none\")");
+});
+
+test('0.9.9: verify asks about context drift and offers the owning command', () => {
+  has('skills/verify/SKILL.md', '**Context drift (a second question, only when found).**', '`/keystone:architecture`',
+    '`/keystone:setup`', '`.claude/rules` → `/keystone:evolve`', 'Context drift: <file — what is stale, owning command> | none');
 });

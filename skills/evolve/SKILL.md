@@ -91,6 +91,9 @@ Task folders: `docs/keystone/<date>-<slug>/` (fallback `paths.specs` when the pr
 4. Review and security findings saved in a task folder (`review.md`, `security.md`, `qa/` results).
 5. `docs/notes/*.md` (memlab notes), when the folder exists.
 6. Fallback, only for a project that uses AI Factory: `.ai-factory/patches/*.md`, sorted by filename.
+7. `### Suggested rule updates` from a `/keystone:review rules` run earlier in this session — in the conversation, not
+   a file; each line becomes a prevention point (source `review rules <date>`), and they are not added to the log's
+   `Sources:` line.
 
 **Re-run guard.** Never re-analyze a source listed in the log, unless the user asks for a full rescan (then ignore the
 log for this run and say so). Sources not in the log are the "new" set. To limit the chance of skipping a point on one

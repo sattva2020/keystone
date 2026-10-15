@@ -2,7 +2,7 @@
 name: implement
 description: "Keystone: execute an approved plan task by task — requirement consistency gate, checkbox after every task, resume after /clear, plan drift edited in the same commit, literal BLOCKED:, line-by-line evidence report. Use only via explicit /keystone:implement [plan path]."
 argument-hint: "[path to plan.md]"
-allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Skill
+allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Skill TaskCreate TaskUpdate
 disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-implement/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
@@ -110,9 +110,17 @@ before any work.
 Print one line per task (`[x]` / `[ ]`, number, title) and `Current task: #N`. Then execute. If the argument is a task
 number, run only that task. If the user says "status", print this and stop.
 
+**Live task list — a mirror of the checkboxes.** When `TaskCreate` is available, create the list once per session,
+right after this step: one task per open `- [ ] N.` line of `## Tasks` (subject `#N — <title>`; `[x]` tasks are not
+created; a task with `BLOCKED:` is created and stays pending, the reason in its description). In release mode the
+`- [ ] R<n>.` lines are the tasks. Then `TaskUpdate` it to `in_progress` at 2.1 and to `completed` right after the box
+is ticked at 2.5. The plan's checkboxes stay the only state: the list is never read back to decide what is done; on
+resume (Step 0.1) it is rebuilt from the plan, never reused; when the two disagree, the plan wins and the list is
+corrected. No `TaskCreate` (`claude -p`, CI) → skip the list; the progress display below is enough.
+
 ## Step 2: Execute the current task
 
-**2.1 Read the task** in full: its files, check and any cited Risks.
+**2.1 Read the task** in full: its files, check and any cited Risks. Mark its live task `in_progress`.
 
 **2.2 Run the requirement consistency gate.** Before marking a behavior-changing task in progress:
 
@@ -140,7 +148,7 @@ the task. When a representative repository artifact defines the contract, exerci
 path rather than relying only on synthetic fixtures.
 
 **2.5 Tick the box — immediately.** Right after the task is done, change `- [ ]` to `- [x]` for that task in `plan.md`
-(use Edit). Never batch the ticks to the end; the plan is the source of truth for progress and for the next session.
+(use Edit), then mark its live task `completed`. Never batch the ticks to the end; the plan is the source of truth for progress and for the next session.
 
 **2.6 Commit.** Commit after each task, or at the points marked in `## Commit Plan` when the plan has one. Use a
 conventional commit message by the project's rules (`type(scope): subject`). Do not ask permission per commit unless the

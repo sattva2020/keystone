@@ -148,7 +148,7 @@ All 25 commands, grouped. Parameters are in brackets; `|` is a choice.
 | `/keystone:grill [topic]` | interviews you over the whole decision tree; returns a numbered decision list, writes no file |
 | `/keystone:intent [idea]` · `accept <path>` | writes `intent.md` in your words: numbered `I-n` lines, a decision log, a sign-off |
 | `/keystone:plan <intent or task> [S\|M\|L]` | the plan is the spec: reconciliation, rules check, Risks, tasks with checks, Approve |
-| `/keystone:check [intent] [plan]` | independent plan check in clean contexts; intent coverage % |
+| `/keystone:check [intent] [plan] [request]` | independent plan check in clean contexts; intent coverage %; a free-text request after the paths |
 | `/keystone:implement [plan]` | tasks in order, `BLOCKED:` instead of "not run", a decision log, resumable after `/clear` |
 | `/keystone:verify [plan [base]] [--strict]` · `accept` | build, tests, lint, then a verifier in a clean context; architecture and security gates; PASS / PASS-UNPROVEN / FAIL |
 | `/keystone:fix <bug>` | regression first: a failing test in a new file, then the smallest fix. `/keystone:fix verify` fixes every finding of the last FAIL `verify.md` in one pass |
@@ -166,7 +166,7 @@ All 25 commands, grouped. Parameters are in brackets; `|` is a choice.
 | Command | What it does |
 |---|---|
 | `/keystone:security [category\|agent\|supply-chain\|path\|plan] \| ignore <id> <reason>` | OWASP Top 10:2025 + LLM Top 10 2026, agent/MCP and supply-chain audit, findings mapped to CWE/ASVS/ISO; `Security gate: pass\|warn\|fail` |
-| `/keystone:review [PR\|ref\|empty = staged]` | review without edits; a clean-context validator rechecks every finding |
+| `/keystone:review [PR\|ref\|rules [ref]\|empty = staged]` | review without edits; a clean-context validator rechecks every finding; `rules` checks only the MUST / MUST NOT rules over the diff, without a plan |
 | `/keystone:qa [--all] [change-summary\|test-plan\|test-cases] [plan\|ref]` | change summary, test plan and manual scenarios linked to `I-n` |
 | `/keystone:qa-check [human\|agent] [plan\|qa folder\|branch]` | runs the `qa` scenarios; pass / fail / blocked with evidence |
 | `/keystone:ask <question>` | answers only on evidence, otherwise `INSUFFICIENT INFORMATION` |

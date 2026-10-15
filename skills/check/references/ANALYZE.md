@@ -123,7 +123,14 @@ Compare the plan against what you found. Use `## Original Request` as the origin
 - On approval these are removed from the active plan — the same drop action as `removals` (see check Step 6). The difference is the report only: an out-of-scope task goes to its own "💡 Out of scope" section instead of being lumped into "🗑️ Removals", so the user sees a useful-but-unrelated idea before it is dropped and can choose to capture it elsewhere. The skill itself does not persist out-of-scope items anywhere.
 
 
-### Keystone categories (in addition to 4.1–4.6)
+**4.7: The user's request (when the caller passes one, not `none`)**
+Apply it to the plan. It is a dispatcher, not a group: each change it asks for becomes a finding in its natural group —
+a new task → `missing`, a reworded or expanded task → `improvements`, an explicit removal → `removals`, a
+useful-but-unrelated idea → `out_of_scope`. Mark each such finding `(from request)` and quote the request words as its
+verbatim quote. A request that contradicts the `## Original Request` or an intent line is a `goal-drift` finding quoting
+both — never a silent plan change.
+
+### Keystone categories (in addition to 4.1–4.7)
 
 **K.1: `intent-gap`** — only when an intent file is given. Take every live `I-n` (struck-through lines are dropped; an
 intent without IDs: number lines `#O1…`, `#C1…` and say so). For each decide, citing the plan line verbatim:

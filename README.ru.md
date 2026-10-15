@@ -147,7 +147,7 @@ plan/grill/check сессий ставьте `/effort high` на сессию.
 | `/keystone:grill [тема]` | допрашивает по всему дереву решений; возвращает список решений, файлов не пишет |
 | `/keystone:intent [идея]` · `accept <путь>` | `intent.md` вашими словами: строки `I-n`, журнал решений, подпись |
 | `/keystone:plan <intent или задача> [S\|M\|L]` | план и есть спека: сверка, правила проекта, Risks, задачи с проверками, Approve |
-| `/keystone:check [intent] [план]` | независимая проверка плана в чистых контекстах; % покрытия intent |
+| `/keystone:check [intent] [план] [запрос]` | независимая проверка плана в чистых контекстах; % покрытия intent; свободный запрос после путей |
 | `/keystone:implement [план]` | задачи по порядку, `BLOCKED:` вместо «не запускалось», журнал решений, продолжение после `/clear` |
 | `/keystone:verify [план [base]] [--strict]` · `accept` | сборка, тесты, линт, затем проверяющий в чистом контексте; гейты архитектуры и безопасности; PASS / PASS-UNPROVEN / FAIL |
 | `/keystone:fix <баг>` | сначала регрессия: падающий тест новым файлом, потом минимальный фикс. `/keystone:fix verify` — все находки последнего FAIL из `verify.md` за один проход |
@@ -165,7 +165,7 @@ plan/grill/check сессий ставьте `/effort high` на сессию.
 | Команда | Что делает |
 |---|---|
 | `/keystone:security [категория\|agent\|supply-chain\|путь\|план] \| ignore <id> <причина>` | аудит по OWASP Top 10:2025 и LLM Top 10 2026, агенты/MCP и цепочка поставок, ссылки на CWE/ASVS/ISO; `Security gate: pass\|warn\|fail` |
-| `/keystone:review [PR\|ref\|пусто = staged]` | ревью без правок; валидатор в чистом контексте перепроверяет каждую находку |
+| `/keystone:review [PR\|ref\|rules [ref]\|пусто = staged]` | ревью без правок; валидатор в чистом контексте перепроверяет каждую находку; `rules` — только правила MUST / MUST NOT по диффу, без плана |
 | `/keystone:qa [--all] [change-summary\|test-plan\|test-cases] [план\|ref]` | сводка изменений, план тестов и ручные сценарии со ссылками на `I-n` |
 | `/keystone:qa-check [human\|agent] [план\|папка qa\|ветка]` | прогоняет сценарии `qa`; pass / fail / blocked с доказательством |
 | `/keystone:ask <вопрос>` | отвечает только по доказательствам, иначе `INSUFFICIENT INFORMATION` |

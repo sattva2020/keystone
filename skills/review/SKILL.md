@@ -1,7 +1,7 @@
 ---
 name: review
-description: "Keystone: read-only code review of staged changes, a pull request (gh pr diff) or everything since a git ref — correctness, security, performance, project rules and architecture. Every finding carries severity, file:line, a Repro and a fix; an independent validator in a clean context ALWAYS re-checks them (keep / modify / drop, severity changes), unproven ones go to Unconfirmed. Use for 'review code', 'check my code', 'review PR', 'is this code okay', and on L changes after /keystone:verify."
-argument-hint: "[PR number | PR url | branch/commit/tag | empty = staged]"
+description: "Keystone: read-only code review of staged changes, a pull request (gh pr diff) or everything since a git ref — correctness, security, performance, project rules and architecture. Every finding carries severity, file:line, a Repro and a fix; an independent validator in a clean context ALWAYS re-checks them (keep / modify / drop, severity changes), unproven ones go to Unconfirmed. `rules [ref]` checks only the project's MUST / MUST NOT rules over the diff, without a plan (S changes), one line per rule with every violating file:line, plus suggested rule updates for /keystone:evolve. Use for 'review code', 'check my code', 'review PR', 'is this code okay', 'check the rules', and on L changes after /keystone:verify."
+argument-hint: "[PR number | PR url | branch/commit/tag | rules [ref] | empty = staged]"
 allowed-tools: Read Glob Grep Agent AskUserQuestion Bash(git *) Bash(gh *)
 model: opus
 effort: high
@@ -57,6 +57,7 @@ approved or implementing), read it and its intent — the review is also judged 
 ## Step 1 — Get the diff
 
 Take the diff from one of three inputs. Remember the exact diff text — the validator gets it verbatim.
+The first word `rules` switches to the **rules check** instead (Step R); the rest of the argument is its ref.
 
 - **Empty → staged.** `git diff --cached`; if nothing is staged, `git diff` (say so in the report).
 - **Digits, `#N` or a PR URL → PR.** `gh pr view <N> --json title,body,baseRefName,headRefName` and `gh pr diff <N>`.
@@ -69,6 +70,48 @@ Take the diff from one of three inputs. Remember the exact diff text — the val
 A branch literally named like a PR number is read as a PR — an accepted compromise. Exception: bare digits of 7+
 characters that `git rev-parse --verify <arg>^{commit}` resolves locally are an abbreviated commit hash → ref (say so
 in one line); `#N` and URLs stay PRs. Empty diff → `Nothing to review.`
+
+## Step R — Rules check without a plan (`/keystone:review rules [ref]`)
+
+For an S change, which has no plan and so no verify: only the project rules, nothing else. Read-only like the rest.
+
+1. **Diff.** A ref → `git rev-parse --verify <ref>`, then `git diff --name-only <ref>...HEAD` and `git diff
+   <ref>...HEAD` (invalid → ask: check staged instead / cancel). No ref → staged; nothing staged → the working tree;
+   still nothing → the branch against its base (`git merge-base HEAD main`, or `master`). Empty → `Nothing to check.`
+2. **Rules.** The MUST / MUST NOT lines from Step 0 (`CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`
+   dependency rules, `.claude/rules/**/*.md` with their `paths:`, `AGENTS.md`; fallback files only for AI Factory
+   projects). None found → `Rules gate: not checkable — no MUST / MUST NOT rules`, suggest `/keystone:setup`, stop.
+3. **Check — the same way as the Rules gate of `agents/verifier.md`.** List the rules first, then check each rule
+   across every changed file before moving to the next. One line per rule:
+   `rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`; **every** violating `file:line` goes
+   on that rule's line — never stop at the first violation. A clear violation of explicit rule text is `fail`; a rule
+   whose `paths:` match no changed file is `n/a — no matching files`.
+4. **Suggested rule updates.** What the diff shows the rules miss or get wrong: a convention the change follows that no
+   rule states, a rule the change contradicts on purpose, a rule too vague to check. One line each:
+   `<add | clarify | drop> — <rule text or source:line> — why: <file:line>`. They are proposals for
+   `/keystone:evolve`; this skill never edits a rule file.
+
+Report (no validator — every line already carries its `file:line`):
+
+```text
+## Rules Check
+
+Scope: <staged | working tree | <ref>..HEAD | branch vs <base>> · files: <n> · rule sources: <list>
+Rules gate: 🟢 pass | 🔴 fail — <k> violations in <r> rules | ⚪ not checkable
+rule <source:line> — pass | fail — <file:line>; … | n/a — <why>
+…
+### Suggested rule updates
+<lines | none>
+
+Blocked on me: <decisions only the user can take | none>
+Changed: none (read-only)
+Found: <k violations in r rules; s suggested rule updates>
+```
+
+Menu (see Choice at the end): `fail` → `Fix the violations here` (Recommended; read `${CLAUDE_SKILL_DIR}/../fix/SKILL.md`
+and follow it with the failing rule lines as the problem — all of them in one pass) · with suggestions → `Turn the
+suggested updates into rules — /keystone:evolve` (it reads them from this session; every rule still needs its own
+yes) · `Stop here`. A `pass` with no suggestions → no menu; `Next: commit`.
 
 ## Step 2 — Review
 
