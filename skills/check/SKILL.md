@@ -25,6 +25,20 @@ later command in that fenced block. Never end on a caveat or an open-ended quest
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
+**Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
+menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
+and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
+continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
+step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
+one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
+always closes the answer.
+
+**Status colors.** In the chat (not in files other tools parse) mark statuses so they scan at a glance: ✅ ok / done ·
+⚠️ not proven / warn / partial · ❌ missing / wrong / fail · ⏸️ BLOCKED · 🔄 in progress · ⏳ pending; verdicts and gates
+🟢 PASS / pass · 🟡 PASS-UNPROVEN / warn / not proven · 🔴 FAIL / fail · ⚪ n/a; severity and risk 🔴 critical / High ·
+🟠 high · 🟡 medium / Medium · 🟢 low / Low. The marker goes before the word; the word stays.
+
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
@@ -68,15 +82,15 @@ status not `accepted`, or intent.md changed after the plan's first commit (`git 
 Launch one agent: `subagent_type: "keystone:analyzer"`. Its prompt names, as absolute paths: the plan, the intent (or
 "none"), the rule files, whether memlab MCP tools are available in this session, and the instructions `${CLAUDE_SKILL_DIR}/references/ANALYZE.md` ("read it completely and
 follow it"). It returns findings `F1…` (groups `missing`, `improvements`, `removals`, `out_of_scope`, `intent-gap`,
-`rule-violation`), dependency lines `D1…`, and the `I-n status:` lines.
+`goal-drift`, `rule-violation`), dependency lines `D1…`, and the `I-n status:` lines.
 
 If the analyzer fails or returns nothing: print `FAIL: analyzer failed (<reason>)` and stop — a check with no analysis
 is not a PASS.
 
 ## Step 3 — validate (always)
 
-Number the findings `Item 1…` in group order (missing, improvements, removals, out_of_scope, intent-gap,
-rule-violation), keeping the F-id and the group in each heading. If the list is empty, skip the validator: hidden = 0,
+Number the findings `Item 1…` in group order (goal-drift, missing, improvements, removals, out_of_scope,
+intent-gap, rule-violation), keeping the F-id and the group in each heading. If the list is empty, skip the validator: hidden = 0,
 adjusted = 0.
 
 Launch a **fresh** agent: `subagent_type: "keystone:validator"`. Pass the plan path, the intent path, the rule files,

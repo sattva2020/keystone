@@ -5,6 +5,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.8] — 2026-10-15
+
+### Added
+- **A menu at the end of every stage, as in AI Factory.** Every skill ends with an AskUserQuestion menu when more than
+  one next step makes sense (recommended first, `Stop here` last), and the picked option is carried out in the same
+  session; a step that needs `/clear`, a push or production becomes the `Next:` command instead.
+- **verify:** `Fix directly here` and `Fix critical only` on FAIL (the fix skill's rules apply, then verify runs again);
+  review / security / push on a plain PASS. **fix:** `verify critical`; a Yes/Skip menu for the extra regression test.
+  **implement:** a menu at the end (verify in a clean session / now / continue) and when there is no plan.
+- **Status colors** in chat reports: ✅ ⚠️ ❌ ⏸️ 🔄 ⏳ for rows and tasks, 🟢 🟡 🔴 ⚪ for verdicts and gates,
+  🔴 🟠 🟡 🟢 for severity and risk (security, review, roadmap check, implement progress, fix summary).
+
+### Fixed
+- **check:** the validator's `Group:` field allowed four of the seven groups, and `goal-drift` was missing from the
+  numbering order, so `intent-gap`, `rule-violation` and `goal-drift` replies could be read as malformed.
+
 ## [0.9.7] — 2026-10-15
 
 ### Changed

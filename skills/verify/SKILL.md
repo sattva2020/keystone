@@ -14,7 +14,7 @@ Judgment is delegated to the `keystone:verifier` agent, which did not write the 
 skill runs the commands, collects the verdict, and writes the record. **Write/Edit are allowed for exactly two things:**
 `<plan folder>/verify.md` and the `Status:` value in the plan header (plus `Accepted unproven by …` in verify.md for
 `accept`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/keystone:fix` or
-`/keystone:implement`, not this skill.
+`/keystone:implement`, not this skill — `Fix directly here` in Step 6 hands the turn to the fix skill's rules.
 
 **Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
@@ -27,6 +27,20 @@ adds a Run button that would fail. When nothing runs now, write `Next: nothing n
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
+
+**Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
+menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
+and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
+continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
+step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
+one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
+always closes the answer.
+
+**Status colors.** In the chat (not in files other tools parse) mark statuses so they scan at a glance: ✅ ok / done ·
+⚠️ not proven / warn / partial · ❌ missing / wrong / fail · ⏸️ BLOCKED · 🔄 in progress · ⏳ pending; verdicts and gates
+🟢 PASS / pass · 🟡 PASS-UNPROVEN / warn / not proven · 🔴 FAIL / fail · ⚪ n/a; severity and risk 🔴 critical / High ·
+🟠 high · 🟡 medium / Medium · 🟢 low / Low. The marker goes before the word; the word stays.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
@@ -189,8 +203,11 @@ A verdict that leaves a decision ends with a menu, not with one command — the 
 report and the three-heading summary first, then call AskUserQuestion once. Options, recommended first and marked
 `(Recommended)`:
 
-- **FAIL** — `Fix every finding now — /keystone:fix verify` · `Finish an unfinished task — /keystone:implement <plan>`
-  (only when a row is `missing`) · `Stop here`.
+- **FAIL** — `Fix directly here — every finding, in this session` (Recommended when the findings are few and small) ·
+  `Fix critical only — wrong behaviour and security / architecture gate fails` (only when there are non-critical
+  findings too) · `Fix every finding in a clean session — /keystone:fix verify` (Recommended when the context is
+  large or the findings are many) · `Finish an unfinished task — /keystone:implement <plan>` (only when a row is
+  `missing`) · `Stop here`.
 - **PASS-UNPROVEN** — one `Prove now: <check>` option for each group of open rows that can be proven before
   production (a test to run, a read-only query against the database, `/keystone:security <plan>` for a security
   row, a local run) · `Accept as unproven (<n> rows: <short list>)` · on L `Run /keystone:review first` ·
@@ -198,6 +215,8 @@ report and the three-heading summary first, then call AskUserQuestion once. Opti
   Security gate concerns security (RLS, grants, auth, permissions) — then the security check is the recommendation.
 - **PASS** with open `## Release` steps — `Release: /keystone:implement <plan>` (on L `Run /keystone:review first`
   goes first) · `Stop here`.
+- **PASS** without release steps — `Review the diff — /keystone:review` (Recommended on L) · `Security check —
+  /keystone:security <plan>` (when the diff touches auth, data or user input) · `Push` · `Stop here`.
 
 After the choice:
 - `Prove now` with a read-only check (tests, a read-only query, a GET) → run it in this turn, quote the output, and
@@ -205,12 +224,17 @@ After the choice:
   hand it to the human as the `Next:` command.
 - `Accept as unproven` → the click is the confirmation the Accept section asks for (it names the rows); go to
   **Accept** without asking again.
-- Any other option → its command becomes the `Next:` line, nothing else is run (fix, implement, review and security
-  are separate commands the human starts).
+- `Fix directly here` → read `${CLAUDE_SKILL_DIR}/../fix/SKILL.md` and follow its **Verify findings mode** for this
+  plan in this turn (verify itself still edits nothing — the fix skill does, with its rules: regression check for a
+  behaviour finding, build / lint / tests, Implementation notes, one commit). Then run this verify again — the code
+  changed — and show its menu.
+- `Fix critical only` → the same, with `verify critical` (fix mode for the critical findings only). The other
+  findings stay open and keep the verdict FAIL until they are fixed or their rule is changed — say so.
+- `Review`, `Security check` → run that skill now the same way (read its SKILL.md and follow it).
+- `Fix … in a clean session`, `Finish an unfinished task`, `Push` → not run here: the command becomes the `Next:`
+  line (a clean session, or an irreversible step the human starts).
 - AskUserQuestion unavailable (`claude -p`, CI) → no menu: print the options as a numbered list and put the first one
   in `Next:`.
-
-PASS without release steps ends with `Next:` as before — there is nothing to choose.
 
 ## Accept — `/keystone:verify accept`
 
@@ -261,8 +285,8 @@ into a project rule.
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
 followed only by the `Next:` line: PASS with open `## Release` steps → `Next: /keystone:implement <plan path>` (release
 mode; on L `/keystone:review` first); PASS without them → `Next: push and open the PR` (L: `/keystone:review` first); PASS-UNPROVEN → the option chosen in Step 6 (a
-`Prove now` check before `/keystone:verify accept <plan path>`); FAIL → `Next: /keystone:fix verify` (defects in the diff, all
-findings in one pass) or `/keystone:implement <plan path>` (a task never finished); after a fix plan or a fixed FAIL, `/keystone:evolve` may follow later.
+`Prove now` check before `/keystone:verify accept <plan path>`); FAIL and PASS → the option chosen in Step 6 (FAIL default
+`/keystone:fix verify`, all findings in one pass); after a fix plan or a fixed FAIL, `/keystone:evolve` may follow later.
 
 ```text
 Blocked on me: <what needs a human decision, incl. recommended next step | none>

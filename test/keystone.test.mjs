@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.7');
+  assert.equal(p.version, '0.9.8');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -517,11 +517,22 @@ test('no $<digit> in skills: Claude Code reads it as an argument placeholder and
 
 test('verify/fix loop: Rules gate lists every rule and violation; fix verify takes all findings in one pass', () => {
   has('agents/verifier.md', 'One line per rule', 'never stop at the first violation');
-  has('skills/verify/SKILL.md', 'Next: /keystone:fix verify', 'Code unchanged since the last FAIL');
+  has('skills/verify/SKILL.md', '/keystone:fix verify', 'Code unchanged since the last FAIL');
   has('skills/fix/SKILL.md', '### Verify findings mode', 'fix all of them in one pass');
 });
 
 test('verify choice: menu after the verdict, prove before accept, security never accept-first, RLS without Threats not n/a', () => {
   has('skills/verify/SKILL.md', '## Step 6 — the choice (AskUserQuestion)', 'Prove now: <check>',
     '**Accept is never first**', 'the click is the confirmation', 'never `n/a`');
+});
+
+test('0.9.8: every skill ends with a menu and carries out the pick; status colors; verify fix-here / critical; check groups', () => {
+  for (const d of readdirSync(join(root, 'skills'))) {
+    has(`skills/${d}/SKILL.md`, '**Choice at the end (menu).**', '**carry it out**', '**Status colors.**');
+    assert.match(front(`skills/${d}/SKILL.md`), /allowed-tools:.*AskUserQuestion/, d);
+  }
+  has('skills/verify/SKILL.md', 'Fix directly here', 'Fix critical only', '../fix/SKILL.md');
+  has('skills/fix/SKILL.md', '`verify critical`', 'Write this test now');
+  has('skills/check/references/VALIDATOR.md', 'Group: missing | improvements | removals | out_of_scope | intent-gap | goal-drift | rule-violation');
+  has('skills/check/SKILL.md', 'in group order (goal-drift, missing');
 });

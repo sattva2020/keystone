@@ -130,6 +130,8 @@ line in its header; you can change it at Approve.
 ## What to run next
 
 Every Keystone answer ends with a `Next:` line — the exact command with paths, or "nothing now — waiting for …".
+When more than one next step makes sense, the stage first opens a menu (recommended option first) and carries
+out what you pick; statuses in reports are colored: ✅ ⚠️ ❌, 🟢 🟡 🔴.
 The same command appears as the dim prompt suggestion (Tab takes it), and `/keystone-status` shows it any time.
 For every situation — a plan in draft, a verify FAIL, "I only ran grill", "back after a break", "waiting for a deploy" —
 see **[What to run next — scenarios](docs/scenarios.md)**.

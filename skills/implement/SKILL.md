@@ -24,6 +24,20 @@ later command in that fenced block. Never end on a caveat or an open-ended quest
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
+**Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
+menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
+and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
+continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
+step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
+one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
+always closes the answer.
+
+**Status colors.** In the chat (not in files other tools parse) mark statuses so they scan at a glance: ✅ ok / done ·
+⚠️ not proven / warn / partial · ❌ missing / wrong / fail · ⏸️ BLOCKED · 🔄 in progress · ⏳ pending; verdicts and gates
+🟢 PASS / pass · 🟡 PASS-UNPROVEN / warn / not proven · 🔴 FAIL / fail · ⚪ n/a; severity and risk 🔴 critical / High ·
+🟠 high · 🟡 medium / Medium · 🟢 low / Low. The marker goes before the word; the word stays.
+
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
@@ -36,7 +50,9 @@ Keep going without asking while the next step needs no human decision; stop only
 
 1. **Plan:** the argument is a path to `plan.md`. Without it, take the active plan. Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing — or `verified` with open `- [ ] R<n>.` lines in `## Release`.
    (`paths.specs` comes from the fallback `.ai-factory/config.yaml` when the project has AI Factory.)
-   No plan found → say "No plan. Run `/keystone:start <task>` first." and STOP.
+   No plan found → say "No plan." and ask with AskUserQuestion: `Size the task and plan it — /keystone:start <task>`
+   (Recommended) · `Quick change without a plan (level S)` — only when the change fits in one sentence; then follow
+   `${CLAUDE_SKILL_DIR}/../start/SKILL.md` for level S · `Show status — /keystone-status` · `Stop here`.
 2. **Status** (header line `Level: … · Mode: … · Status: …`):
    - `draft` → STOP: "Approve the plan first (`/keystone:plan <plan path>`), then run implement."
    - `approved` → set `Status: implementing` now (this edit goes into the baseline commit below).
@@ -193,6 +209,9 @@ Do not run verify yourself. If boxes remain `[ ]` without `BLOCKED:`, the Stop h
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
 followed only by the `Next:` line: decisions for a human go inside `Blocked on me:`, and the last line is
 `Next: /clear, then /keystone:verify <plan path>` (or `Next: /keystone:implement <plan path>` when tasks remain).
+Before it, the menu (see Choice at the end): all tasks done → `Verify in a clean session — /clear, then
+/keystone:verify <plan>` (Recommended) · `Verify now in this session` (small plan, small context) · `Stop here`;
+tasks remain → `Continue with task <n>` · `Pause here`. Release mode done → `Stop here` only, no menu.
 
 ```text
 Blocked on me: <what needs a human decision or action; next step: /keystone:verify <plan path> in a new session | none>
@@ -205,8 +224,12 @@ Found: <defects, surprises, open questions | none>
 After each task print a short status so the user can follow without reading the diff:
 
 ```
-✅ Completed: #3 — <task title>
-Progress: 3/7 tasks · Current task: #4 — <task title>
+✅ #1 — <task title>
+✅ #2 — <task title>
+✅ #3 — <task title>
+🔄 #4 — <task title>
+⏳ #5 — <task title> · ⏳ #6 · ⏸️ #7 BLOCKED: <reason>
+Progress: 3/7 tasks
 ```
 
 When a task cannot proceed (unclear requirement, missing dependency, failing check you cannot fix within the task):

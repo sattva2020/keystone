@@ -2,7 +2,7 @@
 name: security
 description: "Keystone: security audit on OWASP Top 10:2025, LLM Top 10 2026 / prompt injection, agent and MCP configuration, supply chain and race conditions — whole project, a path, a category or the diff of a task. Every finding has severity, file:line, how to exploit it and a fix; ignored items live in docs/keystone/security-ignores.md with reason, date and author; ends with a machine-readable line `Security gate: pass | warn | fail` (fail only on an unignored critical/high finding). Read-only for code. Use for 'security check', 'is this secure', 'before deploy', auth/payments/user-input changes, or `ignore <id> <reason>`."
 argument-hint: "[auth|injection|xss|csrf|secrets|api|infra|prompt-injection|race-condition|agent|supply-chain | <path> | <plan path>] | ignore <id> <reason>"
-allowed-tools: Read Glob Grep Write Edit Bash(npm audit*) Bash(pip-audit*) Bash(cargo audit*) Bash(grep *) Bash(git diff*) Bash(git log*) Bash(git rev-list*) Bash(git config user.name) Bash(bash ${CLAUDE_SKILL_DIR}/scripts/audit.sh)
+allowed-tools: Read Glob Grep Write Edit Bash(npm audit*) Bash(pip-audit*) Bash(cargo audit*) Bash(grep *) Bash(git diff*) Bash(git log*) Bash(git rev-list*) Bash(git config user.name) Bash(bash ${CLAUDE_SKILL_DIR}/scripts/audit.sh) AskUserQuestion
 model: opus
 effort: high
 disable-model-invocation: false
@@ -27,6 +27,20 @@ adds a Run button that would fail. When nothing runs now, write `Next: nothing n
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
+
+**Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
+menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
+and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
+continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
+step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
+one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
+always closes the answer.
+
+**Status colors.** In the chat (not in files other tools parse) mark statuses so they scan at a glance: ✅ ok / done ·
+⚠️ not proven / warn / partial · ❌ missing / wrong / fail · ⏸️ BLOCKED · 🔄 in progress · ⏳ pending; verdicts and gates
+🟢 PASS / pass · 🟡 PASS-UNPROVEN / warn / not proven · 🔴 FAIL / fail · ⚪ n/a; severity and risk 🔴 critical / High ·
+🟠 high · 🟡 medium / Medium · 🟢 low / Low. The marker goes before the word; the word stays.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
@@ -100,7 +114,7 @@ Items below are excluded from /keystone:security audits and from the security ga
 ## Output
 
 1. **Findings** (Confidence HIGH only; when the app can run locally or on staging, offer `/keystone:pentest <your target URL> <this report>` for the S-n findings too) — one block each, ordered critical → low, ids `S-1…`:
-   `S-1 [critical] <title> — <file>:<line>` then `Confidence: HIGH`, `Entry point:` (where untrusted input enters: route, handler, webhook, file, CI trigger, tool output),
+   `🔴 S-1 [critical] <title> — <file>:<line>` (🔴 critical · 🟠 high · 🟡 medium · 🟢 low) then `Confidence: HIGH`, `Entry point:` (where untrusted input enters: route, handler, webhook, file, CI trigger, tool output),
    `Exploit:` (Repro: request / input / sequence an attacker uses), `Impact:` (one line),
    `Fix:` (the smallest concrete change, with the safe pattern from the references), `Refs: <OWASP id> · <CWE-n> · <ASVS 5.0 chapter if clear> · <ISO 27001:2022 A.8.x if clear>`
    (taken from `${CLAUDE_SKILL_DIR}/references/MAPPING.md`; omit a part you cannot map, never invent an id). **OWASP / LLM ids always carry the edition year:**

@@ -28,6 +28,20 @@ later command in that fenced block. Never end on a caveat or an open-ended quest
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
+**Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
+menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
+and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
+continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
+step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
+one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
+always closes the answer.
+
+**Status colors.** In the chat (not in files other tools parse) mark statuses so they scan at a glance: ✅ ok / done ·
+⚠️ not proven / warn / partial · ❌ missing / wrong / fail · ⏸️ BLOCKED · 🔄 in progress · ⏳ pending; verdicts and gates
+🟢 PASS / pass · 🟡 PASS-UNPROVEN / warn / not proven · 🔴 FAIL / fail · ⚪ n/a; severity and risk 🔴 critical / High ·
+🟠 high · 🟡 medium / Medium · 🟢 low / Low. The marker goes before the word; the word stays.
+
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
@@ -75,7 +89,8 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
      first"). Go to Step 2 using the plan as a guide, still applying the Regression-First Policy.
    - `$ARGUMENTS` empty and no fix plan → "No fix plan and no problem description. Run `/keystone:fix <description>`."
      STOP.
-   - `$ARGUMENTS` is `verify` → **Verify findings mode** below; it works inside the active plan, no question.
+   - `$ARGUMENTS` is `verify` or `verify critical` → **Verify findings mode** below; it works inside the active plan,
+     no question.
    - `$ARGUMENTS` given while another plan is active → say which one and ask: finish it, or mark it `abandoned`.
 2. **Project context.** Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
    `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
@@ -86,6 +101,10 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
    or a README with usage sections) — they are written into the plan, never asked.
 
 ### Verify findings mode — `/keystone:fix verify`
+
+`verify critical` narrows the list to the critical findings: every `wrong` line and an Architecture or Security gate
+`fail`. The rest (rule-only findings, `Settings: violated`) are listed as `left open` in the report — they keep the
+verdict FAIL until fixed or until their rule changes.
 
 Read `verify.md` next to the active plan. Its verdict is not FAIL → say so and STOP. Otherwise collect **every**
 finding into one list: each `rule … — fail` line with all its `file:line`, every `wrong` line (with its `Repro:`),
@@ -188,9 +207,11 @@ project has it; for `minimal` add none. Do not refactor unrelated code or add fe
 ### Step 5: Suggest more coverage
 
 Output the fix summary, then **one line**: `Suggested extra coverage: <the edge case that caused the bug, as a test
-name>` — and write it only if the user asks (as a new test file).
+name>`, and ask with AskUserQuestion: `Write this test now (new file)` (Recommended when the regression check was
+manual) · `Skip`. On yes, write it as a new test file, run it, and include it in the fix commit.
 
 ```
+✅ Fix applied (or ⚠️ Fix applied, regression check manual · ❌ Not fixed — <why>)
 **Issue:** [what was broken]
 **Cause:** [why it was broken]
 **Fix:** [what was changed]
