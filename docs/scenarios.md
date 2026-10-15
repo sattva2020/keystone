@@ -8,6 +8,8 @@ places:
 2. **The dim suggestion in the empty prompt box** after a Keystone turn — the same command with the plan path; Tab or →
    takes it.
 3. **`/keystone-status`** at any time: the active plan, its status, tasks, gates, cost and a `Next:` line. No model call.
+   The same next commands sit as buttons above the prompt box (a click fills the box, you press Enter); file paths in
+   answers are clickable; when the context grows, `/keystone-handoff` moves the task to a clean session through the plan.
 
 If none of these helps, find your situation below.
 
@@ -25,7 +27,7 @@ If none of these helps, find your situation below.
 | verify **PASS**, plan has open `## Release` steps | ready to ship | `/keystone:implement <plan.md path>` — release mode: each merge / push / deploy step after your yes |
 | verify **PASS**, no `## Release` | done | push and open the PR (on L run `/keystone:review` first) |
 | verify **PASS-UNPROVEN** | some rows unproven | run the missing check, or `/keystone:verify accept <path>` with your sign-off |
-| verify **FAIL** | `missing` / `wrong` rows | `/keystone:implement <path>` on the list, or `/keystone:fix <finding>` |
+| verify **FAIL** | `missing` / `wrong` rows, Rules gate `fail` | `/keystone:fix verify` (every finding in one pass), or `/keystone:implement <path>` for an unfinished task |
 | Plan `verified` or `abandoned` | task closed | next task: `/keystone:start …` |
 
 ## Scenarios

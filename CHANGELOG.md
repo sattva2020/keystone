@@ -3,6 +3,30 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [0.9.6] — 2026-10-15
+
+### Fixed
+- **verify → fix → verify loop.** The verifier's Rules gate reported a single `rule, file:line`, so each verify run
+  surfaced one violation (a different one each time on the same code) and each cost another fix and verify round. The
+  Rules gate now gives one `rule …` line per project MUST / MUST NOT rule with every violating `file:line`.
+  `/keystone:fix verify` reads the FAIL `verify.md` and fixes every finding in one pass; a FAIL and a re-run of verify
+  on unchanged code both point to it instead of another verify.
+- **Plan not found after `/clear`.** A session that worked in another repository (after `cd`) wrote the plan there but
+  gave `Next:` with a path relative to that repository; the fresh session starts in its own working directory and found
+  nothing. Every skill now gives a path in the `Next:` command that opens from the session's working directory — the
+  absolute path for a file outside it.
+
+## [0.9.5] — 2026-10-14
+
+### Added
+- **Next buttons, file links, handoff (mod).** Buttons above the prompt with the plan's next command; clickable file
+  paths relative to the session folder; `/keystone-handoff` moves a task to a clean session when the context grows.
+
+### Fixed
+- **File links stay inside the session folder** even when a path contains an inner `..`.
+
 ## [0.9.4] — 2026-10-13
 
 ### Fixed

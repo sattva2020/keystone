@@ -1,6 +1,9 @@
 // Keystone mod: /keystone-status (no model turn), a status line, and the real cost of each stage.
 // Works next to the settings hooks in hooks.json (gate.mjs); this module only observes and reports.
 import type { EngineInterface, Register } from 'claude-code'
+import { register as registerNext } from './next.tsx'
+import { register as registerLinks, normalize } from './links.ts'
+import { MARKER } from './handoff.ts'
 
 const ACTIVE = new Set(['draft', 'approved', 'implementing'])
 const STAGE = /^\s*\/keystone:([a-z]+)/
@@ -91,7 +94,35 @@ export function nextCommand(p: Plan): string | null {
   return null
 }
 
-const usd = (n: number) => `$${n.toFixed(2)}`
+// The buttons above the prompt: the plan's next command, /keystone-status, and a third one only where Keystone itself
+// asks for an extra step (check before Approve on L with an intent, review before push on L). No model call.
+export function nextButtons(p: Plan | null, hasIntent: boolean): string[] {
+  const first = p && nextCommand(p)
+  if (!p || !first) return []
+  const dir = p.file.replace(/\/[^/]*$/, '')
+  const b = [first]
+  if (p.status === 'draft' && p.level === 'L' && hasIntent) b.push(`/keystone:check ${dir}/intent.md ${p.file}`)
+  if (p.status === 'implementing' && p.level === 'L' && first.startsWith('/keystone:verify')) b.push('/keystone:review')
+  b.push('/keystone-status')
+  return b
+}
+
+// show=false clears the band; errors leave it empty rather than break the turn.
+export async function publishButtons($: EngineInterface, show: boolean) {
+  try {
+    let list: string[] = []
+    if (show) {
+      const p = await activePlan($)
+      const intent = p ? `${p.file.replace(/\/[^/]*$/, '')}/intent.md` : ''
+      list = nextButtons(p, !!p && p.status === 'draft' && p.level === 'L' && (await $.fs.exists(intent)))
+    }
+    await $.state.set({ plugin: 'keystone', key: 'buttons' }, list)
+  } catch {
+    // the band is optional
+  }
+}
+
+const usd =(n: number) => `$${n.toFixed(2)}`
 export const costLine = (l: Ledger) => {
   const parts = Object.entries(l).filter(([, v]) => v > 0.005).map(([k, v]) => `${k} ${usd(v)}`)
   const total = Object.values(l).reduce((a, b) => a + b, 0)
@@ -114,13 +145,37 @@ const ledgerKey = (p: Plan) => `cost:${p.file}`
 
 async function refresh($: EngineInterface) {
   const p = await activePlan($)
+  await $.state.set({ plugin: 'keystone', key: 'plan' }, p?.file ?? '').catch(() => undefined) // next.tsx offers a handoff only with a plan
   if (!p) return $.ui.status(undefined)
   const l = ((await $.store.get(ledgerKey(p))) ?? {}) as Ledger
   const total = Object.values(l).reduce((a, b) => a + b, 0)
   $.ui.status(`Keystone · ${p.level} · ${p.status} · ${p.done}/${p.total}${p.blocked ? ` · ${p.blocked} blocked` : ''}${total ? ` · ${usd(total)}` : ''}`)
 }
 
-export const register: Register = (on) => {
+// The agent was asked (next.tsx) to bring plan.md up to date. /clear runs only on its marker and only if the plan file
+// really changed; otherwise the handoff is called off and the context stays.
+async function checkHandoff($: EngineInterface, answer: string) {
+  try {
+    const { value: h } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
+    if (!h?.pending) return
+    const { file, mtime } = h.pending
+    await $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...h, pending: null })
+    const changed = (await $.fs.stat(file)).mtimeMs > mtime
+    if (!answer.includes(MARKER) || !changed) return $.ui.toast('Keystone: передача не завершена — план не обновлён, контекст остался')
+    const p = await activePlan($)
+    const cmd = (p && nextCommand(p)) ?? `/keystone:verify ${file}`
+    await $.store.set('handoff:next', cmd)
+    $.clock.after(0, () =>
+      void $.command.run({ command: 'clear' }).catch(() => $.ui.toast(`Keystone: не удалось очистить сессию — выполните /clear и вставьте ${cmd}`)),
+    )
+  } catch {
+    // a failed check leaves the session as it is
+  }
+}
+
+export const register: Register = (on, options) => {
+  registerNext(on, options)
+  registerLinks(on, options)
   let stage = 'other'
   let lastUsd: number | undefined
   let lastPlan: Plan | null = null // verify ends a plan (Status: verified); its own turn is still billed to it
@@ -128,8 +183,18 @@ export const register: Register = (on) => {
 
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'keystone-status', description: 'Keystone: active plan, gates and cost by stage (no model call)' })
+    await $.command.register({ name: 'keystone-handoff', description: 'Keystone: update the plan, clear the session, put the next command in the box' })
     lastUsd = (await $.session.usage()).cost?.usd
     await refresh($)
+    await publishButtons($, true) // back to an unfinished task: its next step is one click away
+    // links resolve from the folder the session started in; a hot reload fires session.start again with a moved cwd
+    const base = await $.state.get({ plugin: 'keystone', key: 'base' }).catch(() => ({ value: undefined }))
+    if (!base.value) await $.state.set({ plugin: 'keystone', key: 'base' }, normalize(e.cwd)).catch(() => undefined)
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('turn.start', async ($, e, next) => {
+    await publishButtons($, false)
     return next(e)
   }).catch(($, e, next) => next(e))
 
@@ -141,6 +206,7 @@ export const register: Register = (on) => {
 
   // remember the stage the user asked for; hand implement/verify the measured cost so their report line is real
   on('prompt.submit', async ($, e, next) => {
+    await publishButtons($, false)
     const m = e.text.match(STAGE)
     if (m) stage = m[1]
     if (m && (m[1] === 'implement' || m[1] === 'verify')) {
@@ -157,6 +223,8 @@ export const register: Register = (on) => {
   on('turn.complete', async ($, e, next) => {
     const out = await next(e)
     if (e.agentId) return out
+    await checkHandoff($, e.answer)
+    await publishButtons($, stage !== 'other')
     const now = (await $.session.usage()).cost?.usd
     if (now === undefined) return out
     const delta = lastUsd === undefined ? 0 : Math.max(0, now - lastUsd)

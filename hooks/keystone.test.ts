@@ -1,5 +1,6 @@
 import { test, expect, mock } from 'claude-code/testing'
-import { parsePlan, statusText, costLine, gatesFor, nextCommand } from './keystone.ts'
+import { parsePlan, statusText, costLine, gatesFor, nextCommand, nextButtons } from './keystone.ts'
+import { MARKER } from './handoff.ts'
 
 const PLAN = [
   '# Plan: reminders', '',
@@ -69,4 +70,131 @@ test('release mode: a verified plan with open ## Release steps stays in view and
   expect(nextCommand(p)).toBe('/keystone:implement docs/keystone/x/plan.md')
   expect(gatesFor(p).join(' ')).toContain('release mode')
   expect(parsePlan('p', PLAN.replace('implementing', 'verified'))).toBe(null)
+})
+
+test('buttons: the next command, the status, and a third only where Keystone asks for one', async () => {
+  const f = 'docs/keystone/x/plan.md'
+  const p = parsePlan(f, PLAN)!
+  expect(nextButtons(null, false)).toEqual([])
+  expect(nextButtons({ ...p, level: 'M', status: 'draft' }, false)).toEqual([`/keystone:plan ${f}`, '/keystone-status'])
+  expect(nextButtons({ ...p, status: 'draft' }, false)).toEqual([`/keystone:plan ${f}`, '/keystone-status'])
+  expect(nextButtons({ ...p, status: 'draft' }, true)).toEqual([`/keystone:plan ${f}`, `/keystone:check docs/keystone/x/intent.md ${f}`, '/keystone-status'])
+  expect(nextButtons({ ...p, status: 'approved' }, true)).toEqual([`/keystone:implement ${f}`, '/keystone-status'])
+  expect(nextButtons(p, false)).toEqual([`/keystone:implement ${f}`, '/keystone-status'])
+  expect(nextButtons({ ...p, level: 'M', done: 3, blocked: 1 }, false)).toEqual([`/keystone:verify ${f}`, '/keystone-status'])
+  expect(nextButtons({ ...p, done: 3, blocked: 1 }, false)).toEqual([`/keystone:verify ${f}`, '/keystone:review', '/keystone-status'])
+  expect(nextButtons({ ...p, status: 'verified', release: 1 }, false)).toEqual([`/keystone:implement ${f}`, '/keystone-status'])
+})
+
+// what the engine answers beneath the plugin in a session
+let mtime = 1
+let hasPlan = true
+const stubSession = (on: any) => {
+  on('fs.exists', ($: any, e: any) => { const p = rel(e.path); return { value: hasPlan && (p in files || Object.keys(files).some((f) => f.startsWith(p + '/'))) } })
+  on('fs.list', () => ({ value: [{ name: '2026-10-12-reminders', kind: 'dir', size: 0 }] }))
+  on('fs.stat', () => ({ value: { kind: 'file', size: 1, mtimeMs: mtime, isLink: false } }))
+  on('fs.read', ($: any, e: any) => ({ value: files[rel(e.path)] }))
+  on('session.start', ($: any, e: any) => e)
+  on('command.register', () => ({ value: true }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1000000 }, rateLimits: [] } }))
+  on('ui.status', () => ({ value: true }))
+  on('turn.start', ($: any, e: any) => e)
+  on('turn.complete', () => ({ text: '' }))
+  on('prompt.suggest', ($: any, e: any) => e)
+  on('agent.list', () => ({ value: [] }))
+  on('classic.SessionStart', () => ({}))
+  on('ui.render', ($: any, e: any) => h($.ui.resolve(e).Box, { key: 'engine' })) // the engine's own (empty) band beneath
+  mock.store(on)
+}
+
+const TURN = { answer: 'done', durationMs: 1, isAborted: false, turnId: 't', reason: 'answer' } as any
+const PLAN_FILE = 'docs/keystone/2026-10-12-reminders/plan.md'
+const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80 } } as any
+const label = async (ui: any, key: string) => ((await ui.find({ key })) as any)?.props?.label
+
+test('buttons appear when a session starts on an active plan and leave when a turn starts', async ($, on) => {
+  stubSession(on)
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  let ui = await $.ui.mount({ plugin: 'keystone', surface: 'desktop', ...BAND })
+  expect(await label(ui, 'next1')).toBe(`/keystone:implement ${PLAN_FILE}`)
+  expect(await label(ui, 'next2')).toBe('/keystone-status')
+  await ui.unmount()
+  await $.turn.start({ text: 'x', turnId: 't2' } as any)
+  ui = await $.ui.mount({ plugin: 'keystone', surface: 'desktop', ...BAND })
+  expect(await ui.find({ key: 'next1' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('a pressed button fills the prompt box and never sends it', async ($, on) => {
+  stubSession(on)
+  const filled: string[] = []
+  const sent: string[] = []
+  on('prompt.read', () => ({ value: { text: '', cursor: 0 } }))
+  on('prompt.fill', ($: any, e: any) => { filled.push(e.text); return { isFilled: true } })
+  on('prompt.submit', ($: any, e: any) => { sent.push(e.text); return { drop: 'test' } })
+  for (const surface of ['terminal', 'desktop'] as const) {
+    await $.session.start({ cwd: 'E:/proj' } as any)
+    const ui = await $.ui.mount({ plugin: 'keystone', surface, ...BAND })
+    await ui.press({ key: 'next1' })
+    expect(await ui.find({ key: 'next1' })).toBeUndefined()
+    await ui.unmount()
+  }
+  expect(filled).toEqual([`/keystone:implement ${PLAN_FILE}`, `/keystone:implement ${PLAN_FILE}`])
+  expect(sent).toEqual([])
+})
+
+test('handoff: /clear only after the marker and a changed plan, then the next command waits in the box', async ($, on) => {
+  stubSession(on)
+  const clock = mock.clock(on)
+  const sent: string[] = []
+  const cleared: string[] = []
+  const filled: string[] = []
+  const toasts: string[] = []
+  on('prompt.submit', ($: any, e: any) => { sent.push(e.text); return { text: e.text } })
+  on('command.run', { command: 'clear' }, () => { cleared.push('clear'); return {} })
+  on('prompt.fill', ($: any, e: any) => { filled.push(e.text); return { isFilled: true } })
+  on('ui.toast', ($: any, e: any) => { toasts.push(String(e?.text ?? e)); return { value: true } })
+  mtime = 1
+  await $.session.start({ cwd: 'E:/proj' } as any)
+
+  // no marker: called off, nothing cleared
+  await $.command.run({ command: 'keystone-handoff', args: '' })
+  await clock.settle()
+  expect(sent.length).toBe(1)
+  expect(sent[0]).toContain(PLAN_FILE)
+  expect(sent[0]).toContain(MARKER)
+  await $.turn.complete(TURN)
+  await clock.settle()
+  expect(cleared).toEqual([])
+
+  // marker, but the plan did not change: called off
+  await $.command.run({ command: 'keystone-handoff', args: '' })
+  await clock.settle()
+  await $.turn.complete({ ...TURN, answer: MARKER })
+  await clock.settle()
+  expect(cleared).toEqual([])
+
+  // marker and a newer plan: /clear, then the next command is filled in after the clear
+  await $.command.run({ command: 'keystone-handoff', args: '' })
+  await clock.settle()
+  mtime = 2
+  await $.turn.complete({ ...TURN, answer: MARKER })
+  await clock.settle()
+  expect(cleared).toEqual(['clear'])
+  await $.classic.SessionStart({ source: 'clear' } as any)
+  await clock.settle()
+  expect(filled).toEqual([`/keystone:implement ${PLAN_FILE}`])
+  mtime = 1
+})
+
+test('/keystone-handoff without an active plan says so and sends nothing', async ($, on) => {
+  stubSession(on)
+  hasPlan = false
+  const sent: string[] = []
+  on('prompt.submit', ($: any, e: any) => { sent.push(e.text); return { drop: 'test' } })
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  const out = await $.command.run({ command: 'keystone-handoff', args: '' })
+  expect(JSON.stringify(out)).toContain('Нет активного плана Keystone')
+  expect(sent).toEqual([])
+  hasPlan = true
 })

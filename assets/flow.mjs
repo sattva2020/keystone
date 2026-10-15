@@ -24,10 +24,10 @@ const laneLabel = (c, y, h, label, hint) => `<rect x="40" y="${y}" width="150" h
 function svg(c) {
   const stages = [
     ['Plan', 'intent.md'], ['Design', 'spec.md'], ['Build', 'plan.md → diff'],
-    ['Test', 'checks + verifier'], ['Deploy', 'merged PR'], ['Maintain', 'incident → intent'],
+    ['Test', 'checks + verifier'], ['Deploy', '## Release'], ['Maintain', 'incident → intent'],
   ];
-  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820" role="img" aria-label="Keystone user flow mapped onto the AI-native SDLC playbook">`;
-  s += `<rect width="1200" height="820" rx="18" fill="${c.bg}"/>`;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="872" viewBox="0 0 1200 872" role="img" aria-label="Keystone user flow mapped onto the AI-native SDLC playbook">`;
+  s += `<rect width="1200" height="872" rx="18" fill="${c.bg}"/>`;
   s += `<text x="40" y="46" ${F} font-size="22" font-weight="800" fill="${c.title}">How Keystone runs the AI-native SDLC playbook</text>`;
   s += `<text x="40" y="68" ${F} font-size="12.5" fill="${c.sub}">Top: the playbook's stages (Anthropic). Below: what you type in Claude Code. Every stage ends with a committed file.</text>`;
   // playbook row
@@ -42,27 +42,28 @@ function svg(c) {
   s += box(c, 40, 150, 150, 52, '/keystone:start', ['sizes the task:', 'S · M · L'], true);
   // L lane
   const yL = 180, hL = 84;
-  s += laneLabel(c, 222, 120, 'L', 'open decisions, data,');
+  s += laneLabel(c, 222, 150, 'L', 'open decisions, data,');
   s += `<text x="56" y="278" ${F} font-size="11" fill="${c.sub}">security, others' code</text>`;
   const L = [
-    ['/keystone:intent', ['grill → your answers', 'intent.md · accept'], true],
+    ['/keystone:intent', ['grill → your answers;', 'original goal kept'], true],
     ['/keystone:plan', ['plan = spec · risks', 'auto /keystone:check'], false],
     ['/keystone:implement', ['/clear, then task by', 'task · notes · Sonnet'], false],
     ['/keystone:verify', ['fresh-context verifier', 'PASS · UNPROVEN · FAIL'], false],
-    ['git push · PR', ['gate opens only', 'after verify'], false],
-    ['/keystone:fix', ['regression-first;', 'big finding → intent'], false],
+    ['release', ['implement runs R-steps;', 'merge → push on yes'], false],
+    ['/keystone:fix', ['bug: regression-first;', 'big finding → intent'], false],
   ];
   L.forEach(([t, l, hot], i) => { s += box(c, COL(i), yL + 42, W, 70, t, l, hot); if (i < 5) s += arrow(c, COL(i) + W, yL + 77, COL(i + 1)); });
   s += lock(c, COL(1) + 4, yL + 120, 'draft: no code edits until Approve');
-  s += lock(c, COL(4) - 20, yL + 120, 'push closed until verify');
+  s += lock(c, COL(4) + 10, yL + 120, 'push closed until verify');
+  s += lock(c, COL(2) + 40, yL + 150, 'FAIL → /keystone:fix verify: every finding in one pass → verify again');
   // M lane
-  const yM = 360;
+  const yM = 390;
   s += laneLabel(c, yM, 90, 'M', 'one clear approach,');
   s += `<text x="56" y="${yM + 58}" ${F} font-size="11" fill="${c.sub}">several files</text>`;
-  const Mx = [['/keystone:plan', ['short plan, Risks;', 'settings inferred'], 1], ['/keystone:implement', ['task by task'], 2], ['/keystone:verify', ['verdict + verify.md'], 3], ['git push · PR', ['after verify'], 4]];
+  const Mx = [['/keystone:plan', ['short plan, Risks;', 'settings inferred'], 1], ['/keystone:implement', ['task by task'], 2], ['/keystone:verify', ['verdict + verify.md'], 3], ['merge · push', ['after verify + yes'], 4]];
   Mx.forEach(([t, l, i], k) => { s += box(c, COL(i), yM + 10, W, 62, t, l); if (k < 3) s += arrow(c, COL(i) + W, yM + 41, COL(i + 1)); });
   // S lane
-  const yS = 470;
+  const yS = 500;
   s += laneLabel(c, yS, 70, 'S', 'diff in one sentence');
   s += box(c, COL(2), yS + 8, W, 54, 'edit + check', ['no intent, no plan'], false);
   s += arrow(c, COL(2) + W, yS + 35, COL(3));
@@ -70,7 +71,7 @@ function svg(c) {
   s += `<text x="${COL(4) + 6}" y="${yS + 32}" ${F} font-size="11.5" fill="${c.sub}">a bug → /keystone:fix (S: fix now,</text>`;
   s += `<text x="${COL(4) + 6}" y="${yS + 48}" ${F} font-size="11.5" fill="${c.sub}">regression test as a new file)</text>`;
   // toolbox lane: run on demand, or pulled in by the chain
-  const yT = 560;
+  const yT = 590;
   s += laneLabel(c, yT, 158, 'tools', 'on demand, or pulled');
   s += `<text x="56" y="${yT + 58}" ${F} font-size="11" fill="${c.sub}">in by the chain</text>`;
   const TB = [
@@ -92,9 +93,10 @@ function svg(c) {
   ];
   TB2.forEach(([t, l], i) => { s += box(c, COL(i), yT + 86, W, 64, t, l); });
   // footer
-  s += `<line x1="40" y1="746" x2="1160" y2="746" stroke="${c.edge}" stroke-width="1"/>`;
-  s += `<text x="40" y="772" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Design is folded into the plan</tspan> — no separate spec.md; every plan row cites an intent line (I-n). Grill runs inside intent; check runs inside plan.</text>`;
-  s += `<text x="40" y="794" ${F} font-size="12.5" fill="${c.text}"><tspan ${M} font-weight="700">/keystone-status</tspan> any time: plan, tasks, gates and cost by stage — answered without a model call. Lift a gate: Status: abandoned or KEYSTONE_GATES=off.</text>`;
+  s += `<line x1="40" y1="776" x2="1160" y2="776" stroke="${c.edge}" stroke-width="1"/>`;
+  s += `<text x="40" y="802" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Design is folded into the plan</tspan> — no separate spec.md; every plan row cites an intent line (I-n). Grill runs inside intent; check runs inside plan.</text>`;
+  s += `<text x="40" y="824" ${F} font-size="12.5" fill="${c.text}"><tspan ${M} font-weight="700">/keystone-status</tspan> any time: plan, tasks, gates and cost by stage — answered without a model call. Lift a gate: Status: abandoned or KEYSTONE_GATES=off.</text>`;
+  s += `<text x="40" y="850" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Above the prompt</tspan> — Next buttons from the plan status, clickable file links, and a handoff to a clean session when the context grows.</text>`;
   return s + '</svg>';
 }
 writeFileSync(`${out}/flow-dark.svg`, svg(T.dark));

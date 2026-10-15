@@ -106,8 +106,12 @@ verify). Report it on the line of the task/row it concerns.
   rules. `Architecture gate: pass | fail — <rule, file:line> | n/a`.
 - Security gate — copy the caller's `Security gate: pass | warn | fail | n/a` line from the input; do not run the audit
   yourself. A `fail` is reported as is (the caller checks `docs/keystone/security-ignores.md`).
-- Rules gate — MUST / MUST NOT lines of the project rules against CHANGED_FILES. `Rules gate: pass | fail — <rule,
-  file:line> | not checkable`. A clear violation of explicit rule text is `fail`.
+- Rules gate — every MUST / MUST NOT line of the project rules against every file in CHANGED_FILES, exhaustively:
+  list the rules first, then check each rule across all changed files before moving to the next. One line per rule,
+  `rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`, and **every** violating `file:line`
+  goes on that rule's line — never stop at the first violation. A clear violation of explicit rule text is `fail`.
+  The summary line: `Rules gate: pass | fail — <k> violations in <r> rules | not checkable`. Verify hands the whole
+  list to `/keystone:fix verify` in one pass, so a violation left unlisted costs another verify → fix round.
 
 ## 7. Rework signal
 
@@ -125,7 +129,9 @@ Keystone verify: <plan path> · base <ref>
 Unrequested: <file — what> | none
 Leftovers / env: <file:line — what> | none
 Settings: ok | violated — …
-Rules gate: pass | fail — … | not checkable
+Rules gate: pass | fail — <k> violations in <r> rules | not checkable
+rule <source:line> — pass | fail — <file:line>; … | n/a — <why>
+…
 Architecture gate: pass | fail — … | n/a
 Security gate: pass | warn | fail | n/a
 Unconfirmed — <what could not be confirmed> — looked in <where> | none

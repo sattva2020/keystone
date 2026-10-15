@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.4');
+  assert.equal(p.version, '0.9.6');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -218,6 +218,18 @@ test('mod: hooks.json loads the keystone module next to the settings hooks', () 
     assert.ok(m.includes(s), s);
 });
 
+// 0.9.5 — buttons, links, handoff (docs/keystone/2026-10-14-mod-next-buttons-file-links/plan.md)
+test('0.9.5 mod: one module imports the band and the links; buttons without a model; handoff clears only on the marker', () => {
+  const m = read('hooks/keystone.ts');
+  for (const s of ["from './next.tsx'", "from './links.ts'", 'export function nextButtons', "name: 'keystone-handoff'", "command: 'clear'", 'MARKER'])
+    assert.ok(m.includes(s), s);
+  const n = read('hooks/next.tsx');
+  for (const s of ["component: 'AbovePrompt'", '$.prompt.fill', "'classic.SessionStart'", "'session.measure'"]) assert.ok(n.includes(s), s);
+  assert.ok(!n.includes('$.model.') && !m.includes('$.model.'), 'no model call behind the buttons');
+  assert.ok(read('hooks/links.ts').includes("component: 'AssistantMessage'"));
+  assert.ok(json('.claude-plugin/plugin.json').types === './types/index.d.ts');
+});
+
 // 0.8.0 — project context and toolbox (docs/keystone/2026-10-12-project-context-and-toolbox/intent.md)
 test('0.8 I-1/I-10: setup writes only after a yes, never overwrites, secrets as ${VAR}, no skills.sh installs', () => {
   const s = read('skills/setup/SKILL.md');
@@ -351,6 +363,7 @@ test('session audit 12.10: check falls back to .ai-factory/plans and a D-list in
 
 test('every skill ends with an explicit Next: line; grill run directly routes its decisions; status shows Next', () => {
   for (const s of SKILLS) has(`skills/${s}/SKILL.md`, '**Next step (mandatory).**');
+  for (const d of readdirSync(join(root, 'skills'))) has(`skills/${d}/SKILL.md`, 'the next session (after `/clear`) starts there', 'its absolute path');
   has('skills/grill/SKILL.md', 'Run directly by the user', 'Next: /keystone:intent <topic>');
   has('hooks/keystone.ts', 'Next: ${nextCommand(p)');
   for (const f of ['docs/scenarios.md', 'docs/scenarios.ru.md']) has(f, '/keystone-status', '/keystone:verify accept');
@@ -500,4 +513,10 @@ test('release mode: ticks ride the next push, no separate push question for them
 
 test('no $<digit> in skills: Claude Code reads it as an argument placeholder and substitutes the user\'s words', () => {
   for (const d of readdirSync(join(root, 'skills'))) assert.doesNotMatch(read(`skills/${d}/SKILL.md`), /\$\d/, d);
+});
+
+test('verify/fix loop: Rules gate lists every rule and violation; fix verify takes all findings in one pass', () => {
+  has('agents/verifier.md', 'One line per rule', 'never stop at the first violation');
+  has('skills/verify/SKILL.md', 'Next: /keystone:fix verify', 'Code unchanged since the last FAIL');
+  has('skills/fix/SKILL.md', '### Verify findings mode', 'fix all of them in one pass');
 });

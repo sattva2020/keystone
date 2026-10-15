@@ -22,7 +22,9 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
 copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
-later command in that fenced block. Never end on a caveat or an open-ended question.
+later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
+from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
+its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to

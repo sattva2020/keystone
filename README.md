@@ -149,7 +149,7 @@ All 25 commands, grouped. Parameters are in brackets; `|` is a choice.
 | `/keystone:check [intent] [plan]` | independent plan check in clean contexts; intent coverage % |
 | `/keystone:implement [plan]` | tasks in order, `BLOCKED:` instead of "not run", a decision log, resumable after `/clear` |
 | `/keystone:verify [plan [base]] [--strict]` · `accept` | build, tests, lint, then a verifier in a clean context; architecture and security gates; PASS / PASS-UNPROVEN / FAIL |
-| `/keystone:fix <bug>` | regression first: a failing test in a new file, then the smallest fix |
+| `/keystone:fix <bug>` | regression first: a failing test in a new file, then the smallest fix. `/keystone:fix verify` fixes every finding of the last FAIL `verify.md` in one pass |
 
 **Project context**
 
@@ -243,6 +243,14 @@ Keystone ships a small TypeScript [mod](https://code.claude.com/docs/en/plugins/
   `cost:` line.
 - **Next command** — after a Keystone turn the empty prompt box shows the next step with the plan path filled in
   (`/keystone:implement docs/keystone/…/plan.md`, then `/keystone:verify …`); press Tab or → to take it.
+- **Next buttons** — above the prompt, from the plan status, without a model call: the plan's next command and
+  `/keystone-status`, plus `/keystone:check` for an L draft with an intent or `/keystone:review` before verify on L.
+  A click puts the command into the prompt box; you press Enter.
+- **File links** — file paths in answers are clickable relative to the session folder (`` `hooks/keystone.ts:86` ``
+  becomes a link); only the rendering changes, the message stays as it is.
+- **Handoff** — when the context grows, `/keystone-handoff` or the Hand off button (at 350k / 600k / 800k tokens;
+  100k / 150k / 170k for a short window) has the agent update `plan.md`; after `/clear` the next command is already
+  in the prompt box. `/clear` runs only after `KEYSTONE HANDOFF READY` and only if the plan really changed.
 
 Mods need Claude Code 2.1.287+ (terminal) or 2.1.286+ (Desktop). In `claude -p` the hooks run but nothing is drawn.
 

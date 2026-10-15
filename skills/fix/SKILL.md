@@ -1,7 +1,7 @@
 ---
 name: fix
-description: "Keystone: fix a bug regression-first — reproduce, failing test, smallest fix, same check green; root cause and prevention recorded in the plan. Fix now (S) or plan first (M). Use only via explicit /keystone:fix <bug description or error>."
-argument-hint: "<bug description or error message> | (empty: continue the active fix plan)"
+description: "Keystone: fix a bug regression-first — reproduce, failing test, smallest fix, same check green; root cause and prevention recorded in the plan. Fix now (S) or plan first (M). Use only via explicit /keystone:fix <bug description or error>, or /keystone:fix verify to fix every finding of the last FAIL verify.md in one pass."
+argument-hint: "<bug description or error message> | verify (every finding of the last FAIL verify.md) | (empty: continue the active fix plan)"
 allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Task
 model: opus
 effort: high
@@ -24,7 +24,9 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
 copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
-later command in that fenced block. Never end on a caveat or an open-ended question.
+later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
+from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
+its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
@@ -73,6 +75,7 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
      first"). Go to Step 2 using the plan as a guide, still applying the Regression-First Policy.
    - `$ARGUMENTS` empty and no fix plan → "No fix plan and no problem description. Run `/keystone:fix <description>`."
      STOP.
+   - `$ARGUMENTS` is `verify` → **Verify findings mode** below; it works inside the active plan, no question.
    - `$ARGUMENTS` given while another plan is active → say which one and ask: finish it, or mark it `abandoned`.
 2. **Project context.** Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
    `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
@@ -81,6 +84,18 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
    Use them to avoid fixes that violate project structure or conventions; MUST / MUST NOT lines
    there are project rules. Infer the Settings (tests: a runner or test files exist; logging: an existing logger; docs: `docs/`
    or a README with usage sections) — they are written into the plan, never asked.
+
+### Verify findings mode — `/keystone:fix verify`
+
+Read `verify.md` next to the active plan. Its verdict is not FAIL → say so and STOP. Otherwise collect **every**
+finding into one list: each `rule … — fail` line with all its `file:line`, every `wrong` line (with its `Repro:`),
+`Settings: violated`, an `Architecture gate: fail`. `not proven`, `BLOCKED` and `Unconfirmed` items are not defects —
+leave them. Print the list numbered, then fix all of them in one pass inside the active plan: no new plan, no mode
+question, one finding = one smallest change; a `wrong` behaviour finding still follows the Regression-First Policy, a
+rule finding (types, a swallowed error, a naming rule) is checked by build, lint and the related tests. Before
+committing, re-check each failing rule against **all** changed files of the plan (not only the cited lines) and fix
+other places that break it too. Add one line per finding to the plan's `## Implementation notes`, commit code and plan
+together, and report each finding as `fixed — <file:line>` or `not fixed — <why>`. Next: `/keystone:verify <plan>`.
 
 ### Step 1: Understand the problem and choose the mode
 
@@ -217,7 +232,8 @@ Found: <defects, surprises, open questions | none>
 6. **Do not fit tests to implementation** — regression tests encode the reported/expected behavior, not the internal shape.
 7. **Tests in HEAD are untouchable** — the regression test is a new file (your own uncommitted one is editable); a wrong
    existing test is the human's call.
-8. **Root cause** — fix the actual problem, not symptoms. **Minimal changes**; **one fix at a time**, no scope creep.
+8. **Root cause** — fix the actual problem, not symptoms. **Minimal changes**; **one fix at a time**, no scope creep —
+   except `/keystone:fix verify`, which fixes every finding of the FAIL `verify.md` in one pass.
 
 **DO NOT:** apply a fix when the user chose "Plan first"; skip the active-plan check; refactor unrelated code; add
 features; edit test files that exist in HEAD; claim `pass` for a check that did not run in this session.

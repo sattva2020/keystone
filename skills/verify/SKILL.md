@@ -24,7 +24,9 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
 copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
-later command in that fenced block. Never end on a caveat or an open-ended question.
+later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
+from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
+its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
@@ -86,7 +88,8 @@ lint warning, an unfinished-work marker (TODO / FIXME / HACK) or an undocumented
 
 Call the agent (Agent tool, `subagent_type: "keystone:verifier"`). Its prompt contains **only** facts, no opinion:
 plan path, intent path, base ref, the Step-2 lines (incl. the Architecture and Security gate lines), and the project-rules file list. It returns one line per task,
-Reconciliation row and `I-n`, then `Unrequested`, `Settings`, `Rules gate`, the count line and the `Keystone Chain` line.
+Reconciliation row and `I-n`, then `Unrequested`, `Settings`, `Rules gate` with one `rule …` line per project rule
+(every violating `file:line` on it), the count line and the `Keystone Chain` line.
 Its first line is `Original goal: met | partially | not met` — the user's verbatim goal against the diff, independent of
 the intent; `partially`/`not met` without a confirmed `Goal check:` in the intent is `wrong` (PASS is impossible). Then
 `Done means:` — every outcome there gets ok / not proven / wrong.
@@ -121,7 +124,11 @@ Unrequested: src/util/retry.ts — new retry logic, no task or I-n
 - Do not shorten the plan or hide rows to keep the report small: every task, every Reconciliation row, every `I-n`
   gets a line, even when it is obviously `ok`.
 - Do not re-run the verifier hoping for a milder verdict. A second run is justified only after the code or the evidence
-  changed.
+  changed. Code unchanged since the last FAIL (no new commit, no relevant uncommitted change) → do not call the
+  verifier: say so, keep `verify.md`, and make the Next command `/keystone:fix verify` — the open findings need a fix,
+  not another verify.
+- A Rules gate `fail` with a single `rule` line while the project has more MUST / MUST NOT lines is incomplete: the
+  verifier must give one line per rule. Send it back once with the missing rules named.
 - A missing or unreadable intent: say so, verify against the plan alone, and report the outcome / constraint counts
   as `n/a`. An intent whose status is not `accepted` is reported, not silently trusted.
 - A plan with no `Settings:` line (older plan format): treat as `Settings: ok`, and say `Settings line absent`.
@@ -164,7 +171,9 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
 3. **PASS-UNPROVEN** → status unchanged, `git push` stays closed. Commit `verify.md` alone (`docs(verify): <slug>`).
    Tell the human: prove the open rows (tests, a run) and verify again, or `/keystone:verify accept` to take them
    consciously.
-4. **FAIL** → status unchanged; commit `verify.md` alone. Recommend `/keystone:fix` (a defect in the diff) or
+4. **FAIL** → status unchanged; commit `verify.md` alone. Recommend `/keystone:fix verify` — it takes every finding
+   from this `verify.md` (each failing `rule` line with all its `file:line`, every `wrong` line, `Settings: violated`,
+   an Architecture gate `fail`) and fixes them in one pass, so verify runs once more, not once per finding — or
    `/keystone:implement` (a task never finished). The push gate stays closed. To lift a stuck gate deliberately: set
    `Status: abandoned` in the plan header, or run with `KEYSTONE_GATES=off` — never as a way around a FAIL.
 
@@ -222,8 +231,8 @@ into a project rule.
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
 followed only by the `Next:` line: PASS with open `## Release` steps → `Next: /keystone:implement <plan path>` (release
 mode; on L `/keystone:review` first); PASS without them → `Next: push and open the PR` (L: `/keystone:review` first); PASS-UNPROVEN →
-`Next: /keystone:verify accept <plan path>` or the missing check; FAIL → `Next: /keystone:implement <plan path>` (or
-`/keystone:fix <finding>`); after a fix plan or a fixed FAIL, `/keystone:evolve` may follow later.
+`Next: /keystone:verify accept <plan path>` or the missing check; FAIL → `Next: /keystone:fix verify` (defects in the diff, all
+findings in one pass) or `/keystone:implement <plan path>` (a task never finished); after a fix plan or a fixed FAIL, `/keystone:evolve` may follow later.
 
 ```text
 Blocked on me: <what needs a human decision, incl. recommended next step | none>
