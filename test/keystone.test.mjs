@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.13');
+  assert.equal(p.version, '0.9.14');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -551,6 +551,13 @@ test('0.9.9: review rules — rules check without a plan, verifier format, sugge
   assert.match(front('skills/review/SKILL.md'), /argument-hint:.*rules \[ref\]/);
   has('agents/verifier.md', '`rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`');
   has('skills/evolve/SKILL.md', '`### Suggested rule updates` from a `/keystone:review rules` run');
+});
+
+test('evolve add: one dictated rule — dedupe, topic file, checked paths:, diff before yes, log without Sources', () => {
+  assert.match(front('skills/evolve/SKILL.md'), /argument-hint:.*add <rule text>/);
+  has('skills/evolve/SKILL.md', '## Mode add — one rule you dictate (`/keystone:evolve add <rule text>`)',
+    '`MUST` / `MUST NOT`', 'Glob each one', '**Covered** → quote the existing rule', '`Write` / `Change topic or paths` / `Cancel`',
+    '`## <date> — evolve add`', 'no `Sources:` line');
 });
 
 test('0.9.9: fix loads past lessons before changing code', () => {

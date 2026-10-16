@@ -1,7 +1,7 @@
 ---
 name: evolve
-description: "Keystone: turn the lessons of finished tasks into project rules. Reads fix plans (Root cause, Prevention), verify FAIL and Found lines, Implementation notes deviations, saved review and security findings and docs/notes; finds recurring patterns and stack pitfalls; proposes rules for .claude/rules/ — written only after you see the diff and say yes. Processed sources are logged in docs/keystone/evolve-log.md so a re-run skips them. Use for 'evolve', 'learn from our fixes', 'what keeps going wrong', after several fixes."
-argument-hint: "[all | plan | implement | fix | verify | <rules topic>]"
+description: "Keystone: turn the lessons of finished tasks into project rules. Reads fix plans (Root cause, Prevention), verify FAIL and Found lines, Implementation notes deviations, saved review and security findings and docs/notes; finds recurring patterns and stack pitfalls; proposes rules for .claude/rules/ — written only after you see the diff and say yes. Processed sources are logged in docs/keystone/evolve-log.md so a re-run skips them. `add <rule text>` writes one rule you dictate (dedupe, topic file, paths:) after the same diff and yes. Use for 'evolve', 'learn from our fixes', 'what keeps going wrong', after several fixes, and for 'add rule', 'remember this convention', 'always do X'."
+argument-hint: "[all | plan | implement | fix | verify | <rules topic> | add <rule text>]"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion
 model: opus
 effort: high
@@ -57,6 +57,30 @@ update. Everything evolve learns becomes a **project rule**.
 
 Arguments: `$ARGUMENTS` — `all` or empty (every source and topic), a Keystone stage (`plan`, `implement`, `fix`,
 `verify`, `check`, `review`) to look only at lessons for that stage, or any other word as a rules topic filter.
+The first word `add` switches to **Mode add** below; the rest of the argument is the rule text.
+
+## Mode add — one rule you dictate (`/keystone:evolve add <rule text>`)
+
+No sources, no registry, no 8-proposal cap: the human's words are the evidence. Steps 1–3 are skipped.
+
+1. **Text.** `add` with no text → ask for the rule (AskUserQuestion, or plain text and wait). Several rules at once
+   (one per line, or split by `;`) → each is handled as its own rule below.
+2. **Context.** Step 0 — the loaded rules are the baseline for dedupe.
+3. **Wording.** One short imperative line in English, the user's meaning kept, a concrete format, name or command kept
+   verbatim. The user says always / never / must → `MUST` / `MUST NOT` (only those lines are checked by
+   `/keystone:review rules` and the verifier's Rules gate); a preference → a plain imperative, and say it will not be
+   gated. Evidence comment: `<!-- evolve add: user, <YYYY-MM-DD> -->`.
+4. **Target.** Use the table in "Where a rule goes": an existing `.claude/rules/<topic>.md` whose topic fits, else a new
+   `<topic>.md` (kebab-case). The rule names files, folders or a language → `paths:` globs; Glob each one and drop or
+   fix a glob that matches nothing. A whole-project rule gets no `paths:`.
+5. **Dedupe** as in Step 2, against every loaded rule including `CLAUDE.md`: **Covered** → quote the existing rule with
+   `file:line`, write nothing; **Partial** → propose the strengthened rule as a diff; **Conflict** → show both and let
+   the human choose.
+6. **Show, then write only after "yes".** Show the exact diff (new file content or the added line), then ask once:
+   `Write` / `Change topic or paths` / `Cancel`. Only on `Write` follow the Writing rules of Step 4. `Change` → ask
+   what, show the new diff, ask again.
+7. **Log.** Append to `docs/keystone/evolve-log.md` an entry `## <date> — evolve add` with an `Added:` line (or
+   `Rejected:` on Cancel) and no `Sources:` line. Then Step 6.
 
 ## Where a rule goes
 
@@ -225,7 +249,7 @@ Context is heavy after reading many sources — suggest `/clear` or `/compact`.
 
 ## Rules
 
-1. **Traceable** — every proposal links to a source path, a convention file or a tech fact.
+1. **Traceable** — every proposal links to a source path, a convention file or a tech fact (in Mode add, the user).
 2. **Minimal** — add short rules; do not rewrite rule files or `CLAUDE.md`.
 3. **Reversible** — the human approves each rule after seeing the diff; nothing is auto-applied.
 4. **Cumulative** — each run builds on the log and the existing rules.

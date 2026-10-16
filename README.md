@@ -185,7 +185,7 @@ All 25 commands, grouped. Parameters are in brackets; `|` is a choice.
 | Command | What it does |
 |---|---|
 | `/keystone:roadmap [check\|vision]` | `docs/roadmap.md` with milestones `M-n` |
-| `/keystone:evolve [all\|stage\|topic]` | turns repeated lessons into `.claude/rules/` after a "yes" |
+| `/keystone:evolve [all\|stage\|topic\|add <rule>]` | turns repeated lessons into `.claude/rules/` after a "yes"; `add` writes one rule you dictate, with dedupe and `paths:` |
 | `/keystone:transfer <project path> [all\|stage\|topic]` | brings rules and lessons from another of your projects |
 | `/keystone:reference <url\|path>… [--name] [--update]` · `list\|show\|delete` | project reference: conclusions, prices, limits with a source |
 | `/keystone:distill <path\|url>… [--name] [--path] [--update] [--split]` | turns a book or documents into a Claude Code skill |

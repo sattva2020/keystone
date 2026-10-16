@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.14] — 2026-10-16
+
+### Added
+- **evolve add:** `/keystone:evolve add <rule text>` writes one rule you dictate, the missing half of AI Factory's
+  `/aif-rules`: English imperative wording (always / never → `MUST` / `MUST NOT`, so `review rules` and the verifier
+  check it), dedupe against every loaded rule (covered → nothing written, partial → a diff, conflict → you choose), an
+  existing or new `.claude/rules/<topic>.md`, `paths:` globs checked to match files, written only after the diff and a
+  "yes", logged in `docs/keystone/evolve-log.md`.
+
 ## [0.9.13] — 2026-10-15
 
 ### Fixed

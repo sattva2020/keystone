@@ -44,7 +44,7 @@ native `CLAUDE.md`, `docs/architecture.md` and `.claude/rules` are absent.
 
 | AI Factory | In Keystone | Why |
 |---|---|---|
-| `/aif-rules` | `.claude/rules/` + `implement` | Rules live in `.claude/rules/*.md`: Claude Code loads them itself, and with `paths:` only for the right files. No separate `RULES.md`. `implement` proposes new rules, up to three per task, and writes them only after a "yes". You can edit them by hand like any file. |
+| `/aif-rules` | `/keystone:evolve add` · `.claude/rules/` + `implement` | Rules live in `.claude/rules/*.md`: Claude Code loads them itself, and with `paths:` only for the right files. No separate `RULES.md`. `implement` proposes new rules, up to three per task, and writes them only after a "yes". `/keystone:evolve add <rule text>` writes one rule you dictate: dedupe against the existing rules, a topic file, `paths:` when it names files, written after the diff and a "yes". You can edit them by hand like any file. |
 | `/aif-rules-check` | `check` · `verify` · `review` | Rule compliance is checked inside the chain: `check` reports rule violations in the plan, `verify` runs the Rules gate and the Architecture gate over the diff, `review` covers project rules. No separate run is needed. |
 | `/aif-warmup` | native Claude Code loading | Claude Code loads `CLAUDE.md` and `.claude/rules` at session start. A warm-up skill would duplicate that and spend tokens. |
 | `/aif-notes` | `plan.md` · `## Implementation notes` | The decision log is an append-only section of the plan (task, decision, why, evidence). `verify` compares deviations from the plan with this log. A separate viewer skill is not needed: it is part of `plan.md`. |
