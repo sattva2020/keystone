@@ -43,7 +43,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 Chain: `intent.md` → plan → code + tests → verify. There is **no separate spec stage**: the plan is the spec.
 This skill captures only *what and why*; *how* belongs to the plan.
@@ -55,8 +56,7 @@ Two subcommands:
 
 ## Step 0: Context
 
-- **Where it lives.** Default `docs/keystone/`. Fallback for AI Factory projects: if `.ai-factory/config.yaml` exists,
-  use its `paths.specs` (default fallback `.ai-factory/specs/`). Intent home: `<root>/<YYYY-MM-DD>-<slug>/intent.md` — one folder
+- **Where it lives.** `docs/keystone/`. Intent home: `docs/keystone/<YYYY-MM-DD>-<slug>/intent.md` — one folder
   per change; `slug` = kebab-case of the idea, ≤ 6 words, ASCII. In plain Claude Code the plan goes next to it as
   `plan.md`.
 - **Research (L, optional).** If the "how" is unclear — a new integration, an unfamiliar library, several architectural
@@ -169,6 +169,6 @@ answer in the user's words, refuse and ask that question first.
 ## Project memory (memlab, optional)
 
 With memlab available, the interview starts from `search_decisions` on the idea (see `/keystone:grill`). Earlier
-intents, plans and verdicts under `docs/keystone/` (or `paths.specs`) are part of the memory once indexed: cite them in
+intents, plans and verdicts under `docs/keystone/` are part of the memory once indexed: cite them in
 Problem or Affected when they explain the current state; list a decision this intent replaces in the Decisions log as
 `supersedes <path>`.

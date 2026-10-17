@@ -41,7 +41,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 ## 1. Size it (agent proposes, human confirms)
 
@@ -63,7 +64,7 @@ creates it (stack, commands, rules) after your yes." Do not block and do not run
 Ask once: `Level: M — <one-line reason>. OK / S / L?` (AskUserQuestion, recommended first). The human's answer wins;
 record the level in the plan header or the report.
 
-**An active plan already exists.** Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. If this is a different task → ask once: continue that plan, or mark it `Status: abandoned` and start
+**An active plan already exists.** Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. If this is a different task → ask once: continue that plan, or mark it `Status: abandoned` and start
 this one. Its gates (no edits while draft, no push before verify) apply until you choose.
 
 **The task already has an intent or a plan.** Only record the level; create no new artifacts. If the user picked M while

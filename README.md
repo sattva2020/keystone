@@ -217,8 +217,8 @@ scripts (`hooks/gate.mjs`) and read only the hook payload and the plan files.
 
 ## Files
 
-Task files live in `docs/keystone/<YYYY-MM-DD>-<slug>/` — `intent.md`, `plan.md`, `verify.md` — or in `paths.specs`
-when the project uses AI Factory. The plan header is `Level · Mode · Status` (plus `Settings:` and `Done means:`), and
+Task files live in `docs/keystone/<YYYY-MM-DD>-<slug>/` — `intent.md`, `plan.md`, `verify.md` (Keystone
+never reads or writes AI Factory's `.ai-factory/` folder). The plan header is `Level · Mode · Status` (plus `Settings:` and `Done means:`), and
 Status moves `draft → approved → implementing → verified`, or `abandoned` at any point; the `## Release` steps run while the
 plan is `verified`. Each stage ends in a committed
 file and the next stage starts by reading it, not by replaying the chat.

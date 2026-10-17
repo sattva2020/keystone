@@ -45,7 +45,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 ## Modes
 
@@ -63,8 +64,7 @@ The skill operates in three sequential modes.
 ### Step 0 — Project context
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`
-(rules with `paths:` apply only to matching files); `AGENTS.md`. FALLBACK only when the project uses AI Factory and those
-are absent: `.ai-factory/{DESCRIPTION,ARCHITECTURE,RULES}.md` and `.ai-factory/rules/*.md` (all fallback).
+(rules with `paths:` apply only to matching files); `AGENTS.md`.
 MUST / MUST NOT lines are project rules. Use the stack, architecture and conventions from them when writing the artifacts.
 
 ### Step 1 — Parse arguments, resolve the input and the task folder
@@ -77,17 +77,15 @@ Parse `$ARGUMENTS` fully before doing anything else:
    - a path to a `plan.md` (or its folder) → **plan input**: read the plan and the `intent.md` next to it;
    - a git ref (`git rev-parse --verify <arg>` succeeds) → **ref input**: the change is `git diff <ref>...HEAD`;
    - nothing → **working input**: the change is `git diff --cached`, or `git diff` when nothing is staged (say which);
-     if an active plan exists (the newest `docs/keystone/*/plan.md` — or `paths.specs` from `.ai-factory/config.yaml`
-     when the project has AI Factory — whose Status is draft, approved or implementing), read it and its intent too.
+     if an active plan exists (the newest `docs/keystone/*/plan.md`
+     whose Status is draft, approved or implementing), read it and its intent too. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
    - not a git work tree and no plan → manual change context (see `${CLAUDE_SKILL_DIR}/references/CHANGE-SUMMARY.md`).
 
 A plan input has no diff of its own: take the change from the commits that implement it (`git log` since the plan's
 baseline commit / the files named in its Tasks) and say how you scoped it.
 
-**Task folder and output folder.** `task_folder` = the folder of the plan used (a plan under `docs/keystone/` — or under
-`paths.specs` in an AI Factory project). `qa_dir = <task_folder>/qa/`. With no plan at all:
+**Task folder and output folder.** `task_folder` = the folder of the plan used (a plan under `docs/keystone/`). `qa_dir = <task_folder>/qa/`. With no plan at all:
 `qa_dir = docs/keystone/qa/<YYYY-MM-DD>-<slug>/`, slug from the ref or from the change (3–5 words, lowercase, hyphens).
-`.ai-factory/qa/` is a FALLBACK read location only — existing QA artifacts there may be read as context, never written.
 
 **If no mode was provided and `all_mode = false` — ask with AskUserQuestion:** which QA mode to run — change summary,
 test plan, test cases, or the full pipeline (`--all`).

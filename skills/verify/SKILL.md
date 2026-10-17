@@ -47,7 +47,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 **No decisions through verify.** If the user asks to put a decision or change into the intent or the plan, do not edit
 anything: answer that this is `/keystone:intent <path>` (intent) or `/keystone:plan <plan path>` (plan), and that verify
@@ -57,16 +58,13 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref]`, or `accept`, or empty (= t
 
 ## Step 0 — find the plan, intent, rules
 
-- Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. (`paths.specs` comes from the fallback `.ai-factory/config.yaml` when that file exists.) If none: ask for the path, or stop with `no plan to verify`.
+- Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument. If none: ask for the path, or stop with `no plan to verify`.
 - A plan with `Status: draft` was never approved: stop and say so — verify measures an implementation, not a draft.
 - Read the plan header (`Level`, `Mode`, `Status`, `Authority`, `Settings`), the intent named in `Authority:` (or
   `intent.md` next to the plan), and the project rules (those that exist): `CLAUDE.md`, `.claude/CLAUDE.md`,
-  `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:` rules apply only to matching files), `AGENTS.md`; fallback
-  only for AI Factory projects without them.
-  Fallback files: `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`. MUST / MUST NOT lines
+  `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:` rules apply only to matching files), `AGENTS.md`.
+  MUST / MUST NOT lines
   there are project rules.
-- A plan in the fallback AI Factory format (`.ai-factory/plans/<x>.md`, no task folder): `verify.md` goes next to the intent when the
-  plan has an `Authority:` line or a link to an intent; otherwise `<plan>.verify.md`.
 - `accept` → jump to **Accept** below.
 
 ## Step 1 — the diff to verify

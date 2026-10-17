@@ -41,12 +41,13 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 ## Step 0 — project context and destination
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`; `AGENTS.md`.
-Fallback only when the project uses AI Factory and the Keystone files are absent: `.ai-factory/DESCRIPTION.md`. They tell which
+They tell which
 stack and conventions the generated skill should fit, and the language of generated content: use the language the user writes in,
 or the source material's language when they say so.
 

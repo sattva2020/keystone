@@ -27,15 +27,9 @@ function projectRoot(start) {
   }
 }
 
-// Folders that hold task folders: docs/keystone, plus AI Factory paths.specs when the project has it.
-function planRoots(root) {
-  const roots = ['docs/keystone'];
-  const cfg = join(root, '.ai-factory', 'config.yaml');
-  if (existsSync(cfg)) {
-    const m = readFileSync(cfg, 'utf8').match(/^\s*specs:\s*["']?([^"'\s#]+)/m);
-    roots.push(m ? m[1].replace(/\/+$/, '') : '.ai-factory/specs');
-  }
-  return roots.map(slash);
+// Folders that hold task folders: only docs/keystone — Keystone never reads another planner's folders.
+function planRoots() {
+  return ['docs/keystone'];
 }
 
 // Task folders with a plan.md that is in view, newest first: newest = latest date prefix of the folder name, same day →

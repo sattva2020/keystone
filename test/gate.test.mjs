@@ -112,12 +112,6 @@ test('I-13: KEYSTONE_GATES=off disables every gate', () => {
   assert.equal(decide({ hook_event_name: 'PreToolUse', cwd: root, tool_name: 'Edit', tool_input: { file_path: join(root, 'src/a.ts') } }, { KEYSTONE_GATES: 'off' }), null);
 });
 
-test('AI Factory project: task folders under paths.specs count too', () => {
-  const root = project({}, { files: { '.ai-factory/config.yaml': 'paths:\n  specs: .ai-factory/specs/\n', '.ai-factory/specs/2026-10-12-x/plan.md': 'Status: draft\n- [ ] 1. a' } });
-  assert.ok(denied(pre(root, 'Edit', { file_path: join(root, 'src/a.ts') })));
-  assert.equal(pre(root, 'Edit', { file_path: join(root, '.ai-factory/specs/2026-10-12-x/plan.md') }), null);
-});
-
 test('I-13: hooks.json uses node exec form and matches Bash|PowerShell; the CLI emits JSON', () => {
   const h = JSON.parse(readFileSync(join(dirname(GATE), 'hooks.json'), 'utf8'));
   const pre = h.hooks.PreToolUse[0];
@@ -236,4 +230,9 @@ test('session binding: each session gets its own plan; push stays repo-wide', ()
   assert.ok(denied(pre(root, 'Edit', { file_path: join(root, 'src/a.ts') }, fresh)));
   assert.equal(stop(root, false, fresh), null, 'a draft has no Stop reminder');
   assert.ok(denied(pre(root, 'Bash', { command: 'git' + ' push' }, trail(root, []))), 'push: unbound session, unpushed commits of the plan folder');
+});
+
+test('0.9.17: AI Factory folders are not Keystone plans — a draft under .ai-factory/specs gates nothing', () => {
+  const root = project({}, { files: { '.ai-factory/config.yaml': 'paths:\n  specs: .ai-factory/specs/\n', '.ai-factory/specs/2026-10-12-x/plan.md': 'Status: draft\n- [ ] 1. a' } });
+  assert.equal(pre(root, 'Edit', { file_path: join(root, 'src/a.ts') }), null);
 });

@@ -148,8 +148,7 @@ original goal and the header has no confirmed `Goal check: narrowed | replaced â
 `goal-drift` finding quoting both. An intent with no `## Original goal`: compare with the plan's `## Original Request`.
 
 **K.2: `rule-violation`** â€” read `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md` (layer dependency rules),
-`.claude/rules/**/*.md` (a rule with `paths:` applies only to files it matches), `AGENTS.md`; fallback only for AI Factory
-projects without them (fallback, if they exist): `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+`.claude/rules/**/*.md` (a rule with `paths:` applies only to files it matches), `AGENTS.md`.
 A plan step that breaks a MUST / MUST NOT line is a blocker. Quote the rule and the plan step. Also: the
 `Project rules check:` line missing or claiming "none" while a violation exists.
 

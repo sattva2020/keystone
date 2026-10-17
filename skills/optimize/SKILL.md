@@ -47,15 +47,15 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 Arguments: `$ARGUMENTS` = `perf <target>` or `simplify <path>`. Neither → ask which mode and which target.
 
 ## Step 0 — Project context
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`
-(rules with `paths:` apply only to matching files); `AGENTS.md`. FALLBACK only when the project uses AI Factory and those
-are absent: `.ai-factory/{DESCRIPTION,ARCHITECTURE,RULES}.md` and `.ai-factory/rules/*.md`. MUST / MUST NOT lines are project
+(rules with `paths:` apply only to matching files); `AGENTS.md`. MUST / MUST NOT lines are project
 rules. Find the test command first: without a green test run there is no safe baseline — say so and ask.
 
 ## Mode perf

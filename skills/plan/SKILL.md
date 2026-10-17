@@ -47,7 +47,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 Do not skip a step: re-read the step list before you finish and confirm each applicable one is done.
 
@@ -65,16 +66,15 @@ security/auth/payments, a module owned by others, unclear "done") makes it L.
 - **L.** Intent mode (below). No intent given → recommend `/keystone:intent` first and stop unless the user says
   "Plan anyway".
 
-**Task folder.** `docs/keystone/<YYYY-MM-DD>-<slug>/` (slug: lowercase, hyphenated, ≤ 50 characters). If the project
-has AI Factory, as a fallback location (`.ai-factory/config.yaml` exists), read only `paths.specs` from it and use that
-directory instead of `docs/keystone`. Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by
-the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or
-implementing.
+**Task folder.** `docs/keystone/<YYYY-MM-DD>-<slug>/` (slug: lowercase, hyphenated, ≤ 50 characters).
+Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name,
+ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older
+task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
 
 **Existing plan (one plan per task).** If the argument is a path to an existing `plan.md` (or its folder) with
 `Status: draft`, do not create a folder or rewrite the plan: go straight to § Before approval → § On Approve (used by
 `/keystone:fix` M, `/keystone:implement` draft-stop, `/keystone:check`, and a plan with open questions). If a plan for
-this intent/task already exists (in the task folder, or in a fallback `.ai-factory/plans/*.md` that cites this intent), refine it
+this intent/task already exists (in the task folder), refine it
 instead of creating a second one.
 
 **Intent mode** — the argument is a path to an `intent.md` or to a folder that contains one. Always L.
@@ -89,8 +89,6 @@ words that came with the path; if there were none, the intent's Problem line is 
 
 **Project context.** Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
 `.claude/rules/**/*.md` (a rule with `paths:` frontmatter applies only to matching files); `AGENTS.md` if present.
-Fallback only if the project uses AI Factory and those files are absent.
-Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
 MUST / MUST NOT lines there are
 project rules. Use this context when exploring, writing task text (correct
 technologies) and planning file structure (follow project conventions and layer boundaries). Treat explicit rules as

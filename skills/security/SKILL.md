@@ -47,16 +47,16 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 Arguments: `$ARGUMENTS`.
 
 ## Step 0 — context and ignore-list
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`
-(rules with `paths:` frontmatter apply only to matching files); `AGENTS.md`. Fallback only when the project uses AI Factory
-and the Keystone files are absent: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`,
-`.ai-factory/rules/*.md`. MUST / MUST NOT lines there are project rules; a violated security MUST is a finding.
+(rules with `paths:` frontmatter apply only to matching files); `AGENTS.md`.
+MUST / MUST NOT lines there are project rules; a violated security MUST is a finding.
 
 Then **always read** `docs/keystone/security-ignores.md` before any audit. If it exists, it lists the checks the team decided to ignore.
 

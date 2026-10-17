@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.16');
+  assert.equal(p.version, '0.9.17');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -55,7 +55,6 @@ test('I-15: no AI Factory leftovers in skills (attribution lines excepted)', () 
     const t = body(f);
     assert.doesNotMatch(t, /\/aif-|HANDOFF_MODE|Handoff|TaskList|TaskGet|ultra|spec.md/, f);
     if (f !== 'skills/implement/SKILL.md') assert.doesNotMatch(t, /TaskCreate|TaskUpdate/, `${f}: live task list only in implement`);
-    if (/config\.yaml/.test(t)) assert.match(t, /paths\.specs/, `${f}: config.yaml only for paths.specs`);
   }
 });
 
@@ -153,9 +152,9 @@ test('I-17: grill goes all the way down', () => {
     assert.ok(g.toLowerCase().includes(s.toLowerCase()), s);
 });
 
-test('intent: IDs, decisions log, paths (docs/keystone or AIF paths.specs), no spec stage', () => {
+test('intent: IDs, decisions log, paths (docs/keystone only), no spec stage', () => {
   const i = read('skills/intent/SKILL.md');
-  for (const s of ['- I-1 ', 'never renumbered', '## Decisions log', 'Written after plan:', 'docs/keystone/', 'paths.specs', 'no separate spec stage'])
+  for (const s of ['- I-1 ', 'never renumbered', '## Decisions log', 'Written after plan:', 'docs/keystone/', 'no separate spec stage'])
     assert.ok(i.includes(s), s);
 });
 
@@ -184,7 +183,7 @@ test('stand 12.10 fixes: verify never edits intent, accept re-checks freshness, 
   const v = read('skills/verify/SKILL.md');
   assert.match(v, /\/keystone:intent/);
   assert.match(v, /changed after the last `?verify\.md/i);
-  assert.match(read('skills/fix/SKILL.md'), /paths\.specs/);
+  assert.match(read('skills/fix/SKILL.md'), /docs\/keystone/);
   assert.match(read('skills/fix/SKILL.md'), /BLOCKED: <reason>/);
   assert.match(read('skills/implement/SKILL.md'), /## Open questions \(implement\)/);
   assert.match(read('skills/check/SKILL.md'), /not re-checked/);
@@ -357,8 +356,8 @@ test('security P0: Top 10:2025, agent/supply-chain, Refs, UNASSESSED, mapping re
   has('skills/security/scripts/audit.sh', 'sk-ant-', 'UNASSESSED');
 });
 
-test('session audit 12.10: check falls back to .ai-factory/plans and a D-list intent; start keeps grilled decisions at L', () => {
-  has('skills/check/SKILL.md', '.ai-factory/plans/*.md', 'reconstructed from the plan', 'never directly');
+test('session audit 12.10: check accepts a D-list intent; start keeps grilled decisions at L', () => {
+  has('skills/check/SKILL.md', 'reconstructed from the plan', 'never directly');
   has('skills/start/SKILL.md', 'Decisions already closed in a grill', 'Production, secrets');
 });
 
@@ -405,16 +404,6 @@ test('pentest skill, authorized and scoped', () => {
     assert.ok(read(`skills/pentest/references/${f}.md`).startsWith('<!-- original Keystone file (MIT) -->'), f);
   }
   has('skills/pentest/references/SCOPE.md', 'third-party');
-});
-
-test('every .ai-factory/ mention in skills is a fallback (paths.specs reads excepted)', () => {
-  const walk = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
-  for (const f of walk('skills').filter((x) => x.endsWith('.md'))) {
-    for (const para of read(f).split(/\n\s*\n/)) {
-      if (!para.includes('.ai-factory/') || para.includes('derived from ai-factory@')) continue;
-      assert.match(para, /fall ?back|paths\.specs|AI Factory project|when the project (uses|has) AI Factory/i, `${f}: .ai-factory only as a fallback`);
-    }
-  }
 });
 
 test('writing skills ask before they write (yes-gates)', () => {
@@ -595,7 +584,13 @@ test('0.9.12: verify flags weakened tests and contradicted prior decisions', () 
     'or a `Weakened test` line no task asks for', 'a `Decision:` line,');
 });
 
-test('0.9.15: a file outside the working directory is never a link — the mod shows it as code, every skill says so', () => {
-  for (const d of readdirSync(join(root, 'skills'))) has(`skills/${d}/SKILL.md`, 'is **never a link**', 'absolute path in `code`');
-  has('hooks/links.ts', 'export function outsideAsCode', "t.startsWith('../')");
+test('0.9.17: a file outside the working directory is never a link — plain text in the mod and in every skill', () => {
+  for (const d of readdirSync(join(root, 'skills'))) has(`skills/${d}/SKILL.md`, 'is **never a link**', 'absolute path as plain', 'Link only a file you checked exists');
+  has('hooks/links.ts', 'export function outsideAsText', 'resolveFile');
+});
+
+test('0.9.17: Keystone never reads or writes .ai-factory — skills, agents and hooks', () => {
+  const walk = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
+  for (const f of [...walk('skills'), ...walk('agents'), ...walk('hooks')].filter((x) => /\.(md|ts|tsx|mjs)$/.test(x) && !/\.test\./.test(x)))
+    assert.doesNotMatch(read(f), /\.ai-factory|paths\.specs/, f);
 });

@@ -29,7 +29,7 @@ Authority: <declared source priority, or "none declared">
 | <material rule or supported combination> | intent — I-1 | <test, command or manual check> |
 | <rule from another source> | `<path>` — <section> | <test, command or manual check> |
 
-Project rules check: read <CLAUDE.md, docs/architecture.md, .claude/rules/*.md, AGENTS.md; fallback .ai-factory/RULES.md …> — MUST violations: none
+Project rules check: read <CLAUDE.md, docs/architecture.md, .claude/rules/*.md, AGENTS.md> — MUST violations: none
 <!-- Check each task's full text, incl. its Logging/Testing lines, against every MUST/MUST NOT; a task that contradicts a rule is a violation to fix before Approve. -->
 
 ## Risks

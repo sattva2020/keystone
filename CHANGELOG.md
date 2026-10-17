@@ -5,6 +5,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.17] — 2026-10-17
+
+### Changed
+- **Keystone no longer reads or writes AI Factory's `.ai-factory/` folder.** Plans and intents live only in
+  `docs/keystone/<date>-<slug>/`; skills, agents and hooks drop every `.ai-factory/*` fallback (`paths.specs`,
+  `config.yaml`, `DESCRIPTION.md`, `RULES.md`, `rules/`, `plans/`, `patches/`, `qa/`, `references/`, `ROADMAP.md`).
+  Project rules come from `CLAUDE.md`, `.claude/rules`, `docs/architecture.md` and `AGENTS.md`. An older plan outside
+  `docs/keystone` still works when its path is given explicitly; the gates and the status band see only
+  `docs/keystone`.
+
+### Fixed
+- **Every file link is checked.** The mod resolves each link and file path in an answer: an existing file inside the
+  session folder becomes a working relative link, a stray leading `../` is repaired when the file exists without it,
+  and a link or a code path to a missing or outside file never stays a link — it is shown as plain text (Desktop turns
+  a path in inline code into a link by itself, so code is not enough). The File links rule in every skill says the
+  same and asks to link only a file that was checked to exist.
+
 ## [0.9.16] — 2026-10-17
 
 ### Changed

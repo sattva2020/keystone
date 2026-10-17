@@ -47,7 +47,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 The skill does not assume a framework, package manager or agent runtime. In agent mode it uses the appropriate available
 execution surface for each case: live browser automation, CLI commands, project test runners, HTTP/API calls, database-safe
@@ -67,8 +68,7 @@ If no mode is provided, ask the user which mode to run.
 ### Step 0 — Project context
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`
-(rules with `paths:` apply only to matching files); `AGENTS.md`. FALLBACK only when the project uses AI Factory and those
-are absent: `.ai-factory/{DESCRIPTION,ARCHITECTURE,RULES}.md` and `.ai-factory/rules/*.md` (all fallback).
+(rules with `paths:` apply only to matching files); `AGENTS.md`.
 MUST / MUST NOT lines are project rules. The project docs and `CLAUDE.md` also tell where the app runs and how to start
 it and run its tests — use them before asking the user.
 
@@ -80,9 +80,8 @@ folder. Resolve `qa_dir`:
 1. a given plan path → `<plan folder>/qa/`; a given folder containing `test-cases.md` → that folder; a branch or git ref →
    the folder `/keystone:qa <ref>` created for it (`docs/keystone/qa/*-<ref slug>/`), or the qa folder of the plan whose
    commits are on that branch;
-2. else the active plan — the newest `docs/keystone/*/plan.md` (or `paths.specs` from `.ai-factory/config.yaml` when the
-   project has AI Factory) whose Status is draft, approved or implementing → `<its folder>/qa/`;
-3. else the newest `docs/keystone/qa/*/` that has `test-cases.md`. `.ai-factory/qa/` is a FALLBACK read location only.
+2. else the active plan — the newest `docs/keystone/*/plan.md` whose Status is draft, approved or implementing → `<its folder>/qa/`; A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
+3. else the newest `docs/keystone/qa/*/` that has `test-cases.md`.
 
 Check for `<qa_dir>/test-cases.md`. If it is missing, STOP and ask: run `/keystone:qa test-cases` first / cancel.
 Read it; extract test cases by ID (`TC-001`…), title, priority, type, execution surface, `Covers:`, preconditions, steps,

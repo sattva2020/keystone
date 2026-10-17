@@ -216,8 +216,8 @@ merge, push или деплоем и оставляет план `verified`. Э�
 
 ## Файлы
 
-Файлы задачи лежат в `docs/keystone/<YYYY-MM-DD>-<slug>/`: `intent.md`, `plan.md`, `verify.md` — либо в
-`paths.specs`, если проект на AI Factory. Шапка плана: `Level · Mode · Status` (плюс `Settings:` и `Done means:`),
+Файлы задачи лежат в `docs/keystone/<YYYY-MM-DD>-<slug>/`: `intent.md`, `plan.md`, `verify.md` (папку
+`.ai-factory/` от AI Factory Keystone не читает и не пишет). Шапка плана: `Level · Mode · Status` (плюс `Settings:` и `Done means:`),
 Status проходит `draft → approved → implementing → verified`, а `abandoned` возможен на любом шаге; шаги `## Release`
 выполняются, когда план уже `verified`. Каждый этап
 заканчивается закоммиченным файлом, следующий начинается с его чтения, а не с переписки.

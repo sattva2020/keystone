@@ -50,7 +50,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 Claude Code loads `.claude/rules/*.md` by itself, so a lesson written there reaches every later session with no extra
 layer. **Keystone has no per-skill override layer and its skills are never edited** — a plugin's files are replaced on
@@ -98,12 +99,12 @@ Never write to `CLAUDE.md` from here; never touch anything under the plugin fold
 ## Step 0: context
 
 Read what exists: `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, every `.claude/rules/**/*.md` (note their
-`paths:`), `AGENTS.md`. Fallback, only for a project that uses AI Factory and lacks these: `.ai-factory/RULES.md`,
-`.ai-factory/rules/*.md`. From them take the **stack** and the **existing rules** — the baseline for dedupe.
+`paths:`), `AGENTS.md`.
+From them take the **stack** and the **existing rules** — the baseline for dedupe.
 
 Read `docs/keystone/evolve-log.md` if it exists (format in Step 5). Its listed sources are **already processed**.
 
-Task folders: `docs/keystone/<date>-<slug>/` (fallback `paths.specs` when the project has AI Factory).
+Task folders: `docs/keystone/<date>-<slug>/`.
 
 ## Step 1: collect intelligence
 
@@ -115,8 +116,7 @@ Task folders: `docs/keystone/<date>-<slug>/` (fallback `paths.specs` when the pr
 3. `plan.md` `## Implementation notes` — decisions that deviated from the plan and "unexplained deviation" entries.
 4. Review and security findings saved in a task folder (`review.md`, `security.md`, `qa/` results).
 5. `docs/notes/*.md` (memlab notes), when the folder exists.
-6. Fallback, only for a project that uses AI Factory: `.ai-factory/patches/*.md`, sorted by filename.
-7. `### Suggested rule updates` from a `/keystone:review rules` run earlier in this session — in the conversation, not
+6. `### Suggested rule updates` from a `/keystone:review rules` run earlier in this session — in the conversation, not
    a file; each line becomes a prevention point (source `review rules <date>`), and they are not added to the log's
    `Sources:` line.
 

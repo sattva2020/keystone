@@ -44,7 +44,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 ## Core idea
 
@@ -66,10 +67,7 @@ request. No such text → `Request: none`.
   Authority or `## Original Request` points to a numbered grill decision list (`D1…`) rather than a file, check that
   list as the intent (`D1 covered — …`), and head the report `Intent: reconstructed from the plan's D-list, not a signed
   intent.md` — the verdict is then advisory, and recommend `/keystone:intent` to record it.
-- Nothing: the active plan. It is: the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. (`paths.specs` comes from
-  the fallback `.ai-factory/config.yaml` when it exists.) Its intent from Authority.
-- Fallback for AI Factory projects: no plan under docs/keystone/ or paths.specs → `.ai-factory/plans/*.md`, the file
-  named after the current git branch first, else the newest; say which file was taken.
+- Nothing: the active plan. It is: the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument. Its intent from Authority.
 - No plan found: print `FAIL: plan not found` and stop.
 - On an **approved** plan the report only reports: changes to the plan are applied after the user's answer (Step 4),
   never directly.
@@ -77,8 +75,7 @@ request. No such text → `Request: none`.
 Read the plan **completely**. Note what is done (`- [x]`, never touched), the `## Original Request` (the scope anchor,
 never touched), the Settings line, the Requirements Reconciliation table, the Risks, the Tasks and the Commit Plan.
 Project rules (those that exist): `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md`
-(`paths:` rules apply only to matching files), `AGENTS.md`; fallback only for AI Factory projects without them:
-fallback files `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`. Intent
+(`paths:` rules apply only to matching files), `AGENTS.md`. Intent
 status not `accepted`, or intent.md changed after the plan's first commit (`git log`) → remember it for the Notes line.
 
 ## Step 2 — analyze

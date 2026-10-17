@@ -43,14 +43,14 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 Keep going without asking while the next step needs no human decision; stop only before a destructive action, an irreversible external action, or an action outside the repository — and say which.
 
 ## Step 0: Find the plan and load context
 
-1. **Plan:** the argument is a path to `plan.md`. Without it, take the active plan. Active plan = the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing — or `verified` with open `- [ ] R<n>.` lines in `## Release`.
-   (`paths.specs` comes from the fallback `.ai-factory/config.yaml` when the project has AI Factory.)
+1. **Plan:** the argument is a path to `plan.md`. Without it, take the active plan. Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing — or `verified` with open `- [ ] R<n>.` lines in `## Release`. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
    No plan found → say "No plan." and ask with AskUserQuestion: `Size the task and plan it — /keystone:start <task>`
    (Recommended) · `Quick change without a plan (level S)` — only when the change fits in one sentence; then follow
    `${CLAUDE_SKILL_DIR}/../start/SKILL.md` for level S · `Show status — /keystone-status` · `Stop here`.
@@ -72,9 +72,7 @@ Keep going without asking while the next step needs no human decision; stop only
    - `logging — minimal|standard|verbose`: read `${CLAUDE_SKILL_DIR}/references/LOGGING.md` only if it is not `minimal`.
    - `docs — yes`: the documentation step before the final report is `/keystone:docs update <affected topics>`.
 4. **Project context:** read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
-   `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
-   projects without them.
-   Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+   `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`.
    MUST / MUST NOT lines there override general habits. Follow the stack, import patterns, file
    placement and module boundaries they describe.
 5. **Context:** if the plan's `## Requirements Reconciliation` cites an `intent.md`, read it once — it explains *why*;

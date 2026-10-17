@@ -45,7 +45,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 ```
 other project (read-only): .claude/rules, evolve log, fix plans' Prevention, CLAUDE.md stack line
@@ -70,8 +71,6 @@ Keystone has no per-skill override layer, so lessons land where Claude Code load
   - `.claude/rules/**/*.md`
   - `docs/keystone/evolve-log.md`
   - `docs/keystone/*/plan.md` with `Mode: fix` — only `## Root cause` and `## Prevention`
-  - fallback, only when the source is an AI Factory project: `.ai-factory/patches/*.md`, its per-skill override files under `.ai-factory/`
-    (read as lesson text only), `.ai-factory/RULES.md`
 - Nothing from the source is copied wholesale. No secrets, tokens, URLs with credentials, customer or user data, or
   internal hostnames ever reach this project's files: if a lesson contains one, rewrite it without it or drop it.
 - Never persist the source's absolute path. A source marker names the project folder and the file inside it
@@ -89,8 +88,7 @@ Usage: `/keystone:transfer <path> [target]`. Quote paths with spaces.
    without writing anything.
 4. Load **this** project's context, in this order, whatever exists: `CLAUDE.md`, `.claude/CLAUDE.md`,
    `docs/architecture.md`, `.claude/rules/**/*.md` (note `paths:`), `AGENTS.md`; dependency manifests (`package.json`,
-   `pyproject.toml`, `go.mod`, `Cargo.toml`, `composer.json`, …). Fallback only for an AI Factory project that lacks
-   them: `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+   `pyproject.toml`, `go.mod`, `Cargo.toml`, `composer.json`, …).
 5. Read `docs/keystone/evolve-log.md` if present: a `transfer from <project>` entry shows what was already taken.
 6. If this project has no stack evidence at all (no CLAUDE.md, no manifest, no code), stop: tell the user to run
    `/keystone:setup` first — the relevance gate needs the stack.

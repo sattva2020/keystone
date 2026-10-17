@@ -46,14 +46,13 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 ## Step 0 — project context
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`; `AGENTS.md`.
-Fallback only when the project uses AI Factory and the Keystone files are absent: `.ai-factory/DESCRIPTION.md`,
-`.ai-factory/ARCHITECTURE.md`, `.ai-factory/ROADMAP.md` (a fallback source for existing milestones — offer to migrate them into
-`docs/roadmap.md`, do not edit the old file). Take the stack, architecture and non-functional requirements from there. MUST/MUST NOT
+Take the stack, architecture and non-functional requirements from there. MUST/MUST NOT
 lines are project rules. Standalone use is fine: the user's own words replace missing files.
 
 ## Step 1 — determine the mode
@@ -130,7 +129,7 @@ Read-only scan; proposes ticks, changes nothing until confirmed. Requires `docs/
 
 **3.1 Read** the roadmap and project context. **3.2 Collect evidence** for every `- [ ]` milestone:
 
-1. Task folders: `docs/keystone/*/intent.md` (or AI Factory `paths.specs` fallback) that carry a line `Roadmap: M-<n>`, and the
+1. Task folders: `docs/keystone/*/intent.md` that carry a line `Roadmap: M-<n>`, and the
    `plan.md` beside each. Read the plan header `Status:`. **`verified` = done** for that task; `implementing` / `approved` / `draft` =
    in progress. A milestone is **done** when every task folder pointing at it is `verified` (an `abandoned` one does not block if
    the rest are verified) and at least one of them is `verified` — abandoned-only means not done. A checked task box alone is not evidence — only the Status counts.

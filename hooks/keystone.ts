@@ -25,13 +25,9 @@ export type Ledger = Record<string, number> // stage → USD
 
 const slash = (p: string) => p.replace(/\\/g, '/')
 
-async function planRoots($: EngineInterface): Promise<string[]> {
-  const roots = ['docs/keystone']
-  if (await $.fs.exists('.ai-factory/config.yaml')) {
-    const m = (await $.fs.read('.ai-factory/config.yaml')).match(/^\s*specs:\s*["']?([^"'\s#]+)/m)
-    roots.push(m ? m[1].replace(/\/+$/, '') : '.ai-factory/specs')
-  }
-  return roots
+// Keystone keeps its task folders only in docs/keystone; it never reads another planner's folders.
+async function planRoots(_$: EngineInterface): Promise<string[]> {
+  return ['docs/keystone']
 }
 
 // Same rule as gate.mjs: task folders whose plan.md is in view (parsePlan), newest first — date prefix of the folder

@@ -46,7 +46,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 ## Hard rules
 
@@ -72,9 +73,7 @@ no arguments:
 
 Say the mode in one line. Also record what already exists: `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/*.md`,
 `docs/architecture.md`, `.mcp.json`, `.claude/settings.json`, `AGENTS.md`, `README.md`.
-Project context to respect: read `CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md`, `AGENTS.md`;
-only if they are absent and the project uses AI Factory, fall back to `.ai-factory/DESCRIPTION.md`,
-`.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md` (fallback source, never a target).
+Project context to respect: read `CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md`, `AGENTS.md`.
 
 ## 2. Mode A — analyze the existing project
 
@@ -239,6 +238,5 @@ if the rule allows it; never a scope the hook rejects. No scope list → keep th
   `CLAUDE.md`, rules, `.mcp.json` and plugin recommendations are done; the user decides when to start implementation.
 - Overwrite, reorder or "tidy" an existing file; put a secret anywhere; install a plugin, skill or package.
 - Ask what the repo already answers (stack, commands, remote) — read it.
-- Treat the `.ai-factory/` fallback files as targets; they are read-only context for projects that still have them.
 
 Report: files touched with line counts, what was skipped and why, env vars still to set.

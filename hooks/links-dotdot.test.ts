@@ -4,10 +4,10 @@ import { linkify, inside } from './links.ts'
 const BASE = 'E:/work/repo'
 const anyFile = async () => true
 
-test('a path that leaves the session folder through an inner ".." is not linked', async () => {
+test('a path that leaves the session folder through an inner ".." is not linked — plain text, never a dead link', async () => {
   for (const p of ['hooks/../../other/x.ts', 'E:/work/repo/../other/x.ts', 'a/b/../../../x.ts']) {
     expect(inside(p, BASE)).toBe(null)
-    expect(await linkify(`see \`${p}\``, BASE, anyFile)).toBe(`see \`${p}\``)
+    expect(await linkify(`see \`${p}\``, BASE, anyFile)).toBe(`see ${p}`)
   }
 })
 

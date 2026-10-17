@@ -45,7 +45,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 ## Core Principles
 
@@ -59,8 +60,7 @@ it and shows "file not found": give its absolute path in `code`, so it can be co
 ## Step 0 — Project context
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`;
-`AGENTS.md`. FALLBACK only when the project uses AI Factory and those files are absent: `.ai-factory/DESCRIPTION.md` (fallback),
-`.ai-factory/ARCHITECTURE.md` (fallback). MUST/MUST NOT lines there are project rules — also for the docs you write (language of
+`AGENTS.md`. MUST/MUST NOT lines there are project rules — also for the docs you write (language of
 the existing README wins; no invented features).
 
 Explore the code: `package.json`, `composer.json`, `requirements.txt`, `go.mod`, `Cargo.toml`, the `src/` layout,

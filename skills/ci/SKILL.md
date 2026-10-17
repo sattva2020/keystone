@@ -46,7 +46,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 | What exists | Mode | Action |
 |---|---|---|
@@ -57,8 +58,7 @@ it and shows "file not found": give its absolute path in `code`, so it can be co
 ## Step 0 — Project context
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md` (it often lists the build/test/lint commands — they
-win over guesses); `docs/architecture.md`; `.claude/rules/**/*.md`; `AGENTS.md`. FALLBACK only when the project uses AI
-Factory and those are absent: `.ai-factory/DESCRIPTION.md` (fallback), `.ai-factory/RULES.md` (fallback). MUST/MUST NOT lines are project rules
+win over guesses); `docs/architecture.md`; `.claude/rules/**/*.md`; `AGENTS.md`. MUST/MUST NOT lines are project rules
 and apply to the generated pipeline. If nothing is there, Step 2 detects everything.
 
 ## Step 1 — Detect existing CI and mode

@@ -47,7 +47,8 @@ always closes the answer.
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
-it and shows "file not found": give its absolute path in `code`, so it can be copied.
+it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
+text, without backticks. Link only a file you checked exists.
 
 ## Workflow
 
@@ -83,8 +84,7 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
 
 ### Step 0: Existing fix plan and project context
 
-1. **Active plan.** It is the plan.md of the newest task folder under docs/keystone/ (or paths.specs) — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. (`paths.specs` comes from
-   the fallback `.ai-factory/config.yaml` when the project has AI Factory.)
+1. **Active plan.** It is the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
    - `$ARGUMENTS` empty and the active plan has `Mode: fix` → "Found existing fix plan. Executing the fix based on the
      plan." Skip Step 1; if `approved`, set `Status: implementing`; if `draft`, STOP ("Approve it in `/keystone:plan`
      first"). Go to Step 2 using the plan as a guide, still applying the Regression-First Policy.
@@ -94,9 +94,7 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
      no question.
    - `$ARGUMENTS` given while another plan is active → say which one and ask: finish it, or mark it `abandoned`.
 2. **Project context.** Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
-   `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`. Fallback only for AI Factory
-   projects without them.
-   Fallback files: `.ai-factory/DESCRIPTION.md`, `.ai-factory/ARCHITECTURE.md`, `.ai-factory/RULES.md`, `.ai-factory/rules/*.md`.
+   `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`.
    Use them to avoid fixes that violate project structure or conventions; MUST / MUST NOT lines
    there are project rules. Infer the Settings (tests: a runner or test files exist; logging: an existing logger; docs: `docs/`
    or a README with usage sections) — they are written into the plan, never asked.
@@ -107,8 +105,7 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
    - the `.claude/rules/**/*.md` files `/keystone:evolve` wrote whose `paths:` match the files you will touch (already
      read in 2 — look again at those);
    - no memlab → the `## Root cause` / `## Prevention` sections of the 10 newest `Mode: fix` plans under docs/keystone/
-     (newest by the folder's date prefix); a project that uses AI Factory → also the last 10 `.ai-factory/patches/*.md`
-     by filename.
+     (newest by the folder's date prefix).
    Prefer recurring Root cause / Prevention patterns. Name what applies in one line — `Lessons: <note or rule> — <how
    it shapes this fix> | none found` — and write that line into task 1's evidence in the plan.
 
@@ -138,7 +135,7 @@ Then ask once (AskUserQuestion, recommended first): **Fix now** — investigate 
 **Plan first** — write a plan for review, fix later (level M). A bug that touches data/schema, security/auth/payments or
 a module owned by others is L: say so and use `/keystone:start` instead.
 
-- **Fix now (S)** → create `<paths.specs from the fallback .ai-factory/config.yaml if it exists, else docs/keystone>/<YYYY-MM-DD>-fix-<slug>/plan.md` (slug from the problem) in the short format below, with `Status: implementing`, then go to Step 2.
+- **Fix now (S)** → create `docs/keystone/<YYYY-MM-DD>-fix-<slug>/plan.md` (slug from the problem) in the short format below, with `Status: implementing`, then go to Step 2.
 - **Plan first (M)** → Step 1.1.
 
 ```markdown
