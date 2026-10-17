@@ -23,8 +23,20 @@ function project(plans = {}, extra = {}) {
   git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'init');
   return root;
 }
-const pre = (root, tool_name, tool_input) => decide({ hook_event_name: 'PreToolUse', cwd: root, tool_name, tool_input }, ENV);
-const stop = (root, active = false) => decide({ hook_event_name: 'Stop', cwd: root, stop_hook_active: active }, ENV);
+const pre = (root, tool_name, tool_input, extra = {}) => decide({ hook_event_name: 'PreToolUse', cwd: root, tool_name, tool_input, ...extra }, ENV);
+const stop = (root, active = false, extra = {}) => decide({ hook_event_name: 'Stop', cwd: root, stop_hook_active: active, ...extra }, ENV);
+// A session transcript (JSONL) as Claude Code writes it: slash commands as user rows, edits as assistant tool_use blocks.
+let n = 0;
+function trail(root, rows) {
+  const lines = rows.map((r) => JSON.stringify(r.cmd
+    ? { type: 'user', message: { role: 'user', content: `<command-message>keystone:${r.cmd}</command-message>\n<command-name>/keystone:${r.cmd}</command-name>\n<command-args>${r.args ?? ''}</command-args>` } }
+    : r.edit
+      ? { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'x', name: 'Write', input: { file_path: r.edit, content: '' } }] } }
+      : { type: 'user', message: { role: 'user', content: r.text } }));
+  const file = join(root, `.t${n++}.jsonl`);
+  writeFileSync(file, lines.join('\n') + '\n');
+  return { transcript_path: file };
+}
 const denied = (r) => r?.hookSpecificOutput?.permissionDecision === 'deny';
 
 test('I-14: no docs/keystone → every event passes', () => {
@@ -50,12 +62,12 @@ test('I-4/I-14: approved and implementing plans allow edits; verified/abandoned 
   }
 });
 
-test('I-14: only the newest task folder counts — a forgotten old draft blocks nothing', () => {
+test('I-14: a folder without plan.md or a finished plan does not hide an older active plan (same rule as the mod)', () => {
   const a = project({ '2026-10-01-old': 'Status: draft', '2026-10-12-new': 'Status: verified' });
-  assert.equal(pre(a, 'Edit', { file_path: join(a, 'src/a.ts') }), null);
+  assert.ok(denied(pre(a, 'Edit', { file_path: join(a, 'src/a.ts') })));
   const b = project({ '2026-10-01-old': 'Status: draft', '2026-10-12-new': null }); // newest folder has intent only
-  assert.equal(pre(b, 'Edit', { file_path: join(b, 'src/a.ts') }), null);
-  assert.equal(pre(b, 'Bash', { command: 'git push' }), null);
+  assert.ok(denied(pre(b, 'Edit', { file_path: join(b, 'src/a.ts') })));
+  assert.equal(pre(b, 'Edit', { file_path: join(b, 'src/a.ts') }, trail(b, [])), null, 'a session that never touched it is not gated');
 });
 
 test('I-5: during a fix, existing test files cannot be edited or overwritten; new tests can be written', () => {
@@ -196,4 +208,32 @@ test('push gate: only a push that ships the active plan\'s commits is closed', (
   assert.ok(denied(pre(root, 'Bash', { command: `${P} --all origin` })), '--all ships every branch');
   assert.ok(denied(pre(root, 'Bash', { command: `${P} origin no-such-branch` })), 'unknown ref → closed');
   assert.match(pre(root, 'Bash', { command: P }).hookSpecificOutput.permissionDecisionReason, /start Claude Code with KEYSTONE_GATES=off/);
+});
+
+test('session binding: Stop and the draft gate stay silent in a session that never worked with the plan', () => {
+  const impl = project({ '2026-10-15-x': 'Level: M · Mode: feature · Status: implementing' });
+  assert.equal(stop(impl, false, trail(impl, [{ text: 'what does this function do?' }, { cmd: 'start', args: 'rename a button' }])), null, 'unrelated session');
+  assert.equal(stop(impl, false, { transcript_path: join(impl, 'missing.jsonl') }), null, 'nothing written yet');
+  assert.equal(stop(impl, false, trail(impl, [{ cmd: 'implement', args: 'docs/keystone/2026-10-15-x/plan.md' }])).decision, 'block', '/keystone:implement <plan>');
+  assert.equal(stop(impl, false, trail(impl, [{ cmd: 'implement' }])).decision, 'block', 'no argument = the newest plan');
+  assert.equal(stop(impl, false, trail(impl, [{ cmd: 'verify', args: 'E:\\proj\\docs\\keystone\\2026-10-15-x\\plan.md' }])).decision, 'block', 'absolute Windows path');
+  assert.equal(stop(impl, false, trail(impl, [{ edit: join(impl, 'docs/keystone/2026-10-15-x/plan.md') }])).decision, 'block', 'edited the plan folder');
+  assert.equal(stop(impl, false, trail(impl, [{ cmd: 'review' }, { edit: join(impl, 'src/a.ts') }])), null, 'no plan named, no plan folder edited');
+
+  const draft = project({ '2026-10-15-x': 'Level: M · Mode: feature · Status: draft' });
+  const src = { file_path: join(draft, 'src/a.ts') };
+  assert.equal(pre(draft, 'Edit', src, trail(draft, [{ text: 'fix the typo in README' }])), null, 'unrelated session edits code');
+  assert.ok(denied(pre(draft, 'Edit', src, trail(draft, [{ cmd: 'plan', args: 'add reminders' }, { edit: 'docs/keystone/2026-10-15-x/plan.md' }]))), 'the session that wrote the plan');
+  assert.ok(denied(pre(draft, 'Edit', src, trail(draft, [{ cmd: 'plan', args: 'docs/keystone/2026-10-15-x/plan.md' }]))));
+});
+
+test('session binding: each session gets its own plan; push stays repo-wide', () => {
+  const root = project({ '2026-10-10-old': 'Level: M · Mode: feature · Status: implementing', '2026-10-15-new': 'Level: M · Mode: feature · Status: draft' });
+  const old = trail(root, [{ cmd: 'implement', args: 'docs/keystone/2026-10-10-old/plan.md' }]);
+  assert.match(stop(root, false, old).reason, /2026-10-10-old/, 'Stop names the session plan, not the newest');
+  assert.equal(pre(root, 'Edit', { file_path: join(root, 'src/a.ts') }, old), null, 'the newer draft does not close its edits');
+  const fresh = trail(root, [{ cmd: 'plan', args: 'docs/keystone/2026-10-15-new/plan.md' }]);
+  assert.ok(denied(pre(root, 'Edit', { file_path: join(root, 'src/a.ts') }, fresh)));
+  assert.equal(stop(root, false, fresh), null, 'a draft has no Stop reminder');
+  assert.ok(denied(pre(root, 'Bash', { command: 'git' + ' push' }, trail(root, []))), 'push: unbound session, unpushed commits of the plan folder');
 });

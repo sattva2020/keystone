@@ -1,5 +1,6 @@
 // Keystone gates (Claude Code hooks). One script for PreToolUse and Stop; reads the hook JSON on stdin.
-// Blocks only while an *active* plan exists: plan.md of the newest task folder with Status draft|approved|implementing.
+// Blocks only while an *active* plan exists (Status draft|approved|implementing) and, except for push, only the session
+// that works with it — ran /keystone:<stage> on it or edited its task folder (read from transcript_path).
 // Off switch: KEYSTONE_GATES=off in Claude Code's environment (set before it starts).
 // Push gate: only a push that ships commits touching the active plan's task folder is closed.
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
@@ -8,6 +9,8 @@ import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const ACTIVE = new Set(['draft', 'approved', 'implementing']);
+const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'];
+const NO_ARG = new Set(['implement', 'verify']);
 const TEST_FILE = /(^|\/)(test|tests|__tests__|spec)\/|\.(test|spec)\.[^/]+$|_test\.[^/]+$|(^|\/)test_[^/]+\.py$/i;
 const NOT_TEST = /(^|\/)(fixtures?|__snapshots__)\//i; // fixtures and snapshots may change with a fix
 // git push (also with -C/-c/--opt global options; not --dry-run) or gh pr create.
@@ -35,33 +38,77 @@ function planRoots(root) {
   return roots.map(slash);
 }
 
-export function activePlan(root) {
-  const dirs = [];
+// Task folders with a plan.md that is in view, newest first: newest = latest date prefix of the folder name, same day →
+// latest plan.md modification time. In view = an active status, or verified with open `- [ ] R<n>.` steps in ## Release
+// (the mod shows that release mode). A folder without plan.md (intent written, plan not yet) never hides another plan.
+// Same rule as activePlan/sessionPlan in keystone.ts.
+function plans(root) {
+  const out = [];
   for (const r of planRoots(root)) {
     const abs = join(root, r);
     if (!existsSync(abs)) continue;
-    for (const d of readdirSync(abs)) if (statSync(join(abs, d)).isDirectory()) dirs.push({ name: d, abs: join(abs, d) });
+    for (const name of readdirSync(abs)) {
+      const file = join(abs, name, 'plan.md');
+      if (!existsSync(file)) continue;
+      const text = readFileSync(file, 'utf8').replace(/\r/g, '');
+      const lines = text.split('\n');
+      // the header line "Level: … · Mode: … · Status: …" (or a bare "Status:" line) — never a match inside task text
+      const header = lines.find((l) => /^Level:/.test(l)) ?? lines.find((l) => /^Status:/.test(l)) ?? '';
+      const status = header.match(/\bStatus:\s*([a-z]+)/i)?.[1]?.toLowerCase();
+      if (!ACTIVE.has(status) && !(status === 'verified' && openRelease(text))) continue;
+      const mode = header.match(/\bMode:\s*([a-z]+)/i)?.[1]?.toLowerCase() ?? 'feature';
+      out.push({ name, file: slash(relative(root, file)), status, mode, text, mtime: statSync(file).mtimeMs });
+    }
   }
-  if (!dirs.length) return null;
-  // newest = latest date prefix of the folder name; same day → latest plan.md (or folder) modification time
-  const key = (d) => {
-    const f = join(d.abs, 'plan.md');
-    return [d.name.slice(0, 10), statSync(existsSync(f) ? f : d.abs).mtimeMs];
-  };
-  dirs.sort((a, b) => {
-    const [da, ma] = key(a), [db, mb] = key(b);
-    return da === db ? ma - mb : da.localeCompare(db);
-  });
-  const file = join(dirs[dirs.length - 1].abs, 'plan.md');
-  if (!existsSync(file)) return null;
-  const text = readFileSync(file, 'utf8').replace(/\r/g, '');
-  const lines = text.split('\n');
-  // the header line "Level: … · Mode: … · Status: …" (or a bare "Status:" line) — never a match inside task text
-  const header = lines.find((l) => /^Level:/.test(l)) ?? lines.find((l) => /^Status:/.test(l)) ?? '';
-  const status = header.match(/\bStatus:\s*([a-z]+)/i)?.[1]?.toLowerCase();
-  if (!ACTIVE.has(status)) return null;
-  const mode = header.match(/\bMode:\s*([a-z]+)/i)?.[1]?.toLowerCase() ?? 'feature';
-  return { file: slash(relative(root, file)), status, mode, text };
+  return out.sort((a, b) => (a.name.slice(0, 10) === b.name.slice(0, 10) ? b.mtime - a.mtime : b.name.slice(0, 10).localeCompare(a.name.slice(0, 10))));
+}
+
+const openRelease = (text) => {
+  let inRelease = false;
+  for (const l of text.split('\n')) {
+    if (/^## /.test(l)) inRelease = /^## Release\b/.test(l);
+    else if (inRelease && /^\s*- \[ \]/.test(l)) return true;
+  }
+  return false;
+};
+
+// The plan the gates apply to: the newest plan in view (that `isBound` accepts, when given); verified → no gates.
+export function activePlan(root, isBound) {
+  const p = plans(root).find((x) => !isBound || isBound(x, root));
+  return p && ACTIVE.has(p.status) ? p : null;
+}
+
+// What the session did with plans, from its transcript: the `/keystone:<stage> <args>` commands it ran and the files its
+// Edit/Write/MultiEdit/NotebookEdit calls touched. No transcript_path (an old client) → null: every plan counts as bound.
+function sessionTrail(transcript) {
+  if (!transcript) return null;
+  const trail = { commands: [], files: [] };
+  let raw = '';
+  try { raw = readFileSync(transcript, 'utf8'); } catch { return trail; } // nothing written yet → nothing done yet
+  for (const line of raw.split('\n')) {
+    if (!line.includes('keystone') && !line.includes('"tool_use"')) continue;
+    let row;
+    try { row = JSON.parse(line); } catch { continue; }
+    const content = row?.message?.content;
+    if (row.type === 'user' && typeof content === 'string') {
+      const m = content.match(/<command-name>\/keystone:([a-z-]+)<\/command-name>/);
+      if (m) trail.commands.push({ stage: m[1], args: content.match(/<command-args>([\s\S]*?)<\/command-args>/)?.[1] ?? '' });
+    } else if (row.type === 'assistant' && Array.isArray(content)) {
+      for (const b of content)
+        if (b?.type === 'tool_use' && EDIT_TOOLS.includes(b.name)) trail.files.push(slash(String(b.input?.file_path ?? b.input?.notebook_path ?? '')));
+    }
+  }
+  return trail;
+}
+
+// A session works with a plan once it ran `/keystone:<stage>` naming the plan's folder (implement/verify with no
+// argument take the newest plan in view, as their skills do) or edited a file in that folder.
+// ponytail: an argument-less implement/verify binds to the newest plan *now*, not the one that was newest when it ran.
+export function boundTo(trail) {
+  if (!trail) return undefined;
+  return (p, root) =>
+    trail.commands.some((c) => slash(c.args).includes(p.name) || (!c.args.trim() && NO_ARG.has(c.stage) && plans(root)[0]?.name === p.name)) ||
+    trail.files.some((f) => ('/' + f).includes(`/${p.name}/`));
 }
 
 // Open tasks = "- [ ]" lines inside "## Tasks" (until the next "## ") without BLOCKED: on the same line.
@@ -114,7 +161,8 @@ export function decide(input, env = process.env) {
   const abs = target ? resolve(base, target) : null;
   const push = (input.tool_name === 'Bash' || input.tool_name === 'PowerShell') && PUSH.test(ti.command || '') ? pushTarget(ti.command, base) : null;
   const root = projectRoot(abs ? dirname(abs) : push ? push.dir : base);
-  const plan = activePlan(root);
+  // push stays repo-wide (it checks what the commits touch); Stop and the edit gates only bind the session that works with the plan
+  const plan = activePlan(root, push ? undefined : boundTo(sessionTrail(input.transcript_path)));
   if (!plan) return null;
 
   if (event === 'Stop') {
@@ -122,7 +170,7 @@ export function decide(input, env = process.env) {
     if (plan.status !== 'implementing') return null;
     const open = openTasks(plan.text);
     if (!open.length) return null;
-    return { decision: 'block', reason: `Keystone: ${plan.file} is implementing and ${open.length} task(s) are still [ ] without BLOCKED:. If you are implementing: continue them, or append \`BLOCKED: <reason>\` to the task line of one that cannot run, then give the line-by-line report. If you are waiting for the user's answer, the user asked to pause, or this session is not implementing the plan — say so in one line and end the turn. ${HOW}` };
+    return { decision: 'block', reason: `Keystone: ${plan.file} is implementing and ${open.length} task(s) are still [ ] without BLOCKED:. If you are implementing: continue them, or append \`BLOCKED: <reason>\` to the task line of one that cannot run, then give the line-by-line report. If you are waiting for the user's answer or the user asked to pause — say so in one line and end the turn. ${HOW}` };
   }
 
   if (event !== 'PreToolUse') return null;
@@ -133,7 +181,7 @@ export function decide(input, env = process.env) {
     return null;
   }
 
-  if (!['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool) || !abs) return null;
+  if (!EDIT_TOOLS.includes(tool) || !abs) return null;
   const rel = slash(relative(root, abs));
   if (rel.startsWith('..')) return null; // outside the project
   const inPlans = planRoots(root).some((r) => rel === r || rel.startsWith(r + '/'));

@@ -210,6 +210,8 @@ keeps them in `## Release` (`R1`, `R2`, …). Verify does not count them as open
 or deploy, and keeps the plan `verified`. This follows the playbook's rule: *"The agent does everything up to the
 production gate and nothing past it."*
 
+The draft and Stop gates, the status line, the buttons and the handoff offer touch only the session that works with the plan: it ran `/keystone:<stage>` on that plan or edited a file in its folder. The push gate covers the whole repository.
+
 To lift a gate, set `Status: abandoned` in the plan header, or start Claude Code with the environment variable `KEYSTONE_GATES=off` (a prefix on one command does not reach the hook). The hooks are plain Node
 scripts (`hooks/gate.mjs`) and read only the hook payload and the plan files.
 

@@ -1,6 +1,7 @@
 import { test, expect, mock } from 'claude-code/testing'
 import { parsePlan, statusText, costLine, gatesFor, nextCommand, nextButtons } from './keystone.ts'
 import { MARKER } from './handoff.ts'
+import { chip, barText, barSvg, pct, toneFor } from './next.tsx'
 
 const PLAN = [
   '# Plan: reminders', '',
@@ -45,6 +46,9 @@ test('cost line sums stages and says when nothing was measured', async () => {
 test('/keystone-status answers without a model turn', async ($, on) => {
   stubFs(on)
   mock.store(on, { 'cost:docs/keystone/2026-10-12-reminders/plan.md': { plan: 2.5, check: 1 } })
+  on('prompt.submit', () => ({ drop: 'test' }))
+  on('ui.status', () => ({ value: true }))
+  await $.prompt.submit({ text: '/keystone:check docs/keystone/2026-10-12-reminders/plan.md' } as any)
   const out = await $.command.run({ command: 'keystone-status', args: '' })
   const text = JSON.stringify(out)
   expect(text).toContain('Level L')
@@ -72,6 +76,18 @@ test('release mode: a verified plan with open ## Release steps stays in view and
   expect(parsePlan('p', PLAN.replace('implementing', 'verified'))).toBe(null)
 })
 
+test('L with a Threats: block and no ticked security task: security before verify', async () => {
+  const f = 'docs/keystone/x/plan.md'
+  const threats = PLAN.replace('## Tasks', '## Risks\nThreats:\n- token leak — task 4\n\n## Tasks')
+  const p = parsePlan(f, threats)!
+  expect(p.security).toBe(true)
+  expect(nextButtons({ ...p, done: 3, blocked: 1 }, false)).toEqual([`/keystone:security ${f}`, `/keystone:verify ${f}`, '/keystone:review', '/keystone-status'])
+  expect(nextButtons(p, false)[0]).toBe(`/keystone:implement ${f}`) // open tasks still come first
+  const ran = parsePlan(f, threats.replace('- [ ] 4. ui', '- [x] 4. Run /keystone:security docs — check: Security gate pass'))!
+  expect(ran.security).toBe(false)
+  expect(parsePlan(f, PLAN)!.security).toBe(false)
+})
+
 test('buttons: the next command, the status, and a third only where Keystone asks for one', async () => {
   const f = 'docs/keystone/x/plan.md'
   const p = parsePlan(f, PLAN)!
@@ -89,18 +105,21 @@ test('buttons: the next command, the status, and a third only where Keystone ask
 // what the engine answers beneath the plugin in a session
 let mtime = 1
 let hasPlan = true
+let dirs = ['2026-10-12-reminders']
+let usd: number | undefined
+const BIND = { text: '/keystone:implement docs/keystone/2026-10-12-reminders/plan.md' } as any
 const stubSession = (on: any) => {
   on('fs.exists', ($: any, e: any) => { const p = rel(e.path); return { value: hasPlan && (p in files || Object.keys(files).some((f) => f.startsWith(p + '/'))) } })
-  on('fs.list', () => ({ value: [{ name: '2026-10-12-reminders', kind: 'dir', size: 0 }] }))
+  on('fs.list', () => ({ value: dirs.map((name) => ({ name, kind: 'dir', size: 0 })) }))
   on('fs.stat', () => ({ value: { kind: 'file', size: 1, mtimeMs: mtime, isLink: false } }))
   on('fs.read', ($: any, e: any) => ({ value: files[rel(e.path)] }))
   on('session.start', ($: any, e: any) => e)
   on('command.register', () => ({ value: true }))
-  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1000000 }, rateLimits: [] } }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1000000 }, rateLimits: [], ...(usd === undefined ? {} : { cost: { usd } }) } }))
   on('ui.status', () => ({ value: true }))
   on('turn.start', ($: any, e: any) => e)
   on('turn.complete', () => ({ text: '' }))
-  on('prompt.suggest', ($: any, e: any) => e)
+  on('prompt.suggest', () => ({ isShown: true }))
   on('agent.list', () => ({ value: [] }))
   on('classic.SessionStart', () => ({}))
   on('ui.render', ($: any, e: any) => h($.ui.resolve(e).Box, { key: 'engine' })) // the engine's own (empty) band beneath
@@ -112,12 +131,15 @@ const PLAN_FILE = 'docs/keystone/2026-10-12-reminders/plan.md'
 const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80 } } as any
 const label = async (ui: any, key: string) => ((await ui.find({ key })) as any)?.props?.label
 
-test('buttons appear when a session starts on an active plan and leave when a turn starts', async ($, on) => {
+test('buttons appear when a session starts on its plan and leave when a turn starts', async ($, on) => {
   stubSession(on)
-  await $.session.start({ cwd: 'E:/proj' } as any)
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  await $.prompt.submit(BIND)
+  await $.session.start({ cwd: 'E:/proj' } as any) // a reload or resume of a session that works with the plan
   let ui = await $.ui.mount({ plugin: 'keystone', surface: 'desktop', ...BAND })
-  expect(await label(ui, 'next1')).toBe(`/keystone:implement ${PLAN_FILE}`)
-  expect(await label(ui, 'next2')).toBe('/keystone-status')
+  expect(await label(ui, 'next1')).toBe('implement')
+  expect(await label(ui, 'next2')).toBe('статус')
+  expect(await ui.find({ key: 'plan-bar' })).toBeDefined()
   await ui.unmount()
   await $.turn.start({ text: 'x', turnId: 't2' } as any)
   ui = await $.ui.mount({ plugin: 'keystone', surface: 'desktop', ...BAND })
@@ -132,6 +154,8 @@ test('a pressed button fills the prompt box and never sends it', async ($, on) =
   on('prompt.read', () => ({ value: { text: '', cursor: 0 } }))
   on('prompt.fill', ($: any, e: any) => { filled.push(e.text); return { isFilled: true } })
   on('prompt.submit', ($: any, e: any) => { sent.push(e.text); return { drop: 'test' } })
+  await $.prompt.submit(BIND)
+  sent.length = 0
   for (const surface of ['terminal', 'desktop'] as const) {
     await $.session.start({ cwd: 'E:/proj' } as any)
     const ui = await $.ui.mount({ plugin: 'keystone', surface, ...BAND })
@@ -156,6 +180,8 @@ test('handoff: /clear only after the marker and a changed plan, then the next co
   on('ui.toast', ($: any, e: any) => { toasts.push(String(e?.text ?? e)); return { value: true } })
   mtime = 1
   await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit(BIND)
+  sent.length = 0
 
   // no marker: called off, nothing cleared
   await $.command.run({ command: 'keystone-handoff', args: '' })
@@ -197,4 +223,92 @@ test('/keystone-handoff without an active plan says so and sends nothing', async
   expect(JSON.stringify(out)).toContain('Нет активного плана Keystone')
   expect(sent).toEqual([])
   hasPlan = true
+})
+
+test('band pieces: short chips, bars clamp, context tone follows the handoff level', async () => {
+  expect(chip(`/keystone:verify ${PLAN_FILE}`)).toBe('verify')
+  expect(chip('/keystone-status')).toBe('статус')
+  expect(barText(0.5, 8)).toBe('████░░░░')
+  expect(barText(2, 4)).toBe('████')
+  expect(pct(0.383)).toBe('38%')
+  expect([0, 1, 2, 3].map(toneFor)).toEqual(['suggestion', 'warning', 'error', 'error'])
+  expect(barSvg(0.5, 'success', 100)).toContain('width="50"')
+})
+
+test('a plain prompt after a Keystone one is not a stage: no buttons after its turn', async ($, on) => {
+  stubSession(on)
+  on('prompt.submit', ($: any, e: any) => e)
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit({ text: `/keystone:implement ${PLAN_FILE}` } as any)
+  await $.turn.complete(TURN)
+  let ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(await label(ui, 'next1')).toBe('implement')
+  await ui.unmount()
+  await $.prompt.submit({ text: 'what does this function do?' } as any)
+  await $.turn.complete(TURN)
+  ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(await ui.find({ key: 'next1' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('session binding: a session that never worked with the plan gets no buttons, status, handoff or cost', async ($, on) => {
+  stubSession(on)
+  const sent: string[] = []
+  on('prompt.submit', ($: any, e: any) => { sent.push(e.text); return { drop: 'test' } })
+  usd = 1
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  const ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(await ui.find({ key: 'next1' })).toBeUndefined()
+  await ui.unmount()
+  expect(JSON.stringify(await $.command.run({ command: 'keystone-status', args: '' }))).toContain("is not this session's")
+  expect(JSON.stringify(await $.command.run({ command: 'keystone-handoff', args: '' }))).toContain('Нет активного плана Keystone')
+  await $.prompt.submit({ text: 'what does this function do?' } as any)
+  usd = 3
+  await $.turn.complete(TURN)
+  await $.prompt.submit(BIND)
+  expect(JSON.stringify(await $.command.run({ command: 'keystone-status', args: '' }))).toContain('Cost by stage (this machine): not measured yet')
+  expect(sent.some((t) => t.includes('Keystone handoff'))).toBe(false)
+  usd = undefined
+})
+
+test('session binding: /keystone:<stage> naming the plan, or an edit in its folder, makes it the session plan', async ($, on) => {
+  stubSession(on)
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  on('tool.call', () => ({ deny: 'test' }))
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit({ text: '/keystone:start rename a button' } as any)
+  expect(JSON.stringify(await $.command.run({ command: 'keystone-status', args: '' }))).toContain("is not this session's")
+  await $.tool.call({ tool: 'Write', file_path: 'E:\\proj\\docs\\keystone\\2026-10-12-reminders\\plan.md', content: 'x' } as any)
+  expect(JSON.stringify(await $.command.run({ command: 'keystone-status', args: '' }))).toContain('tasks 2/4')
+})
+
+test('session binding: an argument-less implement takes the newest plan; a newer folder without plan.md hides nothing', async ($, on) => {
+  stubSession(on)
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  dirs = ['2026-10-12-reminders', '2026-10-16-next'] // the newer folder has only an intent
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit({ text: '/keystone:implement' } as any)
+  await $.turn.complete(TURN)
+  const ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(await label(ui, 'next1')).toBe('implement')
+  await ui.unmount()
+  dirs = ['2026-10-12-reminders']
+})
+
+test('session binding: Keystone stages run before the session had a plan are billed to it once it has one', async ($, on) => {
+  stubSession(on)
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  usd = 0
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit({ text: '/keystone:start add reminders' } as any)
+  usd = 2
+  await $.turn.complete(TURN)
+  await $.prompt.submit({ text: 'unrelated chat' } as any)
+  usd = 2.5
+  await $.turn.complete(TURN)
+  await $.prompt.submit(BIND)
+  usd = 3.5
+  await $.turn.complete(TURN)
+  expect(JSON.stringify(await $.command.run({ command: 'keystone-status', args: '' }))).toContain('start $2.00 · implement $1.00 · total $3.00')
+  usd = undefined
 })

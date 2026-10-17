@@ -5,6 +5,29 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.16] — 2026-10-17
+
+### Changed
+- **The active plan belongs to the session that works with it.** A plan is a session's once it ran
+  `/keystone:<stage>` naming the plan's folder (`implement` / `verify` with no argument take the newest plan) or edited
+  a file in that folder; the gates read this from the session transcript, the mod keeps it in its session state. Any
+  other session in the repo gets no Stop reminder, no draft lock on code edits, no status line, buttons or handoff
+  offer, and its turns are not billed to the plan; `/keystone-status` there names the repo's plan and the command that
+  takes it over. The push gate stays repo-wide. Keystone stages run before the session had a plan (start, intent,
+  plan before plan.md exists) are billed to it once it has one.
+- **Plan choice is the same in the gates and the mod:** the newest task folder whose plan.md is in view (active, or
+  verified with open `## Release` steps). A newer folder with only an intent no longer hides an implementing plan.
+- **Band above the prompt:** a plan progress bar and a context bar (real bars on Desktop, block glyphs in the
+  terminal); the handoff buttons sit on the context bar; commands show as short chips, the full command with its plan
+  path fills the box.
+
+### Fixed
+- After a plain prompt the stage resets: no buttons after unrelated turns, and their cost is no longer billed to the
+  last Keystone stage.
+- The plan's next command now really replaces the engine's suggestion (a shadowed variable kept it from ever doing so).
+- On L with a `Threats:` block, the band offers `/keystone:security` before `/keystone:verify`, as verify's Security
+  gate needs.
+
 ## [0.9.15] — 2026-10-17
 
 ### Fixed

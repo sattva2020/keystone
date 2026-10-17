@@ -7,6 +7,22 @@ import { handoffPrompt, kTokens, levelFor, thresholdsFor } from './handoff.ts'
 const IDLE = { level: 0, tokens: 0, window: 0, shown: 0, pending: null }
 const BUSY = new Set(['pending', 'running', 'waiting'])
 
+// The band's look, pure: a chip names the stage (the full command with its plan path goes into the box), bars fill
+// by fraction — Svg on the desktop, block glyphs in the terminal — and the context bar warms up with the handoff level.
+type Tone = 'success' | 'suggestion' | 'warning' | 'error'
+export const chip = (cmd: string) => (cmd === '/keystone-status' ? 'статус' : cmd.match(/^\/keystone:([a-z]+)/)?.[1] ?? cmd)
+export const pct = (f: number) => `${Math.round(Math.max(0, Math.min(1, f)) * 100)}%`
+export const toneFor = (level: number): Tone => (level >= 2 ? 'error' : level === 1 ? 'warning' : 'suggestion')
+export const barText = (f: number, cells: number) => {
+  const n = Math.round(Math.max(0, Math.min(1, f)) * cells)
+  return '█'.repeat(n) + '░'.repeat(cells - n)
+}
+const HEX: Record<Tone, string> = { success: '#2da44e', suggestion: '#3b82f6', warning: '#d97706', error: '#dc2626' }
+export const barSvg = (f: number, tone: Tone, w: number) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="8" viewBox="0 0 ${w} 8">` +
+  `<rect width="${w}" height="8" rx="4" fill="#8888884d"/>` +
+  `<rect width="${Math.round(Math.max(0, Math.min(1, f)) * w)}" height="8" rx="4" fill="${HEX[tone]}"/></svg>`
+
 const clear = ($: EngineInterface) => $.state.set({ plugin: 'keystone', key: 'buttons' }, [])
 
 async function pick($: EngineInterface, cmd: string) {
@@ -67,26 +83,60 @@ export const register: Register = (on) => {
     const { value: buttons = [] } = await $.state.get({ plugin: 'keystone', key: 'buttons' })
     const { value: ho = IDLE } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
     const { value: plan = '' } = await $.state.get({ plugin: 'keystone', key: 'plan' })
+    const { value: pr = null } = await $.state.get({ plugin: 'keystone', key: 'progress' })
     const offer = plan !== '' && ho.pending === null && ho.level > ho.shown
     if (buttons.length === 0 && !offer) return next(e)
-    const { Box, Button, Text } = $.ui.resolve(e)
-    const rows = []
-    if (offer)
-      rows.push(
-        <Box key="handoff" flexDirection="row" alignItems="center" columnGap={1}>
-          <Text dimColor>Keystone: контекст {kTokens(ho.tokens)} из {kTokens(ho.window)} — передать задачу в чистую сессию?</Text>
-          <Button key="handoff-go" label="Передать" onPress={async () => $.ui.toast(await startHandoff($))} />
-          <Button key="handoff-later" label="Позже" onPress={() => $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, shown: ho.level })} />
-        </Box>,
+    const { Box, Button, Text, Svg } = $.ui.resolve(e)
+    const desktop = e.surface === 'desktop'
+    const cols = e.props.bodyColumns
+    const wide = cols >= 72
+    const cells = Math.max(6, Math.min(24, cols - (wide ? 30 : 0) - 34))
+    const bar = (key: string, label: string, frac: number, tone: Tone, tail: string, extra?: unknown) => (
+      <Box key={key} flexDirection="row" alignItems="center" columnGap={1}>
+        <Text dimColor>{label}</Text>
+        {desktop ? (
+          <Svg source={barSvg(frac, tone, cells * 8)} alt={`${label} ${pct(frac)}`} width={cells * 8} height={8} />
+        ) : (
+          <Text color={tone}>{barText(frac, cells)}</Text>
+        )}
+        <Text wrap="truncate-end">{tail}</Text>
+        {extra ?? null}
+      </Box>
+    )
+    const bars = []
+    if (pr && pr.total > 0)
+      bars.push(bar('plan-bar', 'План    ', pr.done / pr.total, 'success', `${pr.done}/${pr.total}${pr.blocked ? ` · ${pr.blocked} blocked` : ''}`))
+    if (ho.window > 0)
+      bars.push(
+        bar('ctx-bar', 'Контекст', ho.tokens / ho.window, toneFor(ho.level), wide ? `${pct(ho.tokens / ho.window)} · ${kTokens(ho.tokens)}/${kTokens(ho.window)}` : pct(ho.tokens / ho.window),
+          offer ? [
+            <Button key="handoff-go" label="Передать" variant="primary" onPress={async () => $.ui.toast(await startHandoff($))} />,
+            <Button key="handoff-later" label="Позже" dimColor onPress={() => $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, shown: ho.level })} />,
+          ] : undefined),
       )
+    const title = pr ? `Keystone · ${pr.level} · ${pr.status}` : 'Keystone'
+    const rows = []
+    rows.push(
+      wide ? (
+        <Box key="bars" flexDirection="row" columnGap={2}>
+          <Box width={28}><Text dimColor wrap="truncate-end">{title}</Text></Box>
+          <Box flexDirection="column">{bars}</Box>
+        </Box>
+      ) : (
+        <Box key="bars" flexDirection="column">
+          <Text dimColor wrap="truncate-end">{title}</Text>
+          {bars}
+        </Box>
+      ),
+    )
     if (buttons.length > 0)
       rows.push(
-        <Box key="next" flexDirection="row" alignItems="center" columnGap={1}>
-          <Text dimColor>Keystone</Text>
+        <Box key="next" flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={1}>
           {buttons.map((cmd, i) => (
-            <Button key={`next${i + 1}`} label={cmd} onPress={() => pick($, cmd)} />
+            <Button key={`next${i + 1}`} label={chip(cmd)} variant={i === 0 ? 'primary' : 'secondary'} onPress={() => pick($, cmd)} />
           ))}
-          <Button key="dismiss" label="×" role="dismiss" onPress={() => clear($)} />
+          <Box flexGrow={1} />
+          <Button key="dismiss" label="×" role="dismiss" dimColor onPress={() => clear($)} />
         </Box>,
       )
     // the band is shared: keep what other mods draw below ours

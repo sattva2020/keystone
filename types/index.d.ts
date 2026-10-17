@@ -6,8 +6,10 @@ export type Handoff = {
   pending: { file: string; mtime: number } | null
 }
 
+export type Progress = { level: string; status: string; done: number; total: number; blocked: number }
+
 declare module 'claude-code' {
   interface PluginState {
-    keystone: { buttons: string[]; base: string; plan: string; handoff: Handoff }
+    keystone: { buttons: string[]; base: string; plan: string; bound: string[]; progress: Progress | null; handoff: Handoff }
   }
 }

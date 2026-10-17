@@ -53,7 +53,7 @@ grill saves nothing: decisions D1…Dn live in the chat. Record them: `/keystone
 `Next: nothing now — waiting for <event>`; when it happens, `/keystone:start <topic>` with a pointer to the decisions.
 
 ### Back after a break
-`/keystone-status` → the `Next:` line. Or open `docs/keystone/`, take the newest folder: its `plan.md` is the active
+`/keystone-status` → the `Next:` line (in a new session it names the plan; running that command binds the session to it). Or open `docs/keystone/`, take the newest folder with a `plan.md`: it is the active
 task and its header holds the status.
 
 ### Waiting for an external event (deploy, a WAF rule, a colleague)

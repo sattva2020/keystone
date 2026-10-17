@@ -81,4 +81,4 @@ showing a diff and your "yes"; a re-run only adds what is missing.
 | What | How it works | When |
 |---|---|---|
 | `/keystone-status` | The active plan, tasks, gates and the cost of each stage. Answered by the mod without a model call, so it is free. The cost total is also in the status line after every turn. | Any time. |
-| Gates (hooks) | While a plan is `draft`, code edits are closed until Approve. Push and PR are closed until verify. In a fix, committed tests cannot be changed. Stop reminds once about open tasks. | They work on their own. To lift: `Status: abandoned` in the plan or `KEYSTONE_GATES=off`. |
+| Gates (hooks) | While a plan is `draft`, code edits are closed until Approve. Push and PR are closed until verify. In a fix, committed tests cannot be changed. Stop reminds once about open tasks. Draft and Stop gates, the status line and the buttons touch only the session that works with the plan (ran `/keystone:<stage>` on it or edited its folder); push is repo-wide. | They work on their own. To lift: `Status: abandoned` in the plan or `KEYSTONE_GATES=off`. |
