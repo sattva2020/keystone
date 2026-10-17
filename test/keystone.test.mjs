@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.14');
+  assert.equal(p.version, '0.9.15');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -593,4 +593,9 @@ test('0.9.12: verify flags weakened tests and contradicted prior decisions', () 
     '`Decision: <intent path:I-n | note path> — contradicted by <file:line> — <how>`', 'Weakened tests: <Weakened test: … lines> | none', 'Decisions: <Decision: … lines> | none');
   has('skills/verify/SKILL.md', 'A green test run proves nothing about a test the diff loosened', '`Weakened tests: none` (or each tied to a task); `Decisions: none`',
     'or a `Weakened test` line no task asks for', 'a `Decision:` line,');
+});
+
+test('0.9.15: a file outside the working directory is never a link — the mod shows it as code, every skill says so', () => {
+  for (const d of readdirSync(join(root, 'skills'))) has(`skills/${d}/SKILL.md`, 'is **never a link**', 'absolute path in `code`');
+  has('hooks/links.ts', 'export function outsideAsCode', "t.startsWith('../')");
 });

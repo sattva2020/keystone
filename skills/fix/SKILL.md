@@ -45,8 +45,9 @@ always closes the answer.
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
 that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
-subproject. A file that must live outside it gets its absolute path. Check the link before showing it: the app opens
-links only from the working directory.
+subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
+it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
+it and shows "file not found": give its absolute path in `code`, so it can be copied.
 
 ## Workflow
 

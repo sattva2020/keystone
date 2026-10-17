@@ -28,7 +28,19 @@ export function inside(path: string, base: string): string | null {
   return out.length ? out.join('/') : null
 }
 
-// Code fences and existing links are left alone; at most MAX_STATS look-ups per message.
+// A link to a file outside the session folder: the Desktop file pane cannot open it ("file not found"), so the
+// path is shown as code instead — copyable, never a dead link. The label stays when it says more than the path.
+export function outsideAsCode(link: string, target: string): string {
+  let path = target
+  try { path = decodeURI(target) } catch { /* keep as written */ }
+  const label = link.slice(1, link.lastIndexOf(']('))
+  const bare = label.replace(/`/g, '')
+  const same = normalize(bare) === normalize(path) || normalize(bare) === normalize(target)
+  return same || !bare ? `\`${path}\`` : `${label} (\`${path}\`)`
+}
+
+// Code fences are left alone; existing links inside the folder are kept (absolute → relative), links outside it
+// become code; at most MAX_STATS look-ups per message.
 export async function linkify(text: string, base: string, isFile: (abs: string) => Promise<boolean>): Promise<string> {
   let stats = 0
   const parts = text.split(/(```[\s\S]*?(?:```|$))/)
@@ -42,8 +54,11 @@ export async function linkify(text: string, base: string, isFile: (abs: string) 
       out.push(chunk.slice(last, m.index))
       last = m.index! + m[0].length
       if (m[1] !== undefined) {
-        const rel = isAbs(normalize(m[1])) ? inside(m[1], base) : null
-        out.push(rel ? m[0].replace(`(${m[1]})`, `(${encode(rel)})`) : m[0])
+        const t = normalize(m[1])
+        const rel = isAbs(t) ? inside(m[1], base) : null
+        if (rel) out.push(m[0].replace(`(${m[1]})`, `(${encode(rel)})`))
+        else if (isAbs(t) || t.startsWith('../')) out.push(outsideAsCode(m[0], m[1]))
+        else out.push(m[0])
         continue
       }
       const c = m[2].match(CANDIDATE)

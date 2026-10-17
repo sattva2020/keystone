@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { linkify, inside, MAX_STATS } from './links.ts'
+import { linkify, inside, outsideAsCode, MAX_STATS } from './links.ts'
 
 const BASE = 'E:/work/repo'
 const FILES = new Set(['E:/work/repo/hooks/keystone.ts', 'E:/work/repo/docs/my plan (v2).md'])
@@ -31,4 +31,15 @@ test('at most MAX_STATS look-ups per message', async () => {
   const count = async () => { n++; return false }
   await linkify(Array.from({ length: MAX_STATS + 5 }, (_, i) => `${tick}f${i}.ts${tick}`).join(' '), BASE, count)
   expect(n).toBe(MAX_STATS)
+})
+
+test('a link to a file outside the session folder becomes code, not a dead link', async () => {
+  const mem = 'C:/Users/me/.claude/projects/x/memory/a.md'
+  expect(await linkify(`[${mem}](${mem})`, BASE, isFile)).toBe(`${tick}${mem}${tick}`)
+  expect(await linkify(`[${tick}${mem}${tick}](${mem})`, BASE, isFile)).toBe(`${tick}${mem}${tick}`)
+  expect(await linkify(`[memory note](${mem})`, BASE, isFile)).toBe(`memory note (${tick}${mem}${tick})`)
+  expect(await linkify('[up](../other/x.md)', BASE, isFile)).toBe(`up (${tick}../other/x.md${tick})`)
+  expect(outsideAsCode('[a b](C:/x/a%20b.md)', 'C:/x/a%20b.md')).toBe(`a b (${tick}C:/x/a b.md${tick})`)
+  expect(await linkify('[plan](docs/plan.md)', BASE, isFile)).toBe('[plan](docs/plan.md)')
+  expect(await linkify('[x](https://e.com/a.ts)', BASE, isFile)).toBe('[x](https://e.com/a.ts)')
 })

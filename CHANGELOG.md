@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.15] — 2026-10-17
+
+### Fixed
+- **Dead links to files outside the session folder.** The Desktop file pane opens only files inside the session's
+  working directory, so a link to Claude's memory (`~/.claude/projects/.../memory`), another repository or a temp
+  folder showed "file not found" although the file existed. The mod now draws such a link as the path in code
+  (copyable), keeping a label that says more than the path; the File links rule in every skill says the same: a file
+  outside the working directory is never a link, only its absolute path in code.
+
 ## [0.9.14] — 2026-10-16
 
 ### Added
