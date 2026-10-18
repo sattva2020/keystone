@@ -1,10 +1,10 @@
-// Usage: node assets/flow.mjs assets — writes assets/flow-{dark,light}.svg: the user flow mapped onto
-// Anthropic's AI-native SDLC playbook (Plan → Design → Build → Test → Deploy → Maintain).
+// Usage: node assets/flow.mjs assets — writes assets/flow-dark.svg: the user flow mapped onto
+// Anthropic's AI-native SDLC playbook (Plan → Design → Build → Test → Deploy → Maintain). Dark only: the SVG carries
+// its own background, so it reads the same on GitHub's light and dark themes.
 import { writeFileSync } from 'node:fs';
 const out = process.argv[2];
 const T = {
   dark: { bg: '#0d1220', panel: '#151b2e', box: '#1d2540', edge: '#3b4668', title: '#f3f5fb', text: '#d6dcef', sub: '#9aa4c2', key: '#f5b83d', keyText: '#1a1300', lane: '#7c89b0', arrow: '#5b678c', lock: '#f5b83d' },
-  light: { bg: '#f7f8fc', panel: '#eceff7', box: '#ffffff', edge: '#b9c2d8', title: '#141a2e', text: '#26304d', sub: '#5b6685', key: '#e09a12', keyText: '#1a1300', lane: '#6b7799', arrow: '#9aa4bf', lock: '#b97a00' },
 };
 const F = `font-family="'Segoe UI', Inter, 'Helvetica Neue', Arial, sans-serif"`;
 const M = `font-family="'JetBrains Mono', 'Cascadia Code', Consolas, monospace"`;
@@ -23,11 +23,11 @@ const laneLabel = (c, y, h, label, hint) => `<rect x="40" y="${y}" width="150" h
 
 function svg(c) {
   const stages = [
-    ['Plan', 'intent.md'], ['Design', 'spec.md'], ['Build', 'plan.md → diff'],
+    ['Plan', 'intent.md'], ['Design', 'inside plan.md'], ['Build', 'plan.md → diff'],
     ['Test', 'checks + verifier'], ['Deploy', '## Release'], ['Maintain', 'incident → intent'],
   ];
-  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="872" viewBox="0 0 1200 872" role="img" aria-label="Keystone user flow mapped onto the AI-native SDLC playbook">`;
-  s += `<rect width="1200" height="872" rx="18" fill="${c.bg}"/>`;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-label="Keystone user flow mapped onto the AI-native SDLC playbook">`;
+  s += `<rect width="1200" height="900" rx="18" fill="${c.bg}"/>`;
   s += `<text x="40" y="46" ${F} font-size="22" font-weight="800" fill="${c.title}">How Keystone runs the AI-native SDLC playbook</text>`;
   s += `<text x="40" y="68" ${F} font-size="12.5" fill="${c.sub}">Top: the playbook's stages (Anthropic). Below: what you type in Claude Code. Every stage ends with a committed file.</text>`;
   // playbook row
@@ -47,20 +47,20 @@ function svg(c) {
   const L = [
     ['/keystone:intent', ['grill → your answers;', 'original goal kept'], true],
     ['/keystone:plan', ['plan = spec · risks', 'auto /keystone:check'], false],
-    ['/keystone:implement', ['/clear, then task by', 'task · notes · Sonnet'], false],
-    ['/keystone:verify', ['fresh-context verifier', 'PASS · UNPROVEN · FAIL'], false],
+    ['/keystone:implement', ['fresh session, task', 'by task · Sonnet'], false],
+    ['/keystone:verify', ['Sonnet runs, Opus judges', 'PASS · UNPROVEN · FAIL'], false],
     ['release', ['implement runs R-steps;', 'merge → push on yes'], false],
     ['/keystone:fix', ['bug: regression-first;', 'big finding → intent'], false],
   ];
   L.forEach(([t, l, hot], i) => { s += box(c, COL(i), yL + 42, W, 70, t, l, hot); if (i < 5) s += arrow(c, COL(i) + W, yL + 77, COL(i + 1)); });
-  s += lock(c, COL(1) + 4, yL + 120, 'draft: no code edits until Approve');
-  s += lock(c, COL(4) + 10, yL + 120, 'push closed until verify');
-  s += lock(c, COL(2) + 40, yL + 150, 'FAIL → /keystone:fix verify: every finding in one pass → verify again');
+  s += lock(c, COL(0) + 4, yL + 120, 'draft: no code edits until Approve');
+  s += lock(c, COL(3) + 70, yL + 120, "push of this plan's commits closed until verify");
+  s += lock(c, COL(2) + 40, yL + 150, 'FAIL → /keystone:fix verify, all findings in one pass · UNPROVEN → prove or accept');
   // M lane
   const yM = 390;
   s += laneLabel(c, yM, 90, 'M', 'one clear approach,');
   s += `<text x="56" y="${yM + 58}" ${F} font-size="11" fill="${c.sub}">several files</text>`;
-  const Mx = [['/keystone:plan', ['short plan, Risks;', 'settings inferred'], 1], ['/keystone:implement', ['task by task'], 2], ['/keystone:verify', ['verdict + verify.md'], 3], ['merge · push', ['after verify + yes'], 4]];
+  const Mx = [['/keystone:plan', ['short plan, Risks;', 'settings inferred'], 1], ['/keystone:implement', ['task by task'], 2], ['/keystone:verify', ['fresh session;', 'verdict + verify.md'], 3], ['merge · push', ['after verify + yes'], 4]];
   Mx.forEach(([t, l, i], k) => { s += box(c, COL(i), yM + 10, W, 62, t, l); if (k < 3) s += arrow(c, COL(i) + W, yM + 41, COL(i + 1)); });
   // S lane
   const yS = 500;
@@ -80,7 +80,7 @@ function svg(c) {
     ['/keystone:docs', ['update from implement', 'when docs — yes']],
     ['security · review', ['L: security gate;', 'review + validator']],
     ['dockerize · ci', ['Docker, compose,', 'GitHub / GitLab CI']],
-    ['evolve · transfer', ['lessons → .claude/rules', 'after your yes']],
+    ['evolve · transfer', ['lessons → .claude/rules;', 'add <rule> · after yes']],
   ];
   TB.forEach(([t, l], i) => { s += box(c, COL(i), yT + 8, W, 64, t, l); });
   const TB2 = [
@@ -93,11 +93,12 @@ function svg(c) {
   ];
   TB2.forEach(([t, l], i) => { s += box(c, COL(i), yT + 86, W, 64, t, l); });
   // footer
-  s += `<line x1="40" y1="776" x2="1160" y2="776" stroke="${c.edge}" stroke-width="1"/>`;
-  s += `<text x="40" y="802" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Design is folded into the plan</tspan> — no separate spec.md; every plan row cites an intent line (I-n). Grill runs inside intent; check runs inside plan.</text>`;
-  s += `<text x="40" y="824" ${F} font-size="12.5" fill="${c.text}"><tspan ${M} font-weight="700">/keystone-status</tspan> any time: plan, tasks, gates and cost by stage — answered without a model call. Lift a gate: Status: abandoned or KEYSTONE_GATES=off.</text>`;
-  s += `<text x="40" y="850" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Above the prompt</tspan> — Next buttons from the plan status, clickable file links, and a handoff to a clean session when the context grows.</text>`;
+  s += `<line x1="40" y1="770" x2="1160" y2="770" stroke="${c.edge}" stroke-width="1"/>`;
+  s += `<text x="40" y="794" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Design is folded into the plan</tspan> — no separate spec.md; every plan row cites an intent line (I-n). Grill runs inside intent; check runs inside plan.</text>`;
+  s += `<text x="40" y="816" ${F} font-size="12.5" fill="${c.text}"><tspan ${M} font-weight="700">/keystone-status</tspan> any time: plan, tasks, gates and cost by stage — answered without a model call. Lift a gate: Status: abandoned or KEYSTONE_GATES=off.</text>`;
+  s += `<text x="40" y="838" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Models by role</tspan> — Opus judges (intent, plan, check, the verifier) · Sonnet runs implement and verify · scripts do the mechanics (base, files, tests).</text>`;
+  s += `<text x="40" y="862" ${F} font-size="12.5" fill="${c.text}"><tspan font-weight="700" fill="${c.key}">Above the prompt</tspan> — plan and context bars, Next buttons, file links; a handoff to a clean session when the context grows.</text>`;
+  s += `<text x="40" y="884" ${F} font-size="12.5" fill="${c.sub}">Run implement and verify in a fresh session (/clear): every turn re-reads the whole context, so a stage at 500k tokens costs several times more.</text>`;
   return s + '</svg>';
 }
 writeFileSync(`${out}/flow-dark.svg`, svg(T.dark));
-writeFileSync(`${out}/flow-light.svg`, svg(T.light));

@@ -23,7 +23,7 @@ native `CLAUDE.md`, `docs/architecture.md` and `.claude/rules` are absent.
 | `/aif-improve` | `/keystone:check` | The analyzer and the validator in clean contexts are kept. The validator is always on, not an option. `check` runs from `plan` automatically and compares the plan with the intent and project rules. |
 | `/aif-implement` | `/keystone:implement` | Execution rules and the decision log are kept. No side agents (sidecars): they add cost to every task, and `verify` does the checking. Added: `BLOCKED` instead of "ticked, NOT RUN", commits by the Commit Plan, `/keystone:docs update` with `docs — yes`, up to three new `.claude/rules` after a "yes". Meant for Sonnet. |
 | `/aif-fix` | `/keystone:fix` | The "regression check first" approach is kept as is. Added a hook: while a fix plan is active, tests already committed in HEAD cannot be changed; the regression test goes into a new file. |
-| `/aif-verify` | `/keystone:verify` | Build, test and lint checks are kept. The verdict comes from a separate verifier (Opus) in a fresh context: PASS, PASS-UNPROVEN or FAIL, plus an "unrequested" item. A ticked box is not evidence. New in 0.8: architecture and security gates, `accept` with a sign-off; push is closed before verify. |
+| `/aif-verify` | `/keystone:verify` | Build, test and lint checks are kept. The checks run as one script (`collect.mjs`), the run itself on Sonnet; the verdict comes from a separate verifier (Opus) in a fresh context: PASS, PASS-UNPROVEN or FAIL, plus an "unrequested" item. A ticked box is not evidence. New in 0.8: architecture and security gates, `accept` with a sign-off; push is closed before verify. |
 | `/aif-review` | `/keystone:review` | Review of staged changes, a PR or changes from a ref, with severity, is kept. The validator in a clean context always runs (in AI Factory only with `+check`): in practice it caught an error that verify missed. Findings without Repro go to Unconfirmed. A `Gate` line instead of JSON. |
 | `/aif-security-checklist` | `/keystone:security` | OWASP, prompt-injection and race-condition checklists are kept nearly verbatim. The ignore list lives in `docs/keystone/security-ignores.md` with a reason and a date; entries older than 12 months give a warn. Result: `Security gate: pass \| warn \| fail`; on L with auth or payments `verify` requires it. `audit.sh` is fixed (see below). |
 | `/aif-architecture` | `/keystone:architecture` | The pattern matrix and the check against the code are kept: if the code does not match the pattern, the skill asks whether to describe it as it is or take the strict ideal. Writes `docs/architecture.md`, not `.ai-factory/ARCHITECTURE.md`. Every MUST NOT rule carries a grep command that `verify` runs over changed files. |
@@ -88,7 +88,7 @@ port and restored; they are marked "restored".
 - **`/keystone:start`.** Levels S, M and L: an edit that fits one sentence does not drag an intent and a plan along.
 - **Gates on hooks.** No code edits in `draft`, push closed before verify, committed tests frozen in a fix, a Stop reminder about open tasks.
 - **The mod.** `/keystone-status` without a model call, a status line, and the cost of each stage.
-- **A model per stage.** Opus where judgment is needed (intent, plan, check, verify), Sonnet for execution (implement, docs, ci), Haiku for gathering facts.
+- **A model per role.** Opus judges (intent, plan, check, the verifier), Sonnet orchestrates and executes (implement, the verify run, docs, ci), scripts do fixed mechanical steps and Haiku gathers facts.
 
 ## AI Factory bugs that were not ported
 

@@ -53,6 +53,11 @@ tightened afterwards. A rerun with a stricter simulator is still open.
 `verify` returned `PASS-UNPROVEN` rather than `PASS` whenever a row had no runnable evidence, listed `Unconfirmed` items,
 attached a `Repro:` to each `wrong`, and returned an honest `FAIL` when a logging rule was broken.
 
+## Agentic A/B benchmark
+
+A repeatable A/B of `/keystone:verify` against the same model without the plugin and with a one-line hint,
+on seeded repositories with hidden gaps, 5 runs per cell: [`benchmarks/agentic/`](../benchmarks/agentic/README.md).
+
 ## Limits
 
 - One corpus (a single monorepo) and one run per scenario; no variance estimate.

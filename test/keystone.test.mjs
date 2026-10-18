@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.17');
+  assert.equal(p.version, '0.9.19');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -64,7 +64,8 @@ test('I-15/I-18: every ported file carries the attribution and is listed in THIR
   const ported = ['skills/plan/SKILL.md', 'skills/plan/references/PLAN-FORMAT.md', 'skills/check/SKILL.md',
     'skills/check/references/ANALYZE.md', 'skills/check/references/VALIDATOR.md', 'agents/analyzer.md', 'agents/validator.md',
     'skills/implement/SKILL.md', 'skills/implement/references/LOGGING.md', 'skills/fix/SKILL.md', 'skills/verify/SKILL.md',
-    'skills/verify/references/CHECKS.md', 'agents/verifier.md'];
+    'skills/verify/references/CHECKS.md', 'skills/verify/references/ACCEPT.md', 'skills/verify/references/AFTER-CHOICE.md',
+    'agents/verifier.md'];
   for (const f of ported) {
     assert.ok(existsSync(join(root, f)), f);
     assert.match(read(f), /derived from ai-factory@2\.19\.0 .*\(MIT\)/, f);
@@ -180,7 +181,7 @@ test('I-19…I-23: Done means, keep going / stop, three-part summary, Repro/Unco
 });
 
 test('stand 12.10 fixes: verify never edits intent, accept re-checks freshness, fix path, BLOCKED in fix, grill coverage table', () => {
-  const v = read('skills/verify/SKILL.md');
+  const v = VERIFY.map(read).join('\n');
   assert.match(v, /\/keystone:intent/);
   assert.match(v, /changed after the last `?verify\.md/i);
   assert.match(read('skills/fix/SKILL.md'), /docs\/keystone/);
@@ -299,7 +300,9 @@ test('0.8 I-11: every new ported .md carries the attribution and its skill is li
 });
 
 // qa-roadmap-lessons (docs/keystone/2026-10-12-qa-roadmap-lessons/intent.md)
-const has = (f, ...xs) => { const t = read(f).replace(/\s+/g, ' '); for (const x of xs) assert.ok(t.includes(x), `${f}: ${x}`); };
+const has = (f, ...xs) => { const t = [].concat(f).map(read).join(' ').replace(/\s+/g, ' '); for (const x of xs) assert.ok(t.includes(x), `${f}: ${x}`); };
+// verify keeps its rare branches (accept, gates, after the choice, context drift) in references, read on demand
+const VERIFY = ['skills/verify/SKILL.md', 'skills/verify/references/ACCEPT.md', 'skills/verify/references/AFTER-CHOICE.md'];
 
 test('qa/qa-check: files in <task>/qa/, evidence before pass, Playwright replay', () => {
   has('skills/qa/SKILL.md', 'qa/', 'MUST NOT create a `test-plan` without a `change-summary` artifact');
@@ -325,7 +328,7 @@ test('evolve/transfer: lessons become .claude/rules after a yes, evolve-log, rea
 
 test('ask: 100/100 or INSUFFICIENT INFORMATION, read-only', () => {
   has('skills/ask/SKILL.md', 'Only provide the final answer if confidence is 100/100 based on evidence available.', 'Result: INSUFFICIENT INFORMATION (no guessing)', 'Context7');
-  assert.doesNotMatch(front('skills/ask/SKILL.md'), /^allowed-tools:.*(Write|Edit)/m);
+  assert.doesNotMatch(front('skills/ask/SKILL.md'), /^allowed-tools:.*\b(Write|Edit)\b/m);
 });
 
 test('output is Markdown, not a code-block wall: grill summary table, rendering rule in report skills', () => {
@@ -512,7 +515,7 @@ test('verify/fix loop: Rules gate lists every rule and violation; fix verify tak
 });
 
 test('verify choice: menu after the verdict, prove before accept, security never accept-first, RLS without Threats not n/a', () => {
-  has('skills/verify/SKILL.md', '## Step 6 — the choice (AskUserQuestion)', 'Prove now: <check>',
+  has(VERIFY, '## Step 6 — the choice (AskUserQuestion)', 'Prove now: <check>',
     '**Accept is never first**', 'the click is the confirmation', 'never `n/a`');
 });
 
@@ -521,7 +524,7 @@ test('0.9.8: every skill ends with a menu and carries out the pick; status color
     has(`skills/${d}/SKILL.md`, '**Choice at the end (menu).**', '**carry it out**', '**Status colors.**');
     assert.match(front(`skills/${d}/SKILL.md`), /allowed-tools:.*AskUserQuestion/, d);
   }
-  has('skills/verify/SKILL.md', 'Fix directly here', 'Fix critical only', '../fix/SKILL.md');
+  has(VERIFY, 'Fix directly here', 'Fix critical only', '../fix/SKILL.md');
   has('skills/fix/SKILL.md', '`verify critical`', 'Write this test now');
   has('skills/check/references/VALIDATOR.md', 'Group: missing | improvements | removals | out_of_scope | intent-gap | goal-drift | rule-violation');
   has('skills/check/SKILL.md', 'in group order (goal-drift, missing');
@@ -563,7 +566,7 @@ test('0.9.9: check takes a free-text request and ends with Plan refined', () => 
 });
 
 test('0.9.9: verify asks about context drift and offers the owning command', () => {
-  has('skills/verify/SKILL.md', '**Context drift (a second question, only when found).**', '`/keystone:architecture`',
+  has(VERIFY, '**Context drift (a second question, only when found).**', '`/keystone:architecture`',
     '`/keystone:setup`', '`.claude/rules` → `/keystone:evolve`', 'Context drift: <file — what is stale, owning command> | none');
 });
 
@@ -593,4 +596,103 @@ test('0.9.17: Keystone never reads or writes .ai-factory — skills, agents and 
   const walk = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
   for (const f of [...walk('skills'), ...walk('agents'), ...walk('hooks')].filter((x) => /\.(md|ts|tsx|mjs)$/.test(x) && !/\.test\./.test(x)))
     assert.doesNotMatch(read(f), /\.ai-factory|paths\.specs/, f);
+});
+
+test('security 0.9.18: comparison gaps closed — SSRF ranges, starters, severity, A04/A09, API, auth, IaC, own MCP server', () => {
+  const R = 'skills/security/references/';
+  has(R + 'CHECKLIST.md', '172.16.0.0/12', '192.168.0.0/16', 'fd00::/8', 'git filter-repo', '[no-image-digest]',
+    '## Cryptographic Failures [A04:2025]', '## Security Logging and Alerting Failures [A09:2025]', '600 000',
+    'Mass assignment', 'GraphQL', 'introspection', 'XXE', 'Not a finding: XML only', 'Not a finding: a socket authenticated by a token',
+    'ALLOWED_HOSTS', 'trust proxy', '(static IV / nonce)', '(TLS versions in server config)', '__proto__', 'Access-Control-Allow-Credentials', 'Open redirect', 'IAC.md');
+  assert.ok(!read(R + 'CHECKLIST.md').includes('filter-branch'));
+  assert.match(read(R + 'CHECKLIST.md'), /^\| `pull_request_target` \+ PR-head checkout \[no-ci-hardening\] \| Critical \|/m);
+  has(R + 'SUPPLY-CHAIN.md', '## Models and weights (LLM04:2026)', 'extra-index-url', 'workflow_run', 'persist-credentials: false');
+  assert.ok(!read(R + 'SUPPLY-CHAIN.md').includes('Base images pinned by tag or digest'));
+  const pi = read(R + 'PROMPT-INJECTION.md');
+  assert.ok(!pi.includes('✅ SAFE: Separate system and user messages'));
+  has(R + 'PROMPT-INJECTION.md', '## LLM09:2026 Vector and Embedding Weaknesses', 'stripInvisible', 'U+E0000', 'logits');
+  assert.ok(pi.includes(String.raw`/\bsk-(?:proj-|ant-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}/g`));
+  has(R + 'AUTH.md', "algorithms: ['RS256']", '`kid`', '`jku`', '## OAuth 2.0 / OIDC', 'redirect_uri', 'PKCE', 'CWE-204');
+  assert.ok(read(R + 'IAC.md').startsWith('<!-- original Keystone file (MIT) -->'));
+  has(R + 'IAC.md', 'privileged: true', 'allowPrivilegeEscalation', 'http_tokens', 'cluster-admin', '## Not a finding');
+  has(R + 'AGENT-MCP.md', "## The project's own MCP server and agent tools", 'tool description', '0.0.0.0', 'fail-closed', "uvx --from 'pkg==1.4.2' pkg");
+  has(R + 'MAPPING.md', 'IMDSv1', 'CWE-611', 'CWE-915', 'CWE-1321', 'CWE-347', 'CWE-1427', 'CWE-295', 'CWE-532');
+  for (const x of ['crypto', 'logging', 'iac']) assert.match(front('skills/security/SKILL.md'), new RegExp(String.raw`argument-hint:.*\b${x}\b`), x);
+  has('skills/security/SKILL.md', '`iac` (`references/IAC.md`)', '`IAC.md`');
+  for (const f of ['docs/skills.md', 'docs/skills.ru.md', 'README.ru.md']) has(f, 'iac');
+});
+
+test('security files carry no control characters (a lost backslash once turned a word boundary into a backspace)', () => {
+  const dir = join(root, 'skills/security');
+  const files = ['SKILL.md', 'scripts/audit.sh', ...readdirSync(join(dir, 'references')).map((f) => `references/${f}`)];
+  for (const f of files) {
+    const bad = [...readFileSync(join(dir, f), 'utf8')].filter((c) => c < ' ' && !'\t\n\r'.includes(c));
+    assert.equal(bad.length, 0, f);
+  }
+});
+
+test('audit.sh behaviour 0.9.18: whole-tree console scan, .gitignore lines, python UNASSESSED, value-only placeholder filter; starters', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { mkdtempSync, writeFileSync, mkdirSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const script = join(root, 'skills/security/scripts/audit.sh');
+  const run = (files) => {
+    const d = mkdtempSync(join(tmpdir(), 'ks-audit-'));
+    for (const [f, body] of Object.entries(files)) { mkdirSync(dirname(join(d, f)), { recursive: true }); writeFileSync(join(d, f), body); }
+    return spawnSync('bash', [script], { cwd: d, encoding: 'utf8' }).stdout;
+  };
+  assert.match(run({ 'app/x.js': 'console.log("x")\n' }), /app\/x\.js:1/);
+  assert.match(run({ '.gitignore': '.env.example\n' }), /\.env not in \.gitignore/);
+  assert.match(run({ '.gitignore': '.env\n!.env\n' }), /re-included/);
+  assert.match(run({ '.gitignore': '.env\n' }), /\.env in \.gitignore/);
+  const verdict = (eco) => new RegExp(`UNASSESSED: dependency audit: ${eco}|No known vulnerabilities \\(${eco}|Vulnerabilities found \\(${eco}`, 'g');
+  assert.match(run({ 'requirements.txt': 'flask\n' }), verdict('python'));
+  assert.equal(run({ 'requirements.txt': 'flask\n', 'requirements-dev.txt': 'pytest\n' }).match(verdict('python')).length, 2, 'every requirements*.txt is audited');
+  assert.match(run({ 'Cargo.lock': '' }), verdict('rust'));
+  assert.match(run({ 'go.mod': 'module x\n' }), verdict('go'));
+  assert.match(run({ '.gitignore': '.env.*\n' }), /\.env not in \.gitignore/, '.env.* does not ignore .env');
+  assert.match(run({ '.gitignore': '.env*\n' }), /\.env in \.gitignore/);
+  assert.doesNotMatch(run({ '.env.example': 'API_KEY="abcdefghijklmnop"\n' }), /\.env\.example:1/, 'DO-NOT-FLAG: .env.example');
+  assert.doesNotMatch(run({ 'examples/conf.py': 'token = "abcdefghijklmnop"\n' }), /conf\.py:1/, 'DO-NOT-FLAG: examples/');
+  assert.match(run({ 'a.py': 'token = "Zx9LmN2pR4tV6wY8qA"  # example\n' }), /a\.py:1/);
+  assert.doesNotMatch(run({ 'a.py': 'token = "your-token-here-xxxx"\n' }), /a\.py:1/);
+
+  const d = mkdtempSync(join(tmpdir(), 'ks-wf-'));
+  mkdirSync(join(d, '.github/workflows'), { recursive: true });
+  writeFileSync(join(d, '.github/workflows/ci.yml'), [
+    '    - uses: a/b@0.28.0', `    - uses: a/b@${'0123456789abcdef'.repeat(2)}01234567 # v1`, '    - uses: ./local',
+    '      run: npm install', '      run: npm ci', ''].join('\n'));
+  const sc = read('skills/security/references/SUPPLY-CHAIN.md');
+  const starter = (re) => sc.match(re)[1];
+  const sh = (cmd) => spawnSync('bash', ['-c', cmd], { cwd: d, encoding: 'utf8' }).stdout;
+  const pin = sh(starter(/`(grep -rnE "uses:[^`]+)`/));
+  assert.match(pin, /@0\.28\.0/);
+  assert.doesNotMatch(pin, /01234567 # v1|\.\/local/);
+  const npm = sh(starter(/`(grep -rnE "npm \(install[^`]+)`/));
+  assert.match(npm, /npm install/);
+  assert.doesNotMatch(npm, /npm ci/);
+});
+
+test('skills, agents, hooks and tests carry no control characters (a bash heredoc turns \\b into 0x08)', () => {
+  const walk = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
+  const files = [...walk('skills'), ...walk('agents'), ...walk('hooks'), ...walk('test')].filter((x) => /\.(md|json|ts|tsx|mjs|js)$/.test(x));
+  for (const f of files) assert.doesNotMatch(read(f), /[\x00-\x08\x0b\x0c\x0e-\x1f]/, f);
+});
+
+test('the ask read-only check really tests allowed-tools (fails if Write is added)', () => {
+  const re = /^allowed-tools:.*\b(Write|Edit)\b/m;
+  assert.match('allowed-tools: Read, Write', re);
+  assert.doesNotMatch(front('skills/ask/SKILL.md'), re);
+});
+
+test('0.9.19: verify — orchestrator on the mid model, judge on Opus, report written once, mechanics in collect.mjs', () => {
+  assert.match(front('skills/verify/SKILL.md'), /^model: sonnet$/m);
+  assert.match(front('agents/verifier.md'), /^model: opus$/m);
+  const v = read('skills/verify/SKILL.md');
+  assert.ok(!v.includes('Then print its output'), 'the line-by-line report is not printed in the chat');
+  has('skills/verify/SKILL.md', 'scripts/collect.mjs', '**Write `verify.md` once**', 'Do not print the line-by-line report in the chat',
+    'references/ACCEPT.md', 'references/AFTER-CHOICE.md', '**Roles.**');
+  assert.ok(readFileSync(join(root, 'skills/verify/SKILL.md')).length <= 22000, 'verify SKILL.md ≤ 22000 bytes');
+  for (const f of ['skills/verify/scripts/collect.mjs', 'skills/verify/references/ACCEPT.md', 'skills/verify/references/AFTER-CHOICE.md'])
+    assert.ok(existsSync(join(root, f)), f);
 });

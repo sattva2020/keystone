@@ -53,9 +53,7 @@ them.
 ## How it works
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/flow-light.svg">
-  <img src="assets/flow-light.svg" alt="Keystone user flow mapped onto the AI-native SDLC playbook: Plan → Design → Build → Test → Deploy → Maintain" width="100%">
+  <img src="assets/flow-dark.svg" alt="Keystone user flow mapped onto the AI-native SDLC playbook: Plan → Design → Build → Test → Deploy → Maintain" width="100%">
 </picture>
 
 Keystone follows [Anthropic's AI-native SDLC playbook](https://claude.com/resources/articles/the-ai-native-sdlc-playbook):
@@ -120,8 +118,9 @@ The agent proposes a level, you confirm it. Any single sign of L makes the task 
 | **M** | one obvious approach, several files | `/keystone:plan <task>` → Approve → `/keystone:implement` → `/keystone:verify` | `plan.md` with a 3-line Risks block, `verify.md` |
 | **L** | several decisions; data or schema; security; other teams' modules; unclear "done" | `/keystone:intent` → `/keystone:plan <intent>` (with `/keystone:check`) → Approve → new session → `/keystone:implement` → `/keystone:verify` | `intent.md`, `plan.md` with Coverage, `verify.md` |
 
-Model per stage: **Opus** for grill, intent, plan, check and verify; **Sonnet** for implementation from an approved
-plan; **Haiku** for fact lookups. The `effort` in a skill's frontmatter applies only to the turn that invokes it; for
+Model per role: **Opus** judges (grill, intent, plan, check, and the verifier inside verify); **Sonnet** runs implementation
+from an approved plan and the verify run itself; fixed mechanical steps run as scripts (verify's facts come from
+`collect.mjs`), and **Haiku** does fact lookups. The `effort` in a skill's frontmatter applies only to the turn that invokes it; for
 long multi-turn plan, grill and check sessions set `/effort high` for the session.
 
 Keystone never asks about tests, logging or docs. The plan infers them from the repository and writes a `Settings:`

@@ -79,10 +79,13 @@ the user picked the risky option (lesson: a domain was submitted to a payment pr
 | | S | M | L |
 |---|---|---|---|
 | Exploration | ≤ 2 searches/reads before acting | ≤ 1 Explore subagent sweep | Explore subagents as needed, facts only |
-| Model | session model, low effort | Opus plans, Sonnet implements | Opus: grill, intent, plan, check, verify · Sonnet: implement · Haiku: Explore (fact lookup) |
+| Model | session model, low effort | judge (strongest — Opus) plans · orchestrator (mid — Sonnet) implements · mechanics: a script or command for fixed steps, the cheapest model (Haiku) when an LLM must read or look up | judge (Opus): grill, intent, plan, check, the verifier · orchestrator (Sonnet): implement, the verify run · mechanics: scripts; Haiku for Explore and fact lookup |
 | Artifacts | none — the commit message is the record | `plan.md` | `intent.md`, `plan.md`, check report |
 | Effort | low | plan, fix: high · implement: low–medium | grill, intent, plan, check, verify: high · implement: low–medium · fix: high |
 | Review | the check's output | `/keystone:verify` | `/keystone:check` before approve + `/keystone:verify` |
+
+Roles, not model names: in Claude Code judge = Opus, orchestrator = Sonnet, cheapest = Haiku; the `model:` frontmatter
+carries these aliases.
 
 `effort` in a skill's frontmatter applies only for the turn the skill is invoked; for multi-turn plan/grill/check
 sessions set `/effort high` for the session.

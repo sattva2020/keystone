@@ -2,8 +2,9 @@
 
 # Keystone verify — build / test / lint / imports
 
-The verify skill runs these in the main context and passes the output to the verifier. Never install dependencies. A
-tool that is missing, or a command that cannot run here, is recorded as `not run — <reason>`, never as a pass.
+These tables are implemented by `scripts/collect.mjs`: the verify skill runs it once and passes its lines to the
+verifier, so no model reads this file during a run. Change a table here and in the script together. Never install
+dependencies. A tool that is missing, or a command that cannot run here, is recorded as `not run (<reason>)`, never as a pass.
 
 ## Build & compile check
 

@@ -1,7 +1,7 @@
 ---
 name: security
-description: "Keystone: security audit on OWASP Top 10:2025, LLM Top 10 2026 / prompt injection, agent and MCP configuration, supply chain and race conditions — whole project, a path, a category or the diff of a task. Every finding has severity, file:line, how to exploit it and a fix; ignored items live in docs/keystone/security-ignores.md with reason, date and author; ends with a machine-readable line `Security gate: pass | warn | fail` (fail only on an unignored critical/high finding). Read-only for code. Use for 'security check', 'is this secure', 'before deploy', auth/payments/user-input changes, or `ignore <id> <reason>`."
-argument-hint: "[auth|injection|xss|csrf|secrets|api|infra|prompt-injection|race-condition|agent|supply-chain | <path> | <plan path>] | ignore <id> <reason>"
+description: "Keystone: security audit on OWASP Top 10:2025, LLM Top 10 2026 / prompt injection, agent and MCP configuration, supply chain, IaC (Dockerfile, Kubernetes, Terraform) and race conditions — whole project, a path, a category or the diff of a task. Every finding has severity, file:line, how to exploit it and a fix; ignored items live in docs/keystone/security-ignores.md with reason, date and author; ends with a machine-readable line `Security gate: pass | warn | fail` (fail only on an unignored critical/high finding). Read-only for code. Use for 'security check', 'is this secure', 'before deploy', auth/payments/user-input changes, or `ignore <id> <reason>`."
+argument-hint: "[auth|injection|xss|csrf|secrets|crypto|logging|api|infra|iac|prompt-injection|race-condition|agent|supply-chain | <path> | <plan path>] | ignore <id> <reason>"
 allowed-tools: Read Glob Grep Write Edit Bash(npm audit*) Bash(pip-audit*) Bash(cargo audit*) Bash(grep *) Bash(git diff*) Bash(git log*) Bash(git rev-list*) Bash(git config user.name) Bash(bash ${CLAUDE_SKILL_DIR}/scripts/audit.sh) AskUserQuestion
 model: opus
 effort: high
@@ -11,7 +11,7 @@ disable-model-invocation: false
 
 # Keystone · security
 
-Audit against OWASP Top 10:2025, OWASP LLM Top 10 2026 (prompt injection), agent/MCP configuration, supply chain and race conditions. **Read-only for code and tests.** The only
+Audit against OWASP Top 10:2025, OWASP LLM Top 10 2026 (prompt injection), agent/MCP configuration (incl. the project's own MCP server), supply chain, IaC and race conditions. **Read-only for code and tests.** The only
 file this skill may write is `docs/keystone/security-ignores.md` (the `ignore` flow). Fixing a finding is
 `/keystone:fix` (or an edit inside `/keystone:implement`), never this skill. Other Keystone skills call it: `plan` for L changes that
 touch security, `verify` as a gate.
@@ -65,7 +65,7 @@ Then **always read** `docs/keystone/security-ignores.md` before any audit. If it
 | Argument | Scope |
 |---|---|
 | empty | whole project: all categories in `${CLAUDE_SKILL_DIR}/references/CHECKLIST.md` |
-| `auth`, `injection`, `xss`, `csrf`, `secrets`, `api`, `infra`, `prompt-injection`, `race-condition`, `agent` (`references/AGENT-MCP.md`), `supply-chain` (`references/SUPPLY-CHAIN.md`) | that category only |
+| `auth`, `injection`, `xss`, `csrf`, `secrets`, `crypto` (A04), `logging` (A09), `api`, `infra`, `iac` (`references/IAC.md`), `prompt-injection`, `race-condition`, `agent` (`references/AGENT-MCP.md`, incl. the project's own MCP server), `supply-chain` (`references/SUPPLY-CHAIN.md`, incl. model weights) | that category only |
 | a path (file or directory) | all categories, only code under the path |
 | a plan path (`…/plan.md`) or an active plan with no other argument | **diff of the task** — see below |
 | `ignore <id> <reason>` | add an ignore entry, then stop — no audit, no gate line |
@@ -81,7 +81,7 @@ touches an entry point, a query, a permission check or an LLM call. For a diff s
 1. Run `bash ${CLAUDE_SKILL_DIR}/scripts/audit.sh` once for a whole-project or `infra`/`secrets` scope (read-only; skip for a diff
    scope unless dependencies or `.env` handling changed). Its output is a lead, not a finding: confirm every hit in the code.
 2. Walk the categories of the scope in `${CLAUDE_SKILL_DIR}/references/CHECKLIST.md`. Read the code; grep starters only find candidates.
-   Read `AUTH.md`, `PROMPT-INJECTION.md`, `RACE.md`, `AGENT-MCP.md`, `SUPPLY-CHAIN.md` or `MAPPING.md` (same folder) when the scope includes that category and the code needs a pattern
+   Read `AUTH.md`, `PROMPT-INJECTION.md`, `RACE.md`, `AGENT-MCP.md`, `SUPPLY-CHAIN.md`, `IAC.md` or `MAPPING.md` (same folder) when the scope includes that category and the code needs a pattern
    comparison. Skip categories the project cannot have (no LLM calls → no prompt injection) and say so in one line.
 3. A finding needs evidence: file:line you read, and a concrete way it is exploited. No exploit path → not a finding and not in the gate;
    it may go, one line each, under `## Hardening suggestions` (no severity, no effect on the gate). **Before reporting, check each candidate against `${CLAUDE_SKILL_DIR}/references/DO-NOT-FLAG.md`** (server-controlled

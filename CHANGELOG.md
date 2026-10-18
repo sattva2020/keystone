@@ -5,6 +5,70 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.19] — 2026-10-18
+
+Token diet for `/keystone:verify`. The 2026-10-16/17 benchmark showed the verify run itself — not its verifier —
+spending ~78% of a cell's cost, with the verifier's report generated three times and the whole run on Opus.
+
+### Changed
+- **verify writes the report once.** The verifier's output goes into `verify.md` as it came; the chat gets only the
+  final report (verdict, counts, open rows, `Unconfirmed:`, context drift, status, the three-line summary, `Next:`),
+  not the line-by-line report again.
+- **Model roles.** The verifier agent stays the judge on Opus; the verify run itself (orchestration) moves to Sonnet;
+  the fixed mechanical steps — the diff base, this task's commits and files, build / test / lint by `CHECKS.md`, the
+  Architecture gate's grep checks — run as one script, `skills/verify/scripts/collect.mjs`, so no model spends tokens
+  on them. `/keystone:start` names models by role (judge, orchestrator, mechanics: a script, or Haiku when an LLM must
+  read or look up); the Claude aliases stay in the `model:` frontmatter.
+- **Shorter verify skill.** `accept`, the gates, what to do after the Step 6 choice and the context-drift details moved
+  to `references/ACCEPT.md` and `references/AFTER-CHOICE.md`, read only when needed; `CHECKS.md` is no longer read during
+  a run. What a verify loads went from ~28.3k to ~21.6k bytes.
+
+- **Flow diagram brought up to date and dark only** (`assets/flow-dark.svg`, its own background, so it reads the
+  same on GitHub's light and dark themes, in raw links and in other Markdown viewers; `flow-light.svg` is gone): Design
+  lives inside plan.md, the push gate closes only this plan's commits, verify shows Sonnet running and Opus judging and
+  the UNPROVEN path, implement and verify in a fresh session, model roles, `evolve add`.
+
+### Added
+- **Benchmark before/after:** a `keystone-base` arm runs `/keystone:verify` from another Keystone checkout
+  (`--base-plugin-dir`), `--ref <arm>` takes the ratios against any arm, and an `out` column shows output tokens
+  (subagents included). The before/after run was stopped at 23 of 60 cells, so there is no results file; the partial numbers
+  (turns 3 vs 8, cost about the same — the Opus verifier is most of the bill) are in the plan's Implementation notes.
+
+## [0.9.18] — 2026-10-18
+
+Gaps found by comparing `/keystone:security` with the 163 code-audit skills of Anthropic-Cybersecurity-Skills
+(`docs/research/2026-10-18-security-vs-cybersecurity-skills.md`).
+
+### Fixed
+- **SSRF** — the private-range block list names `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, `fc00::/7`, `fe80::/10`,
+  IPv4-mapped addresses; only `http`/`https`; redirects re-checked.
+- **One severity for `pull_request_target` + PR-head checkout** (critical, as in `SUPPLY-CHAIN.md`); expression injection stays high.
+- **Images pinned by digest** — a tag only is medium `[no-image-digest]`, like an unpinned action.
+- **Grep starters** — action pinning catches numeric tags, branches and short SHAs; `npm install` at the end of a line; the MCP
+  starter no longer flags pinned `npx -y pkg@1.4.2`; `uvx pkg@x.y.z` / `uvx --from 'pkg==x.y.z'` as the safe form.
+- **Prompt injection examples** — separate roles are hardening, no longer marked SAFE; the key-redaction regex covers
+  `sk-proj-`, `sk-ant-`; external text is stripped of zero-width, bidi and Unicode tag characters; LLM09 has its own section.
+- **Two grep starters carried a backspace instead of `\b`** (code-injection starter, key regex); a test now forbids control characters.
+- **`audit.sh`** — Python (`pip-audit`), Rust (`cargo audit`) and Go (`govulncheck`) dependencies are audited or reported
+  `UNASSESSED`, never a silent pass; console / raw-error scan covers the whole tree, not only `src/`; `.gitignore` counts only a
+  line that ignores `.env` and warns on `!.env`; `gitleaks git` (8.19+) with a fallback to `detect`; placeholder words are matched
+  against the found value, not the whole line.
+- `git filter-branch` → `git filter-repo` in the secret-rotation advice.
+
+### Added
+- **A04:2025 Cryptographic Failures** (`crypto`): ECB, DES/3DES/RC4, weak randomness for secrets, IV/nonce reuse, RSA < 2048 and
+  PKCS#1 v1.5, PBKDF2 below the OWASP count, hardcoded keys, TLS verification disabled.
+- **A09:2025 Logging** (`logging`): secrets in logs, log injection, security events not logged.
+- **Auth**: JWT algorithm confusion and `kid`/`jku`/`x5u`/`jwk` header trust, weak HS256 secrets; OAuth 2.0 / OIDC
+  (`redirect_uri`, PKCE, `state`/`nonce`, single-use code, `iss`/`aud`, implicit flow); account enumeration.
+- **API and injection classes**: XXE, prototype pollution, mass assignment, GraphQL limits and field authorization, open redirect,
+  CORS with credentials, WebSocket origin, Host header in reset links, rate limits keyed on `X-Forwarded-For`.
+- **`references/IAC.md`** (`iac`): Dockerfile, Kubernetes / Helm, Terraform / CloudFormation.
+- **The project's own MCP server** in `AGENT-MCP.md`: instructions in tool descriptions, unauthenticated transport, `file://` in
+  fetch tools, loose arguments, fail-open confirmation, no call log, toxic flows. **Model weights** in `SUPPLY-CHAIN.md`;
+  `workflow_run` artifacts and `persist-credentials`; concrete dependency-confusion patterns.
+- `MAPPING.md` rows for every new class; each CWE id checked on cwe.mitre.org.
+
 ## [0.9.17] — 2026-10-17
 
 ### Changed

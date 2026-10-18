@@ -15,7 +15,7 @@ Derived files (upstream path → Keystone path):
 | `aif-improve/SKILL.md`, `aif-improve/references/CHECK-MODE.md`, `aif-improve/references/VALIDATOR.md` | `skills/check/SKILL.md`, `skills/check/references/ANALYZE.md`, `skills/check/references/VALIDATOR.md`, `agents/analyzer.md`, `agents/validator.md` |
 | `aif-implement/SKILL.md` (and its logging guide) | `skills/implement/SKILL.md`, `skills/implement/references/LOGGING.md` |
 | `aif-fix/SKILL.md` | `skills/fix/SKILL.md` |
-| `aif-verify/SKILL.md` | `skills/verify/SKILL.md`, `skills/verify/references/CHECKS.md`, `agents/verifier.md` |
+| `aif-verify/SKILL.md` | `skills/verify/SKILL.md`, `skills/verify/references/CHECKS.md`, `skills/verify/references/ACCEPT.md`, `skills/verify/references/AFTER-CHOICE.md`, `agents/verifier.md` |
 | `aif/SKILL.md` (project setup, without skills.sh installs and config.yaml) | `skills/setup/` |
 | `aif-security-checklist/` (SKILL.md, references, `scripts/audit.sh`) | `skills/security/` |
 | `aif-architecture/` | `skills/architecture/` |

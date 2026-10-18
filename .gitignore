@@ -1,3 +1,6 @@
 node_modules/
 test/harness/scenarios/
 test/harness/runs-*.err
+benchmarks/agentic/runs/
+.env
+benchmarks/agentic/__pycache__/

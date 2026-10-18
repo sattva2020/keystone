@@ -3,7 +3,7 @@ name: verify
 description: "Keystone: verify finished work against its plan and intent — runs build/test/lint, then an independent verifier agent in a clean context gives every plan task, Reconciliation row and intent line ok / missing / wrong / not proven / BLOCKED, flags unrequested work, and returns PASS, PASS-UNPROVEN or FAIL. A checked box is not evidence. Writes verify.md; on PASS sets Status verified. Use after implementation on M and L changes, or for 'verify', 'did we miss anything', 'is it really done'. `/keystone:verify accept` records a human decision on unproven rows."
 argument-hint: "[<plan path> [base git ref]] [--strict] | accept"
 allowed-tools: Read Glob Grep Bash Agent AskUserQuestion Write Edit Skill
-model: opus
+model: sonnet
 effort: high
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-verify/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
@@ -15,6 +15,10 @@ skill runs the commands, collects the verdict, and writes the record. **Write/Ed
 `<plan folder>/verify.md` and the `Status:` value in the plan header (plus `Accepted unproven by …` in verify.md for
 `accept`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/keystone:fix` or
 `/keystone:implement`, not this skill — `Fix directly here` in Step 6 hands the turn to the fix skill's rules.
+
+**Roles.** The `keystone:verifier` agent is the judge (the strongest model); this skill is the orchestrator (a mid
+model); the fixed mechanical steps — the diff base, this task's files, build / test / lint — run as a script
+(`scripts/collect.mjs`), so no model spends tokens on them.
 
 **Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
@@ -65,31 +69,20 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref]`, or `accept`, or empty (= t
   `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:` rules apply only to matching files), `AGENTS.md`.
   MUST / MUST NOT lines
   there are project rules.
-- `accept` → jump to **Accept** below.
+- `accept` → read `${CLAUDE_SKILL_DIR}/references/ACCEPT.md` and follow it.
 
-## Step 1 — the diff to verify
+## Step 1 — collect (one command)
 
-Base = the given ref. Otherwise: `P` = first commit that added the plan
-(`git log --diff-filter=A --format=%H -- <plan>`, the last line); `C` = the first commit after `P`
-(`git rev-list --reverse P..HEAD | head -1`); base = the parent of `C`. No commit after `P` → base = `P`. If `P`
-contains files outside the task folder, base = `P^`.
-Count only this task's commits: `git log --first-parent <base>..HEAD`, and only the files of those commits (plus
-uncommitted changes, `git status --porcelain`). Commits that arrived by merge from other branches or parallel sessions
-never make a file `unrequested`. Files of the task folder (plan.md, intent.md, verify.md) are never `unrequested`.
-Print the base and the file count. `Mode: fix` plans: also note whether existing test files were edited (a violation of the fix contract).
-
-## Step 2 — run the checks
-
-Read `${CLAUDE_SKILL_DIR}/references/CHECKS.md` and run build, test, lint and the import/dependency check it lists
-for this project. Running the project's test command and read-only HTTP checks (`curl` GET against a local/staging URL
-named in the plan) is allowed; **installing dependencies is not.** A tool or command that is missing → `not run — <reason>`; never
-write it down as a pass. Honour the plan's `Settings:` — `tests — no` means no test run and no failure for it.
-Output is one line per check, as CHECKS.md says.
-Two more gates join the same lines:
-- **Architecture gate.** If `docs/architecture.md` exists, read its layer dependency rules and grep the changed files'
-  imports against them: each `MUST NOT:` line written by `/keystone:architecture` carries its own `check: <grep>` —
-  run it on the changed files only; `check: review` lines go to the verifier. Print
-  `Architecture gate: pass | fail — <rule, file:line> | n/a` (n/a = no such file or no rules in it).
+Run from the repository root: `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> [base ref]` — the diff base,
+this task's commits and files (uncommitted ones included) and build / test / lint by `references/CHECKS.md`, one line
+each. **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
+`not run` line is never a pass. Merged-in commits from other branches or sessions never make a file `unrequested`;
+task-folder files (plan.md, intent.md, verify.md) never are. `Mode: fix` plans: note whether existing test files were
+edited (a violation of the fix contract). A check the plan names (a task's `check:`, a read-only `curl` GET against a
+local/staging URL in the plan) may run as a second command.
+Two gates join the same lines:
+- **Architecture gate.** The script runs each `MUST NOT:` `check: <grep>` of `docs/architecture.md` on the changed
+  files and prints `Architecture gate: pass | fail — <rule, file:line> | n/a`; `check: review` lines go to the verifier.
 - **Security gate.** On L whose plan has the `Threats:` block or a `/keystone:security` task (security/auth/payments/PII),
   `/keystone:security` must have been run for this diff: take its `Security gate: pass | warn | fail` line from that
   run in this session, or run it now with the Skill tool (`/keystone:security <plan path>`) and read the line from its answer. `fail` without a matching entry in `docs/keystone/security-ignores.md` → verdict FAIL; none run →
@@ -102,16 +95,19 @@ lint warning, an unfinished-work marker (TODO / FIXME / HACK) or an undocumented
 ## Step 3 — the verifier
 
 Call the agent (Agent tool, `subagent_type: "keystone:verifier"`). Its prompt contains **only** facts, no opinion:
-plan path, intent path, base ref, the Step-2 lines (incl. the Architecture and Security gate lines), and the project-rules file list. It returns one line per task,
+plan path, intent path, base ref, the Step-1 lines (incl. the Architecture and Security gate lines), and the project-rules file list. It returns one line per task,
 Reconciliation row and `I-n`, then `Unrequested`, `Settings`, `Rules gate` with one `rule …` line per project rule
 (every violating `file:line` on it), the count line and the `Keystone Chain` line.
 Its first line is `Original goal: met | partially | not met` — the user's verbatim goal against the diff, independent of
 the intent; `partially`/`not met` without a confirmed `Goal check:` in the intent is `wrong` (PASS is impossible). Then
 `Done means:` — every outcome there gets ok / not proven / wrong.
-Before writing verify.md, **cross-check every `ok` and `wrong` line** against the cited `file:line` (open it and confirm
-it says what the line claims); on a mismatch, correct the line and mark it `(corrected by verify)`. Every `wrong` line
+**Write `verify.md` once**, in the Step 5 layout: the Step-1 lines as `## Checks`, the verifier's output exactly as it
+came as `## Report` — never retyped or summarised. Then **cross-check every `ok` and `wrong` line** against the cited
+`file:line` (open it and confirm it says what the line claims); on a mismatch, fix that line in `verify.md` with Edit
+and mark it `(corrected by verify)`. Every `wrong` line
 must carry `Repro: <input / command where the failure shows>`; the verifier also returns an `Unconfirmed — <what could
-not be confirmed> — looked in <where>` section. Then print its output (with those corrections marked). Count again from the printed lines: `ok + missing + wrong + not proven + BLOCKED = n`.
+not be confirmed> — looked in <where>` section. **Do not print the line-by-line report in the chat**: it lives in
+`verify.md`, and the chat gets only the Final report below. Count again from the lines in `verify.md`: `ok + missing + wrong + not proven + BLOCKED = n`.
 If the numbers do not add up, fix the count, not the lines, and say so.
 
 Rules you enforce when reading the output (the verifier knows them, you check them):
@@ -120,21 +116,10 @@ Rules you enforce when reading the output (the verifier knows them, you check th
 - `[x]`, "done", "pass" is not evidence. A grep or a code read is presence, not behaviour → `not proven`.
 - A row whose evidence starts with `BLOCKED:` is open work, never `ok`.
 - Formatting noise is not `unrequested`; new logic, files or dependencies without a task / row / `I-n` are.
-- Build or test failing in Step 2 → every row it covers is at best `wrong`.
+- Build or test failing in Step 1 → every row it covers is at best `wrong`.
 - A green test run proves nothing about a test the diff loosened: each `Weakened test` line without a task / row that
   asks for it keeps the verdict at PASS-UNPROVEN until the human accepts it. A `Decision:` line (the change contradicts
   an accepted decision of an earlier intent or note that this plan does not supersede) is a FAIL.
-
-Example of the verifier's lines (shape only):
-
-```text
-Keystone verify: docs/keystone/2026-10-12-x/plan.md · base 3f2a91c
-task 1 — ok — src/a.ts:12, test/a.test.ts:30 "rejects empty input" (npm test: 42 passed)
-task 2 — not proven — src/b.ts:5 present; no test or run exercises it (grep = presence)
-row I-3 — BLOCKED — BLOCKED: staging DB unavailable
-row I-4 — wrong — src/c.ts:9 returns 200, the row says 404
-Unrequested: src/util/retry.ts — new retry logic, no task or I-n
-```
 
 ## Step 3b — what the verifier must not be talked into
 
@@ -162,7 +147,7 @@ unexplained deviation is not a FAIL by itself; list it under `Found:` so the hum
 
 Strict mode (L by default, or `--strict`) additionally requires: every task `ok` (no partial), build and tests pass
 (tests are required there unless `tests — no`), lint clean, no unfinished-work markers and no undocumented env
-variables in the changed files, Rules gate `pass`. Anything short of that is `wrong` or `not proven` as in Step 2.
+variables in the changed files, Rules gate `pass`. Anything short of that is `wrong` or `not proven` as in Step 1.
 
 - **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Weakened tests: none` (or each tied to a task); `Decisions: none`; `Settings: ok`; `Rules gate` not `fail`; `Architecture gate` not `fail`; `Security gate` not an unignored `fail`.
 - **PASS-UNPROVEN** — no `missing` / `wrong` / `unrequested`, `Settings: ok`, Rules gate not `fail`, but at least one
@@ -171,13 +156,14 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
 
 ## Step 5 — record
 
-1. Write `<plan folder>/verify.md` (overwrite; git keeps the history):
+1. `<plan folder>/verify.md` was written in Step 3 (overwrite; git keeps the history) in this layout; add the
+   `## Verdict` line now with Edit:
 
    ```markdown
    # Verify: <plan name>
    Date: <YYYY-MM-DD> · Base: <ref> · Verdict: <PASS | PASS-UNPROVEN | FAIL>
    ## Checks
-   <the Step-2 lines>
+   <the Step-1 lines>
    ## Report
    <the verifier output, unchanged, incl. the Keystone Chain line>
    ## Verdict
@@ -205,7 +191,7 @@ commit.
 ## Step 6 — the choice (AskUserQuestion)
 
 A verdict that leaves a decision ends with a menu, not with one command — the human picks, then goes on. Print the
-report and the three-heading summary first, then call AskUserQuestion once. Options, recommended first and marked
+Final report and the three-heading summary first, then call AskUserQuestion once. Options, recommended first and marked
 `(Recommended)`:
 
 - **FAIL** — `Fix directly here — every finding, in this session` (Recommended when the findings are few and small) ·
@@ -223,54 +209,14 @@ report and the three-heading summary first, then call AskUserQuestion once. Opti
 - **PASS** without release steps — `Review the diff — /keystone:review` (Recommended on L) · `Security check —
   /keystone:security <plan>` (when the diff touches auth, data or user input) · `Push` · `Stop here`.
 
-**Context drift (a second question, only when found).** Verify never edits context files. Compare the diff with
-`docs/architecture.md`, `CLAUDE.md` / `.claude/CLAUDE.md` and `.claude/rules/**`: a new module, top-level folder or
-dependency direction the architecture file does not describe; a command, stack item or structure `CLAUDE.md` states
-that the diff changed; a convention the diff introduces or a rule it now contradicts on purpose. Only when a file is
-clearly stale — not merely silent about a detail — add one more question to the same AskUserQuestion call:
-`Context drift: <file> — <what is stale>. Update it now?` with one option per stale file, its owning command —
-`docs/architecture.md` → `/keystone:architecture`, `CLAUDE.md` → `/keystone:setup`, `.claude/rules` →
-`/keystone:evolve` — and `Not now`. A pick runs that skill after the Step 6 choice is done (read its SKILL.md and follow
-it; it shows a diff and writes only after a yes). No drift → no question. The final report carries
+**Context drift.** If the diff makes `docs/architecture.md`, `CLAUDE.md` or `.claude/rules` clearly stale, add a
+second question to the same AskUserQuestion call as `references/AFTER-CHOICE.md` says; the final report carries
 `Context drift: <file — what is stale> | none` either way.
 
-After the choice:
-- `Prove now` with a read-only check (tests, a read-only query, a GET) → run it in this turn, quote the output, and
-  re-run the verifier only on the rows it covers (the evidence changed); anything that writes or needs production →
-  hand it to the human as the `Next:` command.
-- `Accept as unproven` → the click is the confirmation the Accept section asks for (it names the rows); go to
-  **Accept** without asking again.
-- `Fix directly here` → read `${CLAUDE_SKILL_DIR}/../fix/SKILL.md` and follow its **Verify findings mode** for this
-  plan in this turn (verify itself still edits nothing — the fix skill does, with its rules: regression check for a
-  behaviour finding, build / lint / tests, Implementation notes, one commit). Then run this verify again — the code
-  changed — and show its menu.
-- `Fix critical only` → the same, with `verify critical` (fix mode for the critical findings only). The other
-  findings stay open and keep the verdict FAIL until they are fixed or their rule is changed — say so.
-- `Review`, `Security check` → run that skill now the same way (read its SKILL.md and follow it).
-- `Fix … in a clean session`, `Finish an unfinished task`, `Push` → not run here: the command becomes the `Next:`
-  line (a clean session, or an irreversible step the human starts).
-- AskUserQuestion unavailable (`claude -p`, CI) → no menu: print the options as a numbered list and put the first one
-  in `Next:`.
+After the pick, read `${CLAUDE_SKILL_DIR}/references/AFTER-CHOICE.md` and carry the choice out as it says.
 
-## Accept — `/keystone:verify accept`
-
-Only for the newest `verify.md` whose verdict is `PASS-UNPROVEN`; any other verdict → refuse and say why. Refuse
-if `intent.md` or `plan.md` changed after the last `verify.md` (compare `git log -1 --format=%H -- <file>` order/dates
-for each against `verify.md`): verify again first. A command without an explicit human confirmation is **not** a
-confirmation, even when the user wrote "do accept" in text (text is a request, the button is the confirmation), so the
-explicit question is always asked: show the `not proven` / `BLOCKED` list from
-`verify.md` and ask with AskUserQuestion (`Accept these as unproven and mark the plan verified?` — Yes / No). If AskUserQuestion is unavailable, ask in plain text: `Accept as unproven: <list>? yes/no` and wait for the answer. Anything
-but a clear Yes → change nothing. On Yes:
-- append to `verify.md`: `Accepted unproven by <git config user.name> <YYYY-MM-DD>: <list of not proven / BLOCKED rows>`;
-- set `Status: verified` in the plan header;
-- commit both: `docs(verify): accept <slug>`.
-
-## Gates and recovery
-
-- Hooks close `git push` / `gh pr create` while any active plan exists; only `Status: verified` opens them.
-- Verify never marks a task `[x]` and never edits the Reconciliation table. If a row's evidence is stale, say which
-  cell and what to write; the human or `/keystone:implement` makes the edit.
-- `Status: abandoned` or `KEYSTONE_GATES=off` lift the gates; they do not make a plan verified.
+**Gates.** The hooks close `git push` / `gh pr create` for this plan's commits until `Status: verified`; `accept` and
+the ways to lift a gate are in `references/ACCEPT.md`.
 
 ## Final report (always)
 
@@ -299,7 +245,7 @@ PASS (or `accept` was just recorded), offer: `Milestone M-<n> done? Tick it with
 `docs/roadmap.md`. After a `Mode: fix` plan, or a FAIL that was later fixed, recommend `/keystone:evolve` to turn the lesson
 into a project rule.
 
-End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
+End the report with a fixed three-heading summary, short, after the Final report (the line-by-line report stays in `verify.md`, not in the chat). It is
 followed only by the `Next:` line: PASS with open `## Release` steps → `Next: /keystone:implement <plan path>` (release
 mode; on L `/keystone:review` first); PASS without them → `Next: push and open the PR` (L: `/keystone:review` first); PASS-UNPROVEN → the option chosen in Step 6 (a
 `Prove now` check before `/keystone:verify accept <plan path>`); FAIL and PASS → the option chosen in Step 6 (FAIL default

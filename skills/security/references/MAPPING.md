@@ -46,6 +46,31 @@ LLM09:2026 Vector and Embedding Weaknesses · LLM10:2026 Improper Output Handlin
 | RAG tenant isolation, embedding access | LLM09:2026 | CWE-639 | V8 | A.8.3 |
 | LLM output executed / rendered unsafely | LLM10:2026 | CWE-79, CWE-94 | V1 | A.8.28 |
 | Agent / MCP config (see AGENT-MCP.md) | A02:2025, A03:2025, LLM03:2026, LLM04:2026 | CWE-798, CWE-829 | V13 | A.8.9 |
+| XXE, entity expansion | A02:2025 | CWE-611, CWE-776 | V1 | A.8.28 |
+| Mass assignment | A01:2025 | CWE-915 | V8 | A.8.28 |
+| Open redirect, OAuth `redirect_uri` | A01:2025 | CWE-601 | V8 / V10 OAuth | A.8.28 |
+| CORS reflecting Origin with credentials | A02:2025 | CWE-942 | V3 | A.8.9 |
+| Prototype pollution | A05:2025 | CWE-1321 | V1 | A.8.28 |
+| JWT algorithm confusion, key-header trust | A07:2025 | CWE-347 | V9 Self-contained Tokens | A.8.24 |
+| OAuth / OIDC state, PKCE, claims | A07:2025 | CWE-352, CWE-347 | V10 OAuth and OIDC | A.8.28 |
+| Account enumeration | A07:2025 | CWE-204 | V6 | A.8.28 |
+| Host header in reset links | A07:2025 | CWE-640 | V6 | A.8.28 |
+| GraphQL without limits | A06:2025 | CWE-770 | V4 API | A.8.6 |
+| WebSocket origin not checked | A01:2025 | CWE-1385 | V4 API | A.8.28 |
+| Broken / risky algorithm, weak key, nonce reuse | A04:2025 | CWE-327, CWE-326, CWE-323 | V11 Cryptography | A.8.24 |
+| Weak randomness for secrets | A04:2025 | CWE-338, CWE-330 | V11 | A.8.24 |
+| Weak password-based KDF | A04:2025 | CWE-916 | V11 | A.8.24 |
+| Hardcoded key / IV | A04:2025 | CWE-321 | V11 / V13 | A.8.24 |
+| TLS verification disabled | A04:2025 | CWE-295 | V12 Secure Communication | A.8.24 |
+| Secrets / PII in logs | A09:2025 | CWE-532 | V16 | A.8.15 |
+| Log injection | A09:2025 | CWE-117 | V16 | A.8.15 |
+| Security events not logged | A09:2025 | CWE-778 | V16 | A.8.15 |
+| Privileged container, host access | A02:2025 | CWE-250 | V13 | A.8.9 |
+| Kubernetes / cloud RBAC or IAM wildcards | A01:2025 | CWE-269, CWE-284 | V8 | A.8.2 |
+| Public bucket, open admin port, insecure defaults | A02:2025 | CWE-284, CWE-1188 | V13 | A.8.9 |
+| Instance metadata v1 (IMDSv1, `http_tokens = "optional"`) | A02:2025 | CWE-1188 | V13 | A.8.9 |
+| Instructions in an MCP tool description | LLM01:2026 | CWE-1427 | — | A.8.28 |
+| Untrusted model weights / remote code | LLM04:2026, A08:2025 | CWE-502, CWE-494 | V15 | A.8.30 |
 
 CWE ids come from the CWE catalogue. ISO Annex A names, secondary sources: A.8.8 technical vulnerabilities, A.8.9
 configuration management, A.8.12 data leakage prevention, A.8.15 logging, A.8.24 use of cryptography, A.8.25 secure

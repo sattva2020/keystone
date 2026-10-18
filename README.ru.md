@@ -52,9 +52,7 @@ claude plugin install keystone@keystone
 ## Как это работает
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="assets/flow-light.svg">
-  <img src="assets/flow-light.svg" alt="Путь пользователя Keystone по этапам плейбука AI-native SDLC: Plan → Design → Build → Test → Deploy → Maintain" width="100%">
+  <img src="assets/flow-dark.svg" alt="Путь пользователя Keystone по этапам плейбука AI-native SDLC: Plan → Design → Build → Test → Deploy → Maintain" width="100%">
 </picture>
 
 Keystone следует [плейбуку Anthropic AI-native SDLC](https://claude.com/resources/articles/the-ai-native-sdlc-playbook):
@@ -119,8 +117,9 @@ Keystone следует [плейбуку Anthropic AI-native SDLC](https://clau
 | **M** | один очевидный подход, несколько файлов | `/keystone:plan <задача>` → Approve → `/keystone:implement` → `/keystone:verify` | `plan.md` с Risks из трёх пунктов, `verify.md` |
 | **L** | несколько решений; данные или схема; безопасность; чужие модули; неясное «готово» | `/keystone:intent` → `/keystone:plan <intent>` (с `/keystone:check`) → Approve → новая сессия → `/keystone:implement` → `/keystone:verify` | `intent.md`, `plan.md` с Coverage, `verify.md` |
 
-Модель под этап: **Opus** — допрос, intent, план, check, verify; **Sonnet** — реализация по одобренному плану;
-**Haiku** — поиск фактов. `effort` из frontmatter скилла действует только в ход вызова; для многоходовых
+Модель под этап: **Opus (судья)** — допрос, intent, план, check, верификатор внутри verify; **Sonnet (оркестратор)** —
+реализация по одобренному плану и сам прогон verify; механика — скрипты (сбор фактов verify — `collect.mjs`), **Haiku** —
+поиск фактов. `effort` из frontmatter скилла действует только в ход вызова; для многоходовых
 plan/grill/check сессий ставьте `/effort high` на сессию.
 
 Вопросов о тестах, логировании и документации нет. Plan выводит их из репозитория и пишет строкой `Settings:` в
@@ -164,7 +163,7 @@ plan/grill/check сессий ставьте `/effort high` на сессию.
 
 | Команда | Что делает |
 |---|---|
-| `/keystone:security [категория\|agent\|supply-chain\|путь\|план] \| ignore <id> <причина>` | аудит по OWASP Top 10:2025 и LLM Top 10 2026, агенты/MCP и цепочка поставок, ссылки на CWE/ASVS/ISO; `Security gate: pass\|warn\|fail` |
+| `/keystone:security [категория\|crypto\|logging\|iac\|agent\|supply-chain\|путь\|план] \| ignore <id> <причина>` | аудит по OWASP Top 10:2025 (с A04 криптографией и A09 логированием) и LLM Top 10 2026, агенты/MCP и собственный MCP-сервер, цепочка поставок, IaC/K8s, ссылки на CWE/ASVS/ISO; `Security gate: pass\|warn\|fail` |
 | `/keystone:review [PR\|ref\|rules [ref]\|пусто = staged]` | ревью без правок; валидатор в чистом контексте перепроверяет каждую находку; `rules` — только правила MUST / MUST NOT по диффу, без плана |
 | `/keystone:qa [--all] [change-summary\|test-plan\|test-cases] [план\|ref]` | сводка изменений, план тестов и ручные сценарии со ссылками на `I-n` |
 | `/keystone:qa-check [human\|agent] [план\|папка qa\|ветка]` | прогоняет сценарии `qa`; pass / fail / blocked с доказательством |
