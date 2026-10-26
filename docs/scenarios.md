@@ -78,5 +78,6 @@ Run nothing. The task keeps its status; when the event happens, `/keystone-statu
 `/keystone:ask <question>` — answers only on evidence, otherwise "insufficient information: …".
 
 ### The project started with AI Factory
-Keystone reads `.ai-factory/*` as a fallback: `check` finds plans in `.ai-factory/plans/`, and a plan's D1… decision
-list stands in for the intent. Start new tasks with `/keystone:start`, not `/aif-plan`.
+Keystone does not read `.ai-factory/*`: plans there are not active plans for it, and the gates ignore them. Start new
+tasks with `/keystone:start`, not `/aif-plan`; to keep decisions from an old plan, give them in your words to
+`/keystone:intent <topic> — decisions: …`.
