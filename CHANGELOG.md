@@ -27,10 +27,10 @@ The mod speaks the user's language: English by default instead of hard-coded Rus
 Return after a pause without re-reading the whole history.
 
 ### Added
-- **«Кэш остыл» band.** Claude's prompt cache lives up to an hour; after that the next answer re-reads the whole
+- **«Cache went cold» band.** Claude's prompt cache lives up to an hour; after that the next answer re-reads the whole
   context at full price. When the last main-loop turn is 55+ minutes old, the session works with a plan and the context
-  is 30k or more, the band offers **Начать чисто** — `/clear` with no model turn, the plan's next command in the box
-  (only what the plan does not hold is lost) — or **Записать и начать**, the usual handoff (one re-read, the agent
+  is 30k or more, the band offers **Start clean** — `/clear` with no model turn, the plan's next command in the box
+  (only what the plan does not hold is lost) — or **Save and start**, the usual handoff (one re-read, the agent
   updates the plan, then `/clear`). The band goes away with any sent prompt. A reload or a resume finds the pause
   through the time kept in the plugin store per session id.
 - Docs: leaving for more than an hour → `/keystone-handoff` beforehand, while the cache is warm.

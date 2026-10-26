@@ -10,7 +10,7 @@ places:
 3. **`/keystone-status`** at any time: the active plan, its status, tasks, gates, cost and a `Next:` line. No model call.
    The same next commands sit as buttons above the prompt box (a click fills the box, you press Enter); file paths in
    answers are clickable; when the context grows, `/keystone-handoff` moves the task to a clean session through the plan. Back after more
-   than an hour (the prompt cache is gone), the band offers **Начать чисто** — `/clear` with no model turn, the plan's
+   than an hour (the prompt cache is gone), the band offers **Start clean** — `/clear` with no model turn, the plan's
    next command in the box — so the whole history is not re-read at full price.
 
 If none of these helps, find your situation below.
