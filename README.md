@@ -51,6 +51,20 @@ The plan is the spec: there is no separate `spec.md`, and every row of the plan 
 | **Security in the chain** | `/keystone:security` audits OWASP Top 10:2025, LLM Top 10, agent/MCP config and supply chain; on L its gate sits under verify. |
 | **Resume without replaying the chat** | Each stage ends in a committed file and a `Next:` command. The mod hands a long session to a clean one through the plan, offers a clean start when the prompt cache has gone cold, and counts cost per stage. |
 
+## What you can use it for
+
+| Use case | What it's for |
+|---|---|
+| **A feature with open decisions** | Your answers become `intent.md`, the plan is checked before Approve, verify runs in a clean context, push opens after PASS |
+| **A bug** | `/keystone:fix`: a failing regression test in a new file first, then the smallest fix; committed tests stay locked |
+| **A new or undocumented project** | `/keystone:setup` writes `CLAUDE.md`, rules and `.mcp.json`; then `architecture`, `docs`, `dockerize`, `ci` |
+| **A check before deploy** | `/keystone:security` after auth, payments or input changes: `Security gate: pass \| warn \| fail` |
+| **Testing by hand or by an agent** | `/keystone:qa` writes scenarios from the plan, `/keystone:qa-check human \| agent` runs them |
+| **Mistakes that keep coming back** | `/keystone:evolve` turns them into `.claude/rules/` after your yes; `/keystone:transfer` brings them from another project |
+| **Coming back to a task** | `/keystone-status` names the plan and the next command; nothing to re-read in the chat |
+
+Step-by-step routes for each: [What to run next — scenarios](docs/scenarios.md).
+
 ## Install
 
 In Claude Code:
@@ -163,90 +177,27 @@ see **[What to run next — scenarios](docs/scenarios.md)**.
 
 ## Commands
 
-All 25 commands, grouped. Parameters are in brackets; `|` is a choice.
+All 25 commands in five groups; each one with its parameters, model and "when to use" is in the
+[skills reference](docs/skills.md).
 
-**Task chain**
-
-| Command | What it does |
+| Group | Commands |
 |---|---|
-| `/keystone:start <task>` | sizes the change S/M/L and picks the route |
-| `/keystone:grill [topic]` | interviews you over the whole decision tree; returns a numbered decision list, writes no file |
-| `/keystone:intent [idea]` · `accept <path>` | writes `intent.md` in your words: numbered `I-n` lines, a decision log, a sign-off |
-| `/keystone:plan <intent or task> [S\|M\|L]` | the plan is the spec: reconciliation, rules check, Risks, tasks with checks, Approve |
-| `/keystone:check [intent] [plan] [request]` | independent plan check in clean contexts; intent coverage %; a free-text request after the paths |
-| `/keystone:implement [plan]` | tasks in order, `BLOCKED:` instead of "not run", a decision log, resumable after `/clear` |
-| `/keystone:verify [plan [base]] [--strict]` · `accept` | build, tests, lint, then a verifier in a clean context; architecture and security gates; PASS / PASS-UNPROVEN / FAIL |
-| `/keystone:fix <bug>` | regression first: a failing test in a new file, then the smallest fix. `/keystone:fix verify` fixes every finding of the last FAIL `verify.md` in one pass |
+| **Task chain** | `start` · `grill` · `intent` · `plan` · `check` · `implement` · `verify` · `fix` |
+| **Project context** | `setup` · `architecture` · `docs` |
+| **Checks and quality** | `security` · `review` · `qa` · `qa-check` · `ask` · `pentest` · `optimize` |
+| **Build and ship** | `dockerize` · `ci` |
+| **Lessons and knowledge** | `roadmap` · `evolve` · `transfer` · `reference` · `distill` |
 
-**Project context**
-
-| Command | What it does |
-|---|---|
-| `/keystone:setup [description]` | writes a short `CLAUDE.md`, `.claude/rules/base.md` and a project `.mcp.json` after a diff and a "yes"; imports an existing `AGENTS.md` |
-| `/keystone:architecture [pattern]` | picks an architecture pattern and writes `docs/architecture.md` with a grep check per rule |
-| `/keystone:docs [update <files\|topics>] [--web]` | README as a landing page and topic pages in `docs/` |
-
-**Checks and quality**
-
-| Command | What it does |
-|---|---|
-| `/keystone:security [category\|agent\|supply-chain\|path\|plan] \| ignore <id> <reason>` | OWASP Top 10:2025 + LLM Top 10 2026, agent/MCP and supply-chain audit, findings mapped to CWE/ASVS/ISO; `Security gate: pass\|warn\|fail` |
-| `/keystone:review [PR\|ref\|rules [ref]\|empty = staged]` | review without edits; a clean-context validator rechecks every finding; `rules` checks only the MUST / MUST NOT rules over the diff, without a plan |
-| `/keystone:qa [--all] [change-summary\|test-plan\|test-cases] [plan\|ref]` | change summary, test plan and manual scenarios linked to `I-n` |
-| `/keystone:qa-check [human\|agent] [plan\|qa folder\|branch]` | runs the `qa` scenarios; pass / fail / blocked with evidence |
-| `/keystone:ask <question>` | answers only on evidence, otherwise `INSUFFICIENT INFORMATION` |
-| `/keystone:pentest <your target URL> [report]` | confirms the security findings against your own running app (localhost / staging, or a URL you name as yours); one safe request per finding, raises or lowers it |
-| `/keystone:optimize perf <target> \| simplify <path>` | makes code faster or simpler on measurement: same command before and after, a change kept only if the numbers improve |
-
-**Build and ship**
-
-| Command | What it does |
-|---|---|
-| `/keystone:dockerize [--audit]` | Dockerfile, compose, hardened production overlay; or an audit |
-| `/keystone:ci [github\|gitlab] [--enhance]` | CI pipeline from the tools the project really has |
-
-**Lessons and knowledge**
-
-| Command | What it does |
-|---|---|
-| `/keystone:roadmap [check\|vision]` | `docs/roadmap.md` with milestones `M-n` |
-| `/keystone:evolve [all\|stage\|topic\|add <rule>]` | turns repeated lessons into `.claude/rules/` after a "yes"; `add` writes one rule you dictate, with dedupe and `paths:` |
-| `/keystone:transfer <project path> [all\|stage\|topic]` | brings rules and lessons from another of your projects |
-| `/keystone:reference <url\|path>… [--name] [--update]` · `list\|show\|delete` | project reference: conclusions, prices, limits with a source |
-| `/keystone:distill <path\|url>… [--name] [--path] [--update] [--split]` | turns a book or documents into a Claude Code skill |
-
-Full reference with models, "when to use" and who calls each command: [`docs/skills.md`](docs/skills.md).
+Every command is `/keystone:<name>`, for example `/keystone:plan <intent or task>`.
 
 ## Gates (hooks)
 
-Gates apply only while there is an **active plan**: the `plan.md` in the newest task folder whose status is `draft`,
-`approved` or `implementing`. With no active plan, an S-level change is never blocked.
+Gates apply only while there is an active plan. While it is `draft`, code edits outside the task folder are denied;
+`git push` and `gh pr create` for the plan's commits stay closed until `/keystone:verify` returns PASS; in a fix,
+committed tests are locked. Release steps (`## Release`) run after verify, each after your yes. To lift a gate:
+`Status: abandoned` in the plan or `KEYSTONE_GATES=off`. Task files live in `docs/keystone/<YYYY-MM-DD>-<slug>/`.
 
-| When | What is denied |
-|---|---|
-| plan is `draft` | code edits outside the task folder until the plan is approved |
-| fix is `implementing` | edits to test files already committed in `HEAD` (a new regression test file is fine) |
-| plan is `implementing` and `## Tasks` has `[ ]` without `BLOCKED:` | ending the turn: one reminder, it never blocks a question to you |
-| an active plan whose commits the push ships (commits touching its task folder) | `git push` and `gh pr create` until `/keystone:verify` returns PASS, or `/keystone:verify accept`; a push that carries none of the plan's work passes |
-
-**Release after verify.** Because push opens only on a verified plan, release steps never sit in `## Tasks` — the plan
-keeps them in `## Release` (`R1`, `R2`, …). Verify does not count them as open work; on PASS its `Next:` points to
-`/keystone:implement <plan>`, which in **release mode** runs only those steps, asks for your yes before each merge, push
-or deploy, and keeps the plan `verified`. This follows the playbook's rule: *"The agent does everything up to the
-production gate and nothing past it."*
-
-The draft and Stop gates, the status line, the buttons and the handoff offer touch only the session that works with the plan: it ran `/keystone:<stage>` on that plan or edited a file in its folder. The push gate covers the whole repository.
-
-To lift a gate, set `Status: abandoned` in the plan header, or start Claude Code with the environment variable `KEYSTONE_GATES=off` (a prefix on one command does not reach the hook). The hooks are plain Node
-scripts (`hooks/gate.mjs`) and read only the hook payload and the plan files.
-
-## Files
-
-Task files live in `docs/keystone/<YYYY-MM-DD>-<slug>/` — `intent.md`, `plan.md`, `verify.md` (Keystone
-never reads or writes AI Factory's `.ai-factory/` folder). The plan header is `Level · Mode · Status` (plus `Settings:` and `Done means:`), and
-Status moves `draft → approved → implementing → verified`, or `abandoned` at any point; the `## Release` steps run while the
-plan is `verified`. Each stage ends in a committed
-file and the next stage starts by reading it, not by replaying the chat.
+Every gate, release mode and the plan status flow: [`docs/gates.md`](docs/gates.md).
 
 ## Benchmarks
 
@@ -262,38 +213,11 @@ Method, tables and limits: [`docs/benchmarks.md`](docs/benchmarks.md).
 
 ## Status and cost (mod)
 
-Keystone ships a small TypeScript [mod](https://code.claude.com/docs/en/plugins/mods) next to its hooks:
+A small TypeScript mod next to the hooks: `/keystone-status` and a status line with the plan, tasks and cost per stage
+(no model call), the next command in the prompt box and as buttons, handoff to a clean session through the plan, and
+a **Start clean** offer when the prompt cache has gone cold. Needs Claude Code 2.1.287+ (terminal) or 2.1.286+ (Desktop).
 
-- **`/keystone-status`** — the active plan, its level, status, tasks done, `BLOCKED` count, `Done means`, which gates are
-  on, and the cost of each stage. Answered locally, without a model call.
-- **Status line** — `Keystone · L · implementing · 13/14 · $9.60` under the prompt.
-- **Cost meter** — after every turn the session's cost delta is added to the stage you ran (`/keystone:plan`,
-  `check`, `implement`, …) for the active plan; `implement` and `verify` receive the measured numbers for their
-  `cost:` line.
-- **Next command** — after a Keystone turn the empty prompt box shows the next step with the plan path filled in
-  (`/keystone:implement docs/keystone/…/plan.md`, then `/keystone:verify …`); press Tab or → to take it.
-- **Next buttons** — above the prompt, from the plan status, without a model call: the plan's next command and
-  `/keystone-status`, plus `/keystone:check` for an L draft with an intent or `/keystone:review` before verify on L.
-  A click puts the command into the prompt box; you press Enter.
-- **File links** — file paths in answers are clickable relative to the session folder (`` `hooks/keystone.ts:86` ``
-  becomes a link); only the rendering changes, the message stays as it is.
-- **Handoff** — when the context grows, `/keystone-handoff` or the Hand off button (at 350k / 600k / 800k tokens;
-  100k / 150k / 170k for a short window) has the agent update `plan.md`; after `/clear` the next command is already
-  in the prompt box. `/clear` runs only after `KEYSTONE HANDOFF READY` and only if the plan really changed.
-- **Back after a pause** — Claude's prompt cache lives up to an hour; after that the next answer re-reads the whole
-  conversation at full price. When the last answer is 55+ minutes old, the session works with a plan and the context
-  is 30k tokens or more, the band shows *Cache went cold (2 h ago): the next answer re-reads 180k from scratch* with
-  two buttons. **Start clean** runs `/clear` with no model call — the history is not re-read, the plan's next command
-  lands in the prompt box, and only what the plan does not hold is lost. **Save and start** is the usual handoff: one
-  re-read, the agent updates the plan, then `/clear`. Sending any message hides the band. Leaving for more than an
-  hour? Run `/keystone-handoff` before you go, while the cache is still warm and the write-up is cheap.
-- **Interface language** — the band, buttons and toasts come in English, Russian, German, French or Spanish. The
-  plugin option *Interface language* (`auto` by default) picks one; `auto` follows Claude Code's own `language`
-  setting (`"language": "russian"`, `"Deutsch"`, … — the name or the self-name, any case), anything else is English.
-  A string without a translation falls back to English. The German, French and Spanish texts are machine translations
-  — corrections are welcome. The handoff request sent to the agent stays in English in every language.
-
-Mods need Claude Code 2.1.287+ (terminal) or 2.1.286+ (Desktop). In `claude -p` the hooks run but nothing is drawn.
+Every element, thresholds and the interface language option: [`docs/mod.md`](docs/mod.md).
 
 ## Integrations
 
