@@ -6,15 +6,31 @@
   <img src="assets/keystone-light.svg" alt="Keystone — intent-first workflow for Claude Code" width="640">
 </picture>
 
-**Process sized to the change. Intent first, plan as the spec, an independent check before and after the code.**
+<p>
+  <strong>Process sized to the change. Intent first, plan as the spec, an independent check before and after the code.</strong><br>
+  <sub>S / M / L by the size of the change · Gates held by hooks, not prompts · Verify in a clean context · Plugin for Claude Code</sub>
+</p>
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-D97757)](https://code.claude.com/docs/en/plugins)
-[![Latest release](https://img.shields.io/github/v/release/sattva2020/keystone)](https://github.com/sattva2020/keystone/releases)
+<p>
+  <a href="#install">Install</a> &nbsp;·&nbsp;
+  <a href="#how-it-works">How it works</a> &nbsp;·&nbsp;
+  <a href="#commands">Commands</a> &nbsp;·&nbsp;
+  <a href="docs/scenarios.md">What to run next</a> &nbsp;·&nbsp;
+  <a href="docs/skills.md">Reference</a> &nbsp;·&nbsp;
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
-English | [Русский](README.ru.md)
+<p>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-1b1b1f?style=flat-square&labelColor=1b1b1f"></a>
+  <a href="https://code.claude.com/docs/en/plugins"><img alt="Claude Code plugin" src="https://img.shields.io/badge/Claude%20Code-plugin-1b1b1f?style=flat-square&labelColor=1b1b1f"></a>
+  <a href="https://github.com/sattva2020/keystone/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/sattva2020/keystone?style=flat-square&color=1b1b1f&labelColor=1b1b1f"></a>
+</p>
+
+English · [Русский](README.ru.md)
 
 </div>
+
+<hr>
 
 ## What it is
 
@@ -24,6 +40,16 @@ chain: `intent` → `plan` → independent check of the plan → `implement` →
 
 The plan is the spec: there is no separate `spec.md`, and every row of the plan points back to a numbered intent line
 (`I-1…`). Hard rules are held by hooks, not only by prompt text.
+
+| Capability | What it gives you |
+|---|---|
+| **Process sized to the change** | `/keystone:start` sizes every task S, M or L. A one-line fix is edited and checked at once; only a task with open decisions runs the full chain. |
+| **Intent in your words** | `grill` asks every decision that is yours, then `intent.md` records them as numbered `I-n` lines you sign off. Facts are found by the agent; decisions stay yours. |
+| **The plan is the spec** | One `plan.md` with risks and a check per task, every row traced to an `I-n`. `/keystone:check` reviews it in clean contexts and reports intent coverage before you approve. |
+| **Gates held by hooks** | No code edits while the plan is a draft, no `git push` or PR until verify passes. Plain Node hooks, not prompt text the model can talk itself out of. |
+| **Independent verify** | A verifier that did not write the code gives every task and `I-n` a line: ok, missing, wrong or not proven. A checked box is not evidence; `PASS-UNPROVEN` instead of a claim it cannot back. |
+| **Security in the chain** | `/keystone:security` audits OWASP Top 10:2025, LLM Top 10, agent/MCP config and supply chain; on L its gate sits under verify. |
+| **Resume without replaying the chat** | Each stage ends in a committed file and a `Next:` command. The mod hands a long session to a clean one through the plan, offers a clean start when the prompt cache has gone cold, and counts cost per stage. |
 
 ## Install
 
