@@ -2,15 +2,16 @@
 // session when the context has grown. A button only fills the box; you send it. keystone.ts publishes the buttons
 // and the active plan into $.state and checks the agent's handoff answer; this file draws and starts things.
 import type { EngineInterface, Register } from 'claude-code'
-import { handoffPrompt, kTokens, levelFor, thresholdsFor } from './handoff.ts'
+import { coldText, handoffPrompt, kTokens, levelFor, thresholdsFor } from './handoff.ts'
+import { strings, type Lang } from './i18n.ts'
 
-const IDLE = { level: 0, tokens: 0, window: 0, shown: 0, pending: null }
+const IDLE = { level: 0, tokens: 0, window: 0, shown: 0, pending: null, cold: null }
 const BUSY = new Set(['pending', 'running', 'waiting'])
 
 // The band's look, pure: a chip names the stage (the full command with its plan path goes into the box), bars fill
 // by fraction — Svg on the desktop, block glyphs in the terminal — and the context bar warms up with the handoff level.
 type Tone = 'success' | 'suggestion' | 'warning' | 'error'
-export const chip = (cmd: string) => (cmd === '/keystone-status' ? 'статус' : cmd.match(/^\/keystone:([a-z]+)/)?.[1] ?? cmd)
+export const chip = (cmd: string, status = 'status') => (cmd === '/keystone-status' ? status : cmd.match(/^\/keystone:([a-z]+)/)?.[1] ?? cmd)
 export const pct = (f: number) => `${Math.round(Math.max(0, Math.min(1, f)) * 100)}%`
 export const toneFor = (level: number): Tone => (level >= 2 ? 'error' : level === 1 ? 'warning' : 'suggestion')
 export const barText = (f: number, cells: number) => {
@@ -23,6 +24,11 @@ export const barSvg = (f: number, tone: Tone, w: number) =>
   `<rect width="${w}" height="8" rx="4" fill="#8888884d"/>` +
   `<rect width="${Math.round(Math.max(0, Math.min(1, f)) * w)}" height="8" rx="4" fill="${HEX[tone]}"/></svg>`
 
+// the language keystone.ts settled on at session.start; English until then
+export async function langOf($: EngineInterface): Promise<Lang> {
+  return (await $.state.get({ plugin: 'keystone', key: 'lang' }).catch(() => ({ value: undefined }))).value ?? 'en'
+}
+
 const clear = ($: EngineInterface) => $.state.set({ plugin: 'keystone', key: 'buttons' }, [])
 
 async function pick($: EngineInterface, cmd: string) {
@@ -34,15 +40,28 @@ async function pick($: EngineInterface, cmd: string) {
 
 // Asks the agent to bring plan.md up to date; keystone.ts's turn.complete runs /clear once it answers the marker.
 async function startHandoff($: EngineInterface): Promise<string> {
+  const t = strings(await langOf($))
   const { value: file = '' } = await $.state.get({ plugin: 'keystone', key: 'plan' })
-  if (!file) return 'Нет активного плана Keystone — передавать нечего.'
-  if ((await $.agent.list()).some((a) => BUSY.has(a.status))) return 'Keystone: дождитесь субагентов, потом передавайте задачу.'
+  if (!file) return t.noPlan
+  if ((await $.agent.list()).some((a) => BUSY.has(a.status))) return t.waitAgents
   const mtime = (await $.fs.stat(file)).mtimeMs
   const { value: ho = IDLE } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
   await $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, shown: ho.level, pending: { file, mtime } })
   // a prompt cannot be sent while a command's own dispatch runs: send it once that has finished
   $.clock.after(0, () => void $.prompt.submit({ text: handoffPrompt(file) }).catch(() => undefined))
-  return 'Keystone: агент обновит план, затем сессия очистится и следующая команда встанет в поле ввода.'
+  return t.handoffStarted
+}
+
+// Cold cache: /clear with no model turn — the history is not re-read; what the plan lacks is lost. The classic
+// SessionStart hook below puts the plan's next command into the box, as after a handoff.
+async function startClean($: EngineInterface) {
+  const t = strings(await langOf($))
+  const { value: pr = null } = await $.state.get({ plugin: 'keystone', key: 'progress' })
+  if (!pr?.next) return $.ui.toast(t.noNext)
+  await $.store.set('handoff:next', pr.next)
+  $.clock.after(0, () =>
+    void $.command.run({ command: 'clear' }).catch(() => $.ui.toast(t.clearFailed(pr.next))),
+  )
 }
 
 export const register: Register = (on) => {
@@ -85,8 +104,12 @@ export const register: Register = (on) => {
     const { value: plan = '' } = await $.state.get({ plugin: 'keystone', key: 'plan' })
     const { value: pr = null } = await $.state.get({ plugin: 'keystone', key: 'progress' })
     const offer = plan !== '' && ho.pending === null && ho.level > ho.shown
-    if (buttons.length === 0 && !offer) return next(e)
+    const cold = plan !== '' && ho.pending === null && ho.cold !== null && !!pr?.next
+    if (buttons.length === 0 && !offer && !cold) return next(e)
     const { Box, Button, Text, Svg } = $.ui.resolve(e)
+    const lang = await langOf($)
+    const t = strings(lang)
+    const w = Math.max(t.plan.length, t.context.length)
     const desktop = e.surface === 'desktop'
     const cols = e.props.bodyColumns
     const wide = cols >= 72
@@ -105,13 +128,13 @@ export const register: Register = (on) => {
     )
     const bars = []
     if (pr && pr.total > 0)
-      bars.push(bar('plan-bar', 'План    ', pr.done / pr.total, 'success', `${pr.done}/${pr.total}${pr.blocked ? ` · ${pr.blocked} blocked` : ''}`))
+      bars.push(bar('plan-bar', t.plan.padEnd(w), pr.done / pr.total, 'success', `${pr.done}/${pr.total}${pr.blocked ? ` · ${pr.blocked} blocked` : ''}`))
     if (ho.window > 0)
       bars.push(
-        bar('ctx-bar', 'Контекст', ho.tokens / ho.window, toneFor(ho.level), wide ? `${pct(ho.tokens / ho.window)} · ${kTokens(ho.tokens)}/${kTokens(ho.window)}` : pct(ho.tokens / ho.window),
+        bar('ctx-bar', t.context.padEnd(w), ho.tokens / ho.window, toneFor(ho.level), wide ? `${pct(ho.tokens / ho.window)} · ${kTokens(ho.tokens)}/${kTokens(ho.window)}` : pct(ho.tokens / ho.window),
           offer ? [
-            <Button key="handoff-go" label="Передать" variant="primary" onPress={async () => $.ui.toast(await startHandoff($))} />,
-            <Button key="handoff-later" label="Позже" dimColor onPress={() => $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, shown: ho.level })} />,
+            <Button key="handoff-go" label={t.handoff} variant="primary" onPress={async () => $.ui.toast(await startHandoff($))} />,
+            <Button key="handoff-later" label={t.later} dimColor onPress={() => $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, shown: ho.level })} />,
           ] : undefined),
       )
     const title = pr ? `Keystone · ${pr.level} · ${pr.status}` : 'Keystone'
@@ -129,11 +152,24 @@ export const register: Register = (on) => {
         </Box>
       ),
     )
+    if (cold) {
+      const dropCold = () => $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, cold: null })
+      rows.push(
+        <Box key="cold" flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={1}>
+          <Text color="warning" wrap="truncate-end">{coldText((await $.clock.now()) - (ho.cold ?? 0), ho.tokens, lang)}</Text>
+          <Button key="cold-clean" label={t.clean} variant="primary" onPress={() => startClean($)} />
+          <Button key="cold-save" label={t.save} onPress={async () => { await dropCold(); $.ui.toast(await startHandoff($)) }} />
+          <Box flexGrow={1} />
+          <Button key="cold-dismiss" label="×" role="dismiss" dimColor onPress={dropCold} />
+        </Box>,
+        <Text key="cold-note" dimColor wrap="truncate-end">{t.cleanNote}</Text>,
+      )
+    }
     if (buttons.length > 0)
       rows.push(
         <Box key="next" flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={1}>
           {buttons.map((cmd, i) => (
-            <Button key={`next${i + 1}`} label={chip(cmd)} variant={i === 0 ? 'primary' : 'secondary'} onPress={() => pick($, cmd)} />
+            <Button key={`next${i + 1}`} label={chip(cmd, t.status)} variant={i === 0 ? 'primary' : 'secondary'} onPress={() => pick($, cmd)} />
           ))}
           <Box flexGrow={1} />
           <Button key="dismiss" label="×" role="dismiss" dimColor onPress={() => clear($)} />

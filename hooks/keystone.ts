@@ -1,9 +1,10 @@
 // Keystone mod: /keystone-status (no model turn), a status line, and the real cost of each stage.
 // Works next to the settings hooks in hooks.json (gate.mjs); this module only observes and reports.
 import type { EngineInterface, Register } from 'claude-code'
-import { register as registerNext } from './next.tsx'
+import { register as registerNext, langOf } from './next.tsx'
+import { pickLang, strings } from './i18n.ts'
 import { register as registerLinks, normalize } from './links.ts'
-import { MARKER } from './handoff.ts'
+import { COLD_MS, MARKER, isCold } from './handoff.ts'
 
 const ACTIVE = new Set(['draft', 'approved', 'implementing'])
 const STAGE = /^\s*\/keystone:([a-z]+)/
@@ -180,7 +181,7 @@ const ledgerKey = (p: Plan) => `cost:${p.file}`
 async function refresh($: EngineInterface) {
   const p = await sessionPlan($)
   await $.state.set({ plugin: 'keystone', key: 'plan' }, p?.file ?? '').catch(() => undefined) // next.tsx offers a handoff only with a plan
-  const progress = p && { level: p.level, status: p.status, done: p.done, total: p.total, blocked: p.blocked }
+  const progress = p && { level: p.level, status: p.status, done: p.done, total: p.total, blocked: p.blocked, next: nextCommand(p) }
   await $.state.set({ plugin: 'keystone', key: 'progress' }, progress).catch(() => undefined) // the plan bar in next.tsx
   if (!p) return $.ui.status(undefined)
   const l = ((await $.store.get(ledgerKey(p))) ?? {}) as Ledger
@@ -194,19 +195,54 @@ async function checkHandoff($: EngineInterface, answer: string) {
   try {
     const { value: h } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
     if (!h?.pending) return
+    const t = strings(await langOf($))
     const { file, mtime } = h.pending
     await $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...h, pending: null })
     const changed = (await $.fs.stat(file)).mtimeMs > mtime
-    if (!answer.includes(MARKER) || !changed) return $.ui.toast('Keystone: передача не завершена — план не обновлён, контекст остался')
+    if (!answer.includes(MARKER) || !changed) return $.ui.toast(t.handoffNotDone)
     const p = await sessionPlan($)
     const cmd = (p && nextCommand(p)) ?? `/keystone:verify ${file}`
     await $.store.set('handoff:next', cmd)
     $.clock.after(0, () =>
-      void $.command.run({ command: 'clear' }).catch(() => $.ui.toast(`Keystone: не удалось очистить сессию — выполните /clear и вставьте ${cmd}`)),
+      void $.command.run({ command: 'clear' }).catch(() => $.ui.toast(t.clearFailed(cmd))),
     )
   } catch {
     // a failed check leaves the session as it is
   }
+}
+
+// Pause → cold cache: the band (next.tsx) offers a clean start once the last main-loop turn is COLD_MS old.
+// ponytail: one store key per session id, never pruned; prune by age if the store grows noticeably
+const lastKey = async ($: EngineInterface) => `turn:last:${await $.session.id()}`
+let coldTimer: { cancel: () => void } | undefined
+
+async function setCold($: EngineInterface, cold: number | null) {
+  const { value: h = { level: 0, tokens: 0, window: 0, shown: 0, pending: null, cold: null } } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
+  if (h.cold !== cold) await $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...h, cold })
+}
+
+function stopTimer() {
+  try {
+    coldTimer?.cancel()
+  } catch {
+    // a timer of an engine that is gone (a reload, another test) is gone with it
+  }
+  coldTimer = undefined
+}
+
+// the session is active again: no band, and no timer from before that could still come due mid-turn
+async function warm($: EngineInterface) {
+  stopTimer()
+  await setCold($, null)
+}
+
+// marks the cache cold now, or arms a timer for when it will be; a reload drops timers, so session.start calls it too
+async function watchCold($: EngineInterface, last: number) {
+  const now = await $.clock.now()
+  stopTimer()
+  // not due yet: wait; due: decide once (a small context stays as it is, with no timer left behind)
+  if (last + COLD_MS > now) coldTimer = $.clock.after(last + COLD_MS - now, () => void watchCold($, last).catch(() => undefined))
+  else if (isCold(last, now, (await $.session.usage()).context.tokens ?? 0)) await setCold($, last)
 }
 
 export const register: Register = (on, options) => {
@@ -219,6 +255,14 @@ export const register: Register = (on, options) => {
   let suggestion: string | null = null // next Keystone command, offered as the dim suggestion after a Keystone turn
 
   on('session.start', async ($, e, next) => {
+    // the band's language: the plugin option, else Claude Code's `language` setting, else English
+    let setting: unknown
+    try {
+      setting = (await $.settings.read()).language // the merged settings, as `{ key }` reads them
+    } catch {
+      // no settings noun (the test kit): the option or English
+    }
+    await $.state.set({ plugin: 'keystone', key: 'lang' }, pickLang(options.language, setting)).catch(() => undefined)
     await $.command.register({ name: 'keystone-status', description: 'Keystone: active plan, gates and cost by stage (no model call)' })
     await $.command.register({ name: 'keystone-handoff', description: 'Keystone: update the plan, clear the session, put the next command in the box' })
     lastUsd = (await $.session.usage()).cost?.usd
@@ -227,11 +271,18 @@ export const register: Register = (on, options) => {
     // links resolve from the folder the session started in; a hot reload fires session.start again with a moved cwd
     const base = await $.state.get({ plugin: 'keystone', key: 'base' }).catch(() => ({ value: undefined }))
     if (!base.value) await $.state.set({ plugin: 'keystone', key: 'base' }, normalize(e.cwd)).catch(() => undefined)
+    try {
+      const last = (await $.store.get(await lastKey($))) as number | undefined
+      if (last !== undefined) await watchCold($, last)
+    } catch {
+      // the cold-cache offer is optional
+    }
     return next(e)
   }).catch(($, e, next) => next(e))
 
   on('turn.start', async ($, e, next) => {
     await publishButtons($, false)
+    await warm($).catch(() => undefined)
     return next(e)
   }).catch(($, e, next) => next(e))
 
@@ -247,6 +298,7 @@ export const register: Register = (on, options) => {
   // remember the stage the user asked for; hand implement/verify the measured cost so their report line is real
   on('prompt.submit', async ($, e, next) => {
     await publishButtons($, false)
+    await warm($).catch(() => undefined) // whatever is sent, the cache warms up again
     const m = e.text.match(STAGE)
     stage = m ? m[1] : 'other' // a plain prompt is not a Keystone stage: no buttons after it, its cost is `other`
     if (m) await bindCommand($, m[1], e.text.slice(m[0].length)).then(() => refresh($)).catch(() => undefined)
@@ -275,6 +327,14 @@ export const register: Register = (on, options) => {
     const out = await next(e)
     if (e.agentId) return out
     await checkHandoff($, e.answer)
+    try {
+      const at = await $.clock.now()
+      await $.store.set(await lastKey($), at)
+      await setCold($, null) // a fresh answer: whatever a timer wrote while it ran is stale
+      await watchCold($, at)
+    } catch {
+      // the cold-cache offer is optional
+    }
     await publishButtons($, stage !== 'other')
     const now = (await $.session.usage()).cost?.usd
     if (now === undefined) return out

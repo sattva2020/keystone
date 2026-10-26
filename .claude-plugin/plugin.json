@@ -1,11 +1,20 @@
 {
   "name": "keystone",
   "displayName": "Keystone — intent-first workflow for Claude Code",
-  "version": "0.9.19",
+  "version": "0.9.21",
   "description": "Intent-first workflow sized to the change: S (just do it and check), M (short plan with Risks), L (intent → plan → independent check → implement → verify). Built on Anthropic's AI-native SDLC playbook and Claude Code best practices; the plan is the spec.",
   "author": { "name": "sattva2020", "email": "ruslan.griban@gmail.com" },
   "repository": "https://github.com/sattva2020/keystone",
   "license": "MIT",
   "types": "./types/index.d.ts",
-  "keywords": ["workflow", "intent", "planning", "verification", "sdlc"]
+  "keywords": ["workflow", "intent", "planning", "verification", "sdlc"],
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Interface language",
+      "description": "Language of the Keystone band, buttons and toasts. auto follows Claude Code's language setting; missing translations fall back to English.",
+      "options": ["auto", "en", "ru", "de", "fr", "es"],
+      "default": "auto"
+    }
+  }
 }

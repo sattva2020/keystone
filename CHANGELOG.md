@@ -5,6 +5,36 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.21] — 2026-10-26
+
+The mod speaks the user's language: English by default instead of hard-coded Russian.
+
+### Added
+- Plugin option `language` (`/config` → keystone → Interface language): `auto` (default), `en`, `ru`, `de`, `fr`, `es`.
+  `auto` follows Claude Code's own `language` setting (`russian`, `Deutsch`, `français`…, any case); anything else is
+  English.
+- `hooks/i18n.ts`: one table of the mod's words for people; English is required for every string, a missing
+  translation falls back to English. de/fr/es are machine translations, open to fixes.
+
+### Changed
+- The band (plan and context bars, «Hand off» / «Later», the cold-cache row), the `status` chip and the mod's toasts
+  are English unless another language is chosen.
+- The handoff prompt sent to the agent is English in every interface language; the `KEYSTONE HANDOFF READY` marker is
+  unchanged.
+
+## [0.9.20] — 2026-10-26
+
+Return after a pause without re-reading the whole history.
+
+### Added
+- **«Кэш остыл» band.** Claude's prompt cache lives up to an hour; after that the next answer re-reads the whole
+  context at full price. When the last main-loop turn is 55+ minutes old, the session works with a plan and the context
+  is 30k or more, the band offers **Начать чисто** — `/clear` with no model turn, the plan's next command in the box
+  (only what the plan does not hold is lost) — or **Записать и начать**, the usual handoff (one re-read, the agent
+  updates the plan, then `/clear`). The band goes away with any sent prompt. A reload or a resume finds the pause
+  through the time kept in the plugin store per session id.
+- Docs: leaving for more than an hour → `/keystone-handoff` beforehand, while the cache is warm.
+
 ## [0.9.19] — 2026-10-18
 
 Token diet for `/keystone:verify`. The 2026-10-16/17 benchmark showed the verify run itself — not its verifier —

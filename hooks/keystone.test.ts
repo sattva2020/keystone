@@ -107,23 +107,25 @@ let mtime = 1
 let hasPlan = true
 let dirs = ['2026-10-12-reminders']
 let usd: number | undefined
+let ctx: number | undefined // context tokens $.session.usage reports
 const BIND = { text: '/keystone:implement docs/keystone/2026-10-12-reminders/plan.md' } as any
-const stubSession = (on: any) => {
+const stubSession = (on: any, store?: Record<string, unknown>) => {
   on('fs.exists', ($: any, e: any) => { const p = rel(e.path); return { value: hasPlan && (p in files || Object.keys(files).some((f) => f.startsWith(p + '/'))) } })
   on('fs.list', () => ({ value: dirs.map((name) => ({ name, kind: 'dir', size: 0 })) }))
   on('fs.stat', () => ({ value: { kind: 'file', size: 1, mtimeMs: mtime, isLink: false } }))
   on('fs.read', ($: any, e: any) => ({ value: files[rel(e.path)] }))
   on('session.start', ($: any, e: any) => e)
   on('command.register', () => ({ value: true }))
-  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1000000 }, rateLimits: [], ...(usd === undefined ? {} : { cost: { usd } }) } }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1000000, tokens: ctx }, rateLimits: [], ...(usd === undefined ? {} : { cost: { usd } }) } }))
   on('ui.status', () => ({ value: true }))
   on('turn.start', ($: any, e: any) => e)
   on('turn.complete', () => ({ text: '' }))
   on('prompt.suggest', () => ({ isShown: true }))
   on('agent.list', () => ({ value: [] }))
+  on('session.id', () => ({ value: 'sess-1' }))
   on('classic.SessionStart', () => ({}))
   on('ui.render', ($: any, e: any) => h($.ui.resolve(e).Box, { key: 'engine' })) // the engine's own (empty) band beneath
-  mock.store(on)
+  mock.store(on, store)
 }
 
 const TURN = { answer: 'done', durationMs: 1, isAborted: false, turnId: 't', reason: 'answer' } as any
@@ -138,7 +140,7 @@ test('buttons appear when a session starts on its plan and leave when a turn sta
   await $.session.start({ cwd: 'E:/proj' } as any) // a reload or resume of a session that works with the plan
   let ui = await $.ui.mount({ plugin: 'keystone', surface: 'desktop', ...BAND })
   expect(await label(ui, 'next1')).toBe('implement')
-  expect(await label(ui, 'next2')).toBe('статус')
+  expect(await label(ui, 'next2')).toBe('status')
   expect(await ui.find({ key: 'plan-bar' })).toBeDefined()
   await ui.unmount()
   await $.turn.start({ text: 'x', turnId: 't2' } as any)
@@ -220,14 +222,15 @@ test('/keystone-handoff without an active plan says so and sends nothing', async
   on('prompt.submit', ($: any, e: any) => { sent.push(e.text); return { drop: 'test' } })
   await $.session.start({ cwd: 'E:/proj' } as any)
   const out = await $.command.run({ command: 'keystone-handoff', args: '' })
-  expect(JSON.stringify(out)).toContain('Нет активного плана Keystone')
+  expect(JSON.stringify(out)).toContain('No active Keystone plan')
   expect(sent).toEqual([])
   hasPlan = true
 })
 
 test('band pieces: short chips, bars clamp, context tone follows the handoff level', async () => {
   expect(chip(`/keystone:verify ${PLAN_FILE}`)).toBe('verify')
-  expect(chip('/keystone-status')).toBe('статус')
+  expect(chip('/keystone-status')).toBe('status')
+  expect(chip('/keystone-status', 'статус')).toBe('статус')
   expect(barText(0.5, 8)).toBe('████░░░░')
   expect(barText(2, 4)).toBe('████')
   expect(pct(0.383)).toBe('38%')
@@ -261,7 +264,7 @@ test('session binding: a session that never worked with the plan gets no buttons
   expect(await ui.find({ key: 'next1' })).toBeUndefined()
   await ui.unmount()
   expect(JSON.stringify(await $.command.run({ command: 'keystone-status', args: '' }))).toContain("is not this session's")
-  expect(JSON.stringify(await $.command.run({ command: 'keystone-handoff', args: '' }))).toContain('Нет активного плана Keystone')
+  expect(JSON.stringify(await $.command.run({ command: 'keystone-handoff', args: '' }))).toContain('No active Keystone plan')
   await $.prompt.submit({ text: 'what does this function do?' } as any)
   usd = 3
   await $.turn.complete(TURN)
@@ -311,4 +314,197 @@ test('session binding: Keystone stages run before the session had a plan are bil
   await $.turn.complete(TURN)
   expect(JSON.stringify(await $.command.run({ command: 'keystone-status', args: '' }))).toContain('start $2.00 · implement $1.00 · total $3.00')
   usd = undefined
+})
+
+const MIN = 60000
+
+test('cold cache: past 55 minutes the band offers a clean start that clears with no model turn', { options: { language: 'ru' } }, async ($, on) => {
+  stubSession(on)
+  const clock = mock.clock(on)
+  const sent: string[] = []
+  const cleared: string[] = []
+  const filled: string[] = []
+  on('prompt.submit', ($: any, e: any) => { sent.push(e.text); return { drop: 'test' } })
+  on('command.run', { command: 'clear' }, () => { cleared.push('clear'); return {} })
+  on('prompt.fill', ($: any, e: any) => { filled.push(e.text); return { isFilled: true } })
+  ctx = 40000
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit(BIND)
+  await $.turn.complete(TURN)
+  sent.length = 0
+
+  await clock.advance(54 * MIN)
+  let ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(await ui.find({ key: 'cold-clean' })).toBeUndefined()
+  await ui.unmount()
+
+  await clock.advance(MIN)
+  ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(await label(ui, 'cold-clean')).toBe('Начать чисто')
+  expect(await label(ui, 'cold-save')).toBe('Записать и начать')
+  expect(JSON.stringify(await ui.find({ key: 'cold' }))).toContain('Кэш остыл (55 мин назад)')
+  await ui.press({ key: 'cold-clean' })
+  await clock.settle()
+  await ui.unmount()
+  expect(cleared).toEqual(['clear'])
+  expect(sent).toEqual([]) // no model turn: the history is not re-read
+  await $.classic.SessionStart({ source: 'clear' } as any)
+  await clock.settle()
+  expect(filled).toEqual([`/keystone:implement ${PLAN_FILE}`])
+  ctx = undefined
+})
+
+test('cold cache: no offer on a small context or without a plan; a sent prompt takes it away', async ($, on) => {
+  stubSession(on)
+  const clock = mock.clock(on)
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  const cold = async () => {
+    const ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+    const found = (await ui.find({ key: 'cold-clean' })) !== undefined
+    await ui.unmount()
+    return found
+  }
+  await $.session.start({ cwd: 'E:/proj' } as any)
+
+  // a session that never worked with a plan: nothing to start clean from
+  ctx = 40000
+  await $.turn.complete(TURN)
+  await clock.advance(60 * MIN)
+  expect(await cold()).toBe(false)
+
+  await $.prompt.submit(BIND)
+  ctx = 20000
+  await $.turn.complete(TURN)
+  await clock.advance(60 * MIN)
+  expect(await cold()).toBe(false)
+
+  ctx = 40000
+  await $.turn.complete(TURN)
+  await clock.advance(60 * MIN)
+  expect(await cold()).toBe(true)
+  await $.prompt.submit({ text: 'still here' } as any)
+  expect(await cold()).toBe(false)
+  ctx = undefined
+})
+
+test('cold cache: a resumed or reloaded session finds the pause through session.start', { options: { language: 'ru' } }, async ($, on) => {
+  stubSession(on, { 'turn:last:sess-1': 60 * MIN }) // the last turn was two hours ago, before the timer could live
+  const clock = mock.clock(on, { now: 3 * 60 * MIN })
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  ctx = 40000
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit(BIND)
+  await $.session.start({ cwd: 'E:/proj' } as any) // the reload or resume: no timer survived, the store did
+  await clock.settle()
+  const ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(JSON.stringify(await ui.find({ key: 'cold' }))).toContain('(2 ч назад)')
+  await ui.unmount()
+  ctx = undefined
+})
+
+test('cold cache: a timer armed before a new prompt never marks the fresh answer cold', async ($, on) => {
+  stubSession(on)
+  const clock = mock.clock(on)
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  ctx = 40000
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit(BIND)
+  await $.turn.complete(TURN)
+  await clock.advance(54 * MIN)
+  await $.prompt.submit({ text: 'x' } as any)
+  await $.turn.start({ text: 'x', turnId: 't2' } as any)
+  await clock.advance(2 * MIN) // the old 55-min timer comes due while the model answers
+  await $.turn.complete(TURN)
+  const ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(await ui.find({ key: 'cold-clean' })).toBeUndefined()
+  await ui.unmount()
+  ctx = undefined
+})
+
+test('cold cache: «Записать и начать» starts the usual handoff and drops the band', async ($, on) => {
+  stubSession(on)
+  const clock = mock.clock(on)
+  const sent: string[] = []
+  on('prompt.submit', ($: any, e: any) => { sent.push(e.text); return { drop: 'test' } })
+  ctx = 40000
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit(BIND)
+  await $.turn.complete(TURN)
+  sent.length = 0
+  await clock.advance(55 * MIN)
+  let ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  await ui.press({ key: 'cold-save' })
+  await clock.settle()
+  await ui.unmount()
+  expect(sent.length).toBe(1)
+  expect(sent[0]).toContain(PLAN_FILE)
+  expect(sent[0]).toContain(MARKER)
+  ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(await ui.find({ key: 'cold-clean' })).toBeUndefined()
+  await ui.unmount()
+  ctx = undefined
+})
+
+// the whole band: plan and context bars with the handoff offer, the cold-cache row, the next-step buttons
+async function drawBand($: any, on: any, surface: 'terminal' | 'desktop', setting?: string) {
+  stubSession(on)
+  const clock = mock.clock(on)
+  const sent: string[] = []
+  on('prompt.submit', ($: any, e: any) => { sent.push(e.text); return { drop: 'test' } })
+  on('session.measure', () => ({ changed: [] }))
+  if (setting) on('settings.read', () => ({ value: { language: setting } }))
+  ctx = 400000
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit(BIND)
+  await $.turn.complete(TURN)
+  await clock.advance(60 * MIN)
+  await $.session.measure({ context: { tokens: 400000, window: 1000000 } } as any)
+  const ui = await $.ui.mount({ plugin: 'keystone', surface, ...BAND })
+  const text = JSON.stringify(await Promise.all(['bars', 'cold', 'cold-note', 'next'].map((key) => ui.find({ key }))))
+  ctx = undefined
+  return { ui, text, sent, clock }
+}
+
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`language: English by default, no Cyrillic anywhere in the band (${surface})`, async ($, on) => {
+    const { ui, text } = await drawBand($, on, surface)
+    expect(await label(ui, 'handoff-go')).toBe('Hand off')
+    expect(await label(ui, 'cold-clean')).toBe('Start clean')
+    expect(text).toContain('Cache went cold (1 h ago)')
+    expect(/[\u0400-\u04FF]/.test(text)).toBe(false)
+    await ui.unmount()
+  })
+
+  test(`language: ru by the plugin option (${surface})`, { options: { language: 'ru' } }, async ($, on) => {
+    const { ui, text } = await drawBand($, on, surface)
+    expect(await label(ui, 'handoff-go')).toBe('Передать')
+    expect(await label(ui, 'cold-clean')).toBe('Начать чисто')
+    expect(text).toContain('Кэш остыл (1 ч назад)')
+    await ui.unmount()
+  })
+}
+
+test("language: auto follows Claude Code's language setting", { options: { language: 'auto' } }, async ($, on) => {
+  const { ui } = await drawBand($, on, 'terminal', 'russian')
+  expect(await label(ui, 'handoff-go')).toBe('Передать')
+  await ui.unmount()
+})
+
+test('language: the plugin option wins over the setting', { options: { language: 'en' } }, async ($, on) => {
+  const { ui, text } = await drawBand($, on, 'terminal', 'russian')
+  expect(await label(ui, 'handoff-go')).toBe('Hand off')
+  expect(/[\u0400-\u04FF]/.test(text)).toBe(false)
+  await ui.unmount()
+})
+
+test('language: the text sent to the agent stays English in any interface language', { options: { language: 'de' } }, async ($, on) => {
+  const { ui, sent, clock } = await drawBand($, on, 'terminal')
+  expect(await label(ui, 'handoff-go')).toBe('Übergeben')
+  sent.length = 0
+  await ui.press({ key: 'handoff-go' })
+  await clock.settle()
+  await ui.unmount()
+  expect(sent.length).toBe(1)
+  expect(sent[0]).toContain('Do not commit or push')
+  expect(sent[0]).toContain(MARKER)
 })
