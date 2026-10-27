@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.21');
+  assert.equal(p.version, '0.9.22');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -324,6 +324,12 @@ test('evolve/transfer: lessons become .claude/rules after a yes, evolve-log, rea
   }
   has('skills/evolve/SKILL.md', 'One prevention point = one rule.');
   has('skills/transfer/SKILL.md', 'The source project is read-only for the whole run.');
+});
+
+test('evolve: per-point verdicts with confounded, cue and confidence, NO_ENTRY', () => {
+  has('skills/evolve/SKILL.md', '| Verdict — evidence |', '`helped`', '`hurt`', '`no observed effect`',
+    '`confounded` — **prefer it**', '**Verdicts decide.**', 'Cue:', 'Confidence:',
+    '`NO_ENTRY — <why', '### Declined');
 });
 
 test('ask: 100/100 or INSUFFICIENT INFORMATION, read-only', () => {

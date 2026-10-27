@@ -60,7 +60,7 @@ The plan is the spec: there is no separate `spec.md`, and every row of the plan 
 | **A new or undocumented project** | `/keystone:setup` writes `CLAUDE.md`, rules and `.mcp.json`; then `architecture`, `docs`, `dockerize`, `ci` |
 | **A check before deploy** | `/keystone:security` after auth, payments or input changes: `Security gate: pass \| warn \| fail` |
 | **Testing by hand or by an agent** | `/keystone:qa` writes scenarios from the plan, `/keystone:qa-check human \| agent` runs them |
-| **Mistakes that keep coming back** | `/keystone:evolve` turns them into `.claude/rules/` after your yes; `/keystone:transfer` brings them from another project |
+| **Mistakes that keep coming back** | `/keystone:evolve` turns them into `.claude/rules/` after your yes — only lessons with a proven effect or a repeat, each judged first; `/keystone:transfer` brings them from another project |
 | **Coming back to a task** | `/keystone-status` names the plan and the next command; nothing to re-read in the chat |
 
 Step-by-step routes for each: [What to run next — scenarios](docs/scenarios.md).

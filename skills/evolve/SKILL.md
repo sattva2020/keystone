@@ -132,16 +132,27 @@ added to the log's `Sources:` line again.
   several independent points aimed at different stages. Extract EACH separately with its target (a rules topic or a
   Keystone stage). Do NOT treat a source as a single unit.
 
+- **Verdict** — what the record shows the point's action actually did, judged from execution evidence (a test, a
+  re-verify, a later task), never from the source's own claim:
+  - `helped` — the record isolates it: a regression test that failed before and passes after, a re-verify that turned
+    the FAIL into PASS on exactly this point, or the same defect absent in later tasks that followed the action.
+  - `hurt` — the action was later reverted, broke something, or a later source names it as a cause.
+  - `no observed effect` — applied, and the defect or its class came back anyway.
+  - `confounded` — **prefer it** whenever the fix changed several things at once and nothing isolates this one, or a
+    single occurrence is all that stands behind it. A `## Prevention` line, a passing build or an approved plan alone
+    is intent, not evidence: it is `confounded` until something isolates it.
+
 Build one flat registry:
 
 ```text
-| # | Source (path) | Prevention point (specific action) | Target |
-|---|---------------|------------------------------------|--------|
-| 1 | docs/keystone/2026-09-02-x/plan.md | <concrete action to enforce> | .claude/rules/db.md |
-| 2 | docs/keystone/2026-09-02-x/plan.md | <different action, same source> | keystone.md ## fix |
+| # | Source (path) | Prevention point (specific action) | Target | Verdict — evidence |
+|---|---------------|------------------------------------|--------|--------------------|
+| 1 | docs/keystone/2026-09-02-x/plan.md | <concrete action to enforce> | .claude/rules/db.md | helped — test_x red→green in fix commit |
+| 2 | docs/keystone/2026-09-02-x/plan.md | <different action, same source> | keystone.md ## fix | confounded — fix also changed y, z |
 ```
 
-A patch with 5 prevention points produces 5 rows, not 1. The same holds for a plan, a verify.md or a note.
+A patch with 5 prevention points produces 5 rows, not 1. The same holds for a plan, a verify.md or a note. A
+confounded row is a useful record; an invented attribution poisons every later session that loads the rule.
 
 **1.3 Aggregate patterns.** Group by category. Identify:
 - **Recurring problems** — the same category 3 or more times is systemic. Fewer than 3 stays a candidate, labelled so.
@@ -184,6 +195,17 @@ Quality rules (these are what the human reviews):
   stack fact. No evidence, no proposal. No generic advice ("write clean code") — project-specific only.
 - Minimal and additive: do not rewrite whole rule files. A new file only when no existing one fits the topic.
 - Use MUST / MUST NOT only when the source shows a defect already happened; otherwise a plain imperative.
+- **Verdicts decide.** A rule rests on `helped` rows, or on a recurring pattern (3+) whatever the verdicts. A rule
+  that rests only on `confounded` rows is a guess: narrow it to what the record does show, or decline it. A
+  `hurt` row becomes a rule only as its opposite (`MUST NOT <the action>`), and a `no observed effect` row never
+  becomes a rule as written.
+- **Cue and confidence.** Each proposal names its `Cue` — the shape of situation it applies to, so it fires on a
+  different task (not this task's facts: "an optional relation read in a template", not "order.customer in
+  invoice.php") — and its `Confidence` (high / medium / low, with the reason: which verdicts, how many occurrences).
+  Too generic ("be careful with nulls") changes nothing; too specific never fires again.
+- **NO_ENTRY is a real answer.** When no point is backed by `helped` rows or a recurring pattern, propose nothing and
+  say so: `NO_ENTRY — <why: only confounded rows / single occurrences / all covered>`. The registry is still shown.
+  A rule the evidence does not argue for is a regression: it is loaded on every session and buys nothing.
 - Cap a run at **8 proposals**; if more qualify, show the 8 with the most evidence and say how many were left.
 
 ## Step 4: present, then write only after "yes"
@@ -194,17 +216,24 @@ Show the report:
 ## Evolution report
 Sources: <n new> new, <m overlap> overlap, <k skipped by the log>
 Prevention points: <total>, covered <a>, partial <b>, uncovered <c> · recurring patterns: <list> · stack insights: <n>
+Verdicts: helped <h>, hurt <x>, no observed effect <n>, confounded <c>
 
-### Proposed rules
+### Proposed rules   <or the single line NO_ENTRY — <why>>
 1. [new]  .claude/rules/db.md (paths: src/db/**)
    Rule: MUST guard optional relations before reading nested fields.
-   Evidence: docs/keystone/2026-09-02-x/plan.md ## Prevention; docs/keystone/2026-09-20-y/verify.md Found
-   Why: 3 fixes in 6 weeks came from unguarded optional relations.
+   Cue: a template or serializer reads a field through an optional relation.
+   Evidence: docs/keystone/2026-09-02-x/plan.md ## Prevention (helped — test_invoice_no_customer red→green);
+             docs/keystone/2026-09-20-y/verify.md Found (confounded)
+   Confidence: high — 3 fixes in 6 weeks, one isolated by a regression test.
 2. [strengthen]  .claude/rules/keystone.md ## fix
    <unified diff of the change>
 
+### Declined   <points left out on verdicts: # — why (confounded only / no observed effect / hurt) | none>
+
 ### Stale rules   <list with evidence | none>
 ```
+
+With `NO_ENTRY` skip the question below and go to Step 5 (log) with nothing added.
 
 Then ask with AskUserQuestion (one question, up to 4 options per call; batch if more): **one option per proposed
 rule** with its target and first words, plus `None — save nothing`. If AskUserQuestion is unavailable, ask in plain text
@@ -227,7 +256,7 @@ earlier entries. One entry per run:
 ## 2026-10-12 — evolve [all]
 Sources: docs/keystone/2026-09-02-x/plan.md, docs/keystone/2026-09-20-y/verify.md, … (<n>)
 Added: .claude/rules/db.md — "guard optional relations" (evidence: …)
-Rejected: "<rule text>" — <why: not evidence-backed / human said no / conflicts with …>
+Rejected: "<rule text>" — <why: not evidence-backed / confounded only / human said no / conflicts with …>
 Rules after: <n rules in .claude/rules/>
 ```
 
@@ -254,7 +283,8 @@ Context is heavy after reading many sources — suggest `/clear` or `/compact`.
 2. **Minimal** — add short rules; do not rewrite rule files or `CLAUDE.md`.
 3. **Reversible** — the human approves each rule after seeing the diff; nothing is auto-applied.
 4. **Cumulative** — each run builds on the log and the existing rules.
-5. **No hallucination** — only what the sources and the code show.
+5. **No hallucination** — only what the sources and the code show; a rule rests on an isolated execution contrast
+   or a recurring pattern, never on a fix having been accepted.
 6. **Plugin files are never edited**; Keystone has no per-skill override files.
 7. **English only** for rule text; the report may follow the user's language.
 8. **No new skills** — a pattern that keeps recurring and needs a procedure is a candidate for `/keystone:distill`.

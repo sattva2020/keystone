@@ -5,6 +5,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.22] — 2026-10-27
+
+Evolve stops turning accepted fixes into rules: every lesson is judged on what the record shows it did.
+
+### Changed
+- `/keystone:evolve` judges every prevention point before it becomes a rule (idea from Google Research's Harness²
+  experience reflector): a `Verdict` column in the registry — `helped`, `hurt`, `no observed effect`, `confounded`
+  (preferred when nothing isolates the action; a `## Prevention` line alone is intent, not evidence). A rule rests on
+  `helped` rows or a recurring pattern; confounded-only points are narrowed or declined. Each proposal names its `Cue`
+  (the shape of situation it fires on) and `Confidence`; when nothing qualifies the report says
+  `NO_ENTRY — <why>` and writes no rule.
+
 ## [0.9.21] — 2026-10-26
 
 The mod speaks the user's language: English by default instead of hard-coded Russian.
