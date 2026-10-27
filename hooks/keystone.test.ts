@@ -468,7 +468,7 @@ async function drawBand($: any, on: any, surface: 'terminal' | 'desktop', settin
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`language: English by default, no Cyrillic anywhere in the band (${surface})`, async ($, on) => {
     const { ui, text } = await drawBand($, on, surface)
-    expect(await label(ui, 'handoff-go')).toBe('Hand off')
+    expect(await label(ui, 'cold-save')).toBe('Save and start')
     expect(await label(ui, 'cold-clean')).toBe('Start clean')
     expect(text).toContain('Cache went cold (1 h ago)')
     expect(/[\u0400-\u04FF]/.test(text)).toBe(false)
@@ -477,7 +477,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
   test(`language: ru by the plugin option (${surface})`, { options: { language: 'ru' } }, async ($, on) => {
     const { ui, text } = await drawBand($, on, surface)
-    expect(await label(ui, 'handoff-go')).toBe('Передать')
+    expect(await label(ui, 'cold-save')).toBe('Записать и начать')
     expect(await label(ui, 'cold-clean')).toBe('Начать чисто')
     expect(text).toContain('Кэш остыл (1 ч назад)')
     await ui.unmount()
@@ -486,22 +486,22 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
 test("language: auto follows Claude Code's language setting", { options: { language: 'auto' } }, async ($, on) => {
   const { ui } = await drawBand($, on, 'terminal', 'russian')
-  expect(await label(ui, 'handoff-go')).toBe('Передать')
+  expect(await label(ui, 'cold-save')).toBe('Записать и начать')
   await ui.unmount()
 })
 
 test('language: the plugin option wins over the setting', { options: { language: 'en' } }, async ($, on) => {
   const { ui, text } = await drawBand($, on, 'terminal', 'russian')
-  expect(await label(ui, 'handoff-go')).toBe('Hand off')
+  expect(await label(ui, 'cold-save')).toBe('Save and start')
   expect(/[\u0400-\u04FF]/.test(text)).toBe(false)
   await ui.unmount()
 })
 
 test('language: the text sent to the agent stays English in any interface language', { options: { language: 'de' } }, async ($, on) => {
   const { ui, sent, clock } = await drawBand($, on, 'terminal')
-  expect(await label(ui, 'handoff-go')).toBe('Übergeben')
+  expect(await label(ui, 'cold-save')).toBe('Speichern und starten')
   sent.length = 0
-  await ui.press({ key: 'handoff-go' })
+  await ui.press({ key: 'cold-save' })
   await clock.settle()
   await ui.unmount()
   expect(sent.length).toBe(1)

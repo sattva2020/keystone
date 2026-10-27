@@ -103,8 +103,9 @@ export const register: Register = (on) => {
     const { value: ho = IDLE } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
     const { value: plan = '' } = await $.state.get({ plugin: 'keystone', key: 'plan' })
     const { value: pr = null } = await $.state.get({ plugin: 'keystone', key: 'progress' })
-    const offer = plan !== '' && ho.pending === null && ho.level > ho.shown
     const cold = plan !== '' && ho.pending === null && ho.cold !== null && !!pr?.next
+    // «Записать и начать» is the same handoff: one offer at a time
+    const offer = plan !== '' && ho.pending === null && ho.level > ho.shown && !cold
     if (buttons.length === 0 && !offer && !cold) return next(e)
     const { Box, Button, Text, Svg } = $.ui.resolve(e)
     const lang = await langOf($)
@@ -155,12 +156,15 @@ export const register: Register = (on) => {
     if (cold) {
       const dropCold = () => $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, cold: null })
       rows.push(
-        <Box key="cold" flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={1}>
+        // text on its own line, buttons on the next: in one wrapping row they pushed × onto a line of its own
+        <Box key="cold" flexDirection="column">
           <Text color="warning" wrap="truncate-end">{coldText((await $.clock.now()) - (ho.cold ?? 0), ho.tokens, lang)}</Text>
-          <Button key="cold-clean" label={t.clean} variant="primary" onPress={() => startClean($)} />
-          <Button key="cold-save" label={t.save} onPress={async () => { await dropCold(); $.ui.toast(await startHandoff($)) }} />
-          <Box flexGrow={1} />
-          <Button key="cold-dismiss" label="×" role="dismiss" dimColor onPress={dropCold} />
+          <Box flexDirection="row" alignItems="center" columnGap={1}>
+            <Button key="cold-clean" label={t.clean} variant="primary" onPress={() => startClean($)} />
+            <Button key="cold-save" label={t.save} onPress={async () => { await dropCold(); $.ui.toast(await startHandoff($)) }} />
+            <Box flexGrow={1} />
+            <Button key="cold-dismiss" label="×" role="dismiss" dimColor onPress={dropCold} />
+          </Box>
         </Box>,
         <Text key="cold-note" dimColor wrap="truncate-end">{t.cleanNote}</Text>,
       )

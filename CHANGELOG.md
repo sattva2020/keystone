@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.23] — 2026-10-27
+
+The «Кэш остыл» band no longer piles up on itself.
+
+### Fixed
+- **«Кэш остыл» band layout.** The warning text gets its own line; «Начать чисто», «Записать и начать» and × sit
+  on the line below. Before, all of them shared one wrapping row, so the text took two lines and × fell onto a line
+  of its own.
+- **One handoff offer at a time.** While the cold-cache band is shown, «Передать / Позже» next to the context bar
+  is hidden — «Записать и начать» starts the same handoff.
+
 ## [0.9.22] — 2026-10-27
 
 Evolve stops turning accepted fixes into rules: every lesson is judged on what the record shows it did.
