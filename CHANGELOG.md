@@ -5,6 +5,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.24] — 2026-10-29
+
+Review stops hiding the bugs it is unsure about, and a PR review reads the PR's own code. Both come from AI Factory 2.20.0.
+
+### Changed
+- **`/keystone:review` — coverage over filtering** (AI Factory #142). The reviewer reports every issue it finds,
+  including uncertain and minor ones; an unsure finding stays in Critical or Suggestions by its impact and ends with
+  `(confidence: low|medium)`. Before, a finding without a Repro went straight to `Unconfirmed` and the validator never
+  saw it. Now only the validator moves items to `Unconfirmed`; a confirmed item loses its marker, a refuted one is
+  dropped, and a marker left unresolved (validator failed) makes `Gate: fail` with a re-run instead of a guessed verdict.
+- **`/keystone:review` PR mode is pinned to the head commit** (AI Factory #185, without its `pr-source.mjs`). It keeps
+  `headRefOid` / `baseRefOid`, reads surrounding code with `git show <head>:<path>` or the GitHub API at that SHA instead
+  of the local checkout (which may be another branch), passes those excerpts to the validator, re-checks the head after
+  the review (moved or unknown → at least `warn`) and prints a `Sources:` line.
+
 ## [0.9.23] — 2026-10-27
 
 The «Кэш остыл» band no longer piles up on itself.

@@ -14,4 +14,5 @@ files, the reviewed diff (inline) and the numbered findings.
    and output format.
 2. Treat the diff as the primary source of truth. Use Read/Grep/Glob only for surrounding unchanged code the diff does
    not show; never call a finding fabricated just because the cited line is missing on disk (a PR branch is not checked out).
+   In PR mode prefer the pinned-commit excerpts in the prompt over disk.
 3. Output one `### Item N (section: …)` block per input item, nothing before the first block and nothing after the last.

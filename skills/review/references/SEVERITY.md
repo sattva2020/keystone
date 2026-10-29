@@ -1,4 +1,4 @@
-<!-- derived from ai-factory@2.19.0 skills/aif-review/references/SEVERITY.md (MIT); see THIRD_PARTY_NOTICES.md -->
+<!-- derived from ai-factory@2.19.0 skills/aif-review/references/SEVERITY.md, coverage-first and PR pinning from ai-factory@2.20.0 (MIT); see THIRD_PARTY_NOTICES.md -->
 # Review item severity levels
 
 The single source of truth for what counts as *critical*, *suggestion* or *unconfirmed* in `/keystone:review`. `SKILL.md`
@@ -24,6 +24,14 @@ and `VALIDATOR.md` defer to this file — do not redefine the levels elsewhere.
 
 When in doubt between critical and suggestion, leave the item at its original level. Reclassification is a deliberate
 judgment, not a default.
+
+## Confidence markers
+
+A `(confidence: low)` / `(confidence: medium)` marker is not a fourth level and never changes severity: severity reflects
+the impact of the cited behavior *assuming the finding is true*, so an uncertain potential blocker is filed as
+**critical** and a well-established nitpick as **suggestion**. Uncertainty is resolved by the validator's verdict
+(`keep` / `modify` confirm, `drop` refutes, `unconfirmed` moves), never by demotion: do not demote a confirmed item
+because it arrived with a marker, and do not keep an unconfirmed one because it is hedged.
 
 ## When the validator reclassifies
 

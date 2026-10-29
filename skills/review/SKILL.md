@@ -7,7 +7,7 @@ model: opus
 effort: high
 disable-model-invocation: true
 ---
-<!-- derived from ai-factory@2.19.0 skills/aif-review/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
+<!-- derived from ai-factory@2.19.0 skills/aif-review/SKILL.md, coverage-first and PR pinning from ai-factory@2.20.0 (MIT); see THIRD_PARTY_NOTICES.md -->
 
 # Review — code review with an independent validator
 
@@ -60,8 +60,22 @@ Take the diff from one of three inputs. Remember the exact diff text — the val
 The first word `rules` switches to the **rules check** instead (Step R); the rest of the argument is its ref.
 
 - **Empty → staged.** `git diff --cached`; if nothing is staged, `git diff` (say so in the report).
-- **Digits, `#N` or a PR URL → PR.** `gh pr view <N> --json title,body,baseRefName,headRefName` and `gh pr diff <N>`.
-  The PR branch is not checked out: read the change from the diff, surrounding code from disk.
+- **Digits, `#N` or a PR URL → PR.** Pin the change first — see **PR source** below. Pass a URL to `gh` as is, so the
+  repository comes from the URL, not from the current checkout.
+
+**PR source (PR mode only).** The review binds to one exact commit of the PR, never to a moving branch or to your disk.
+Read-only: never check out, fetch, switch branches or run code from the PR.
+
+1. **Pin.** `gh pr view <N|url> --json number,url,title,body,baseRefName,headRefName,baseRefOid,headRefOid` → keep the
+   full `headRefOid` and `baseRefOid`. Then `gh pr diff <N|url>`; this text is the reviewed diff.
+2. **Context from the pinned commit.** Callers, callees and tests around a hunk come from `headRefOid`, not from disk
+   (your checkout may be another branch): `git show <headRefOid>:<path>` when `git cat-file -e <headRefOid>^{commit}`
+   succeeds; otherwise `gh api -H "Accept: application/vnd.github.raw" "repos/<owner>/<repo>/contents/<path>?ref=<headRefOid>"`.
+   Neither works for a file → it is unavailable context: say so under **Sources**, and do not judge that file from disk.
+   A local copy that differs from the pinned one is a discrepancy to note, never evidence.
+3. **Freshness.** After the review, `gh pr view <N|url> --json headRefOid` again. A different SHA means the PR moved during
+   the review (the diff may mix two versions): Gate at least `warn`, say `PR moved: <old7>→<new7>, re-run`. The check
+   failed → freshness unknown, also at least `warn` — unknown is never fresh.
 - **Anything else → ref.** `git rev-parse --verify <arg>`; invalid → do not fall back silently, ask: review staged
   instead / cancel. Valid → `git log --oneline --reverse <ref>..HEAD` (empty → say so and stop); more than 20 commits →
   ask: all / last 20 / cancel. Review the net change `git diff <ref>...HEAD`, then each commit with `git show`: does the
@@ -115,7 +129,8 @@ yes) · `Stop here`. A `pass` with no suggestions → no menu; `Next: commit`.
 
 ## Step 2 — Review
 
-For every changed hunk read the surrounding code (callers, callees, tests) before judging. Checklist:
+For every changed hunk read the surrounding code (callers, callees, tests) before judging — in PR mode from the pinned
+commit (PR source, step 2). Checklist:
 
 - **Correctness** — logic errors, edge cases, null/undefined, error handling, type safety, off-by-one, state and ordering.
 - **Security** — injection (SQL, command, XSS), auth/authorization, CSRF, sensitive data in code or logs, input
@@ -131,6 +146,11 @@ file is `WARN`. Gates only report; this skill never edits those files.
 
 ## Step 3 — Findings
 
+**Coverage over filtering.** At this stage the job is coverage, not filtering: report every issue you found, including
+the ones you are unsure about or judge minor. Do not omit a finding because it feels small or unproven, and do not
+self-censor to fit "only important issues" or "be conservative" framing — the validator in Step 4 ranks and filters.
+Coverage is not padding: never invent an issue you did not find; no findings is a valid result.
+
 Each finding is a short block, in this order: **behavioural impact** (what breaks for the user or downstream code) ·
 `file:line` (the closest anchor in the diff) · **Repro** (a concrete input, command or call sequence and where the
 failure is visible — "if X is called with Y, Z happens at `path:line`") · **fix** (a concrete edit) · severity.
@@ -139,9 +159,14 @@ Severity — read `${CLAUDE_SKILL_DIR}/references/SEVERITY.md` when unsure. **cr
 security regression, broken correctness on a path real users hit, downstream break). **suggestion** = non-blocking
 (clarity, micro-performance, missing log, future refactor, a test gap that hides no active bug).
 
-A finding you cannot give a Repro for — you suspect it but cannot name a trigger or the path — is **not** dropped and not
-reported as a defect: it goes to `Unconfirmed` with the reason it could not be shown. Do not pad: no findings is a valid
-result.
+**Confidence marker.** Severity and confidence are separate. Severity picks the section by the impact of the behaviour
+*assuming the finding is true* — an unsure potential blocker still goes to Critical. A finding you are not sure about —
+you suspect it but cannot fully walk the trigger — ends with exactly one marker, `(confidence: low)` or
+`(confidence: medium)`, and its Repro is your best candidate trigger. Sure findings carry no marker. Never park an
+uncertain finding in `Unconfirmed` or `Open questions` yourself: only the validator moves an item to `Unconfirmed`, so
+every claim goes through it. Litmus test: an item that asserts something about the change that could be true or false
+("is it intended that X leaks the connection?") is a finding, not a question; `Open questions` holds only real
+clarifications with no claim of their own.
 
 ## Step 4 — Validate (always, in a clean context)
 
@@ -152,22 +177,28 @@ not validated. Empty list → skip the validator (hidden = adjusted = reclassifi
 Launch a **fresh** agent: `subagent_type: "keystone:review-validator"`. The prompt carries, inline: the instructions path
 `${CLAUDE_SKILL_DIR}/references/VALIDATOR.md` ("read it completely and follow it exactly"), the severity rules path
 `${CLAUDE_SKILL_DIR}/references/SEVERITY.md`, the project-rule files, the reviewed diff verbatim, the items — **not** your
-reasoning. Read `${CLAUDE_SKILL_DIR}/references/CHECK-MODE.md` for how to parse the answer and what to do on failure.
+reasoning. In PR mode add the pinned `headRefOid` and, verbatim, the excerpts from that commit the findings rely on (the
+validator cannot run `git show`). Read `${CLAUDE_SKILL_DIR}/references/CHECK-MODE.md` for how to parse the answer and what to do on failure.
 In short: `keep` unchanged · `modify` → replace the text, adjusted += 1 · `drop` → remove, hidden += 1 · `Severity:` may
 move an item to the other section (suffix ` [validated: promoted from Suggestions]` / `[validated: demoted from Critical]`,
-reclassified += 1) or to `unconfirmed` (the concern may be real but no trigger could be shown).
+reclassified += 1) or to `unconfirmed` (the concern may be real but no trigger could be shown). A confidence marker
+is resolved here: `keep` / `modify` confirm the item and the marker is removed; `drop` refutes it; `unconfirmed` moves it.
 
 Fallbacks: a malformed block → treated as `keep`, and a line `WARN [validator]: validator response for item N was
 malformed, kept as-is`; the whole call failed → every item kept, no counters, and the line
 `WARN [validator]: validator failed (<reason>), all items kept as-is` — never present unvalidated findings as validated.
+An item that still carries its confidence marker after this step was never judged: it stays with its marker, and the
+Gate reports the failure itself (CHECK-MODE.md, "Gate after validation") instead of guessing whether it is real.
 
 ## Step 5 — Report
 
 ```text
 ## Code Review
 
-Scope: <staged | PR #N | <ref>..HEAD> · files: <n> · Risk: 🟢 Low | 🟡 Medium | 🔴 High
-Gate: pass | warn | fail        ← fail if any Critical remains or a context gate is ERROR; warn if only Suggestions/WARN
+Scope: <staged | PR #N @ <head7> | <ref>..HEAD> · files: <n> · Risk: 🟢 Low | 🟡 Medium | 🔴 High
+Sources: <PR mode only: head <headRefOid> · base <baseRefOid> · context read from <local git objects | GitHub API> ·
+unavailable: <files | none> · freshness: <unchanged | moved <old7>→<new7> | unknown>>     ← omit in other modes
+Gate: pass | warn | fail        ← fail if any Critical remains, a context gate is ERROR or a marked item is left unvalidated; warn if only Suggestions/WARN
 Validated: <hidden> hidden · <adjusted> adjusted · <reclassified> reclassified     ← or the WARN line
 
 ### Context gates
@@ -178,7 +209,7 @@ Validated: <hidden> hidden · <adjusted> adjusted · <reclassified> reclassified
 ### Suggestions
 <finding blocks>
 ### Unconfirmed
-<what is suspected, why no Repro could be shown, what to run to confirm — not defects, not counted in Gate>
+<items the validator moved here: what is suspected, why no Repro could be shown, what to run to confirm — not defects, not counted in Gate>
 ### Open questions
 <open questions to the author>
 ### Positive notes

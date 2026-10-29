@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.23');
+  assert.equal(p.version, '0.9.24');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -549,6 +549,16 @@ test('0.9.9: review rules — rules check without a plan, verifier format, sugge
   assert.match(front('skills/review/SKILL.md'), /argument-hint:.*rules \[ref\]/);
   has('agents/verifier.md', '`rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`');
   has('skills/evolve/SKILL.md', '`### Suggested rule updates` from a `/keystone:review rules` run');
+});
+
+test('AIF 2.20: review coverage-first with confidence markers; PR review pinned to the head SHA', () => {
+  has('skills/review/SKILL.md', '**Coverage over filtering.**', '`(confidence: low)`', 'only the validator moves an item to `Unconfirmed`',
+    'headRefOid', 'git show <headRefOid>:<path>', 'PR moved: <old7>→<new7>', 'Sources:');
+  assert.doesNotMatch(read('skills/review/SKILL.md'), /Do not pad/);
+  has('skills/review/references/CHECK-MODE.md', '**Unresolved marker = validation failure.**', 'remove the marker');
+  has('skills/review/references/VALIDATOR.md', 'The marker is not evidence either way', 'pinned head SHA');
+  has('skills/review/references/SEVERITY.md', '## Confidence markers');
+  assert.match(read('THIRD_PARTY_NOTICES.md'), /ai-factory@2\.20\.0/);
 });
 
 test('evolve add: one dictated rule — dedupe, topic file, checked paths:, diff before yes, log without Sources', () => {

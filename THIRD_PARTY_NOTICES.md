@@ -36,6 +36,11 @@ Derived files (upstream path → Keystone path):
 Each derived Markdown file and script carries the comment `<!-- derived from ai-factory@2.19.0 … (MIT); see THIRD_PARTY_NOTICES.md -->` (a `#` comment in scripts);
 templates copied as-is are covered by the row of their skill.
 
+From `ai-factory@2.20.0` (same license): the coverage-first finding stage with confidence markers
+(`aif-review/SKILL.md`, `references/SEVERITY.md`, `references/VALIDATOR.md`, PR #142) and binding a PR review to its
+head SHA (`aif-review/references/PR-SOURCE.md`, PR #185), reworked without its `pr-source.mjs`, in `skills/review/` and
+`agents/review-validator.md`; those files say so in their `derived from` comment.
+
 MIT License text (applies to the derived portions):
 
 > Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
