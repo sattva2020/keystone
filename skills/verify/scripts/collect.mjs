@@ -3,10 +3,11 @@
 // build / test / lint checks of references/CHECKS.md. No model spends tokens on them.
 // Usage (from the repo root): node collect.mjs <plan path> [base ref]
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-const TIMEOUT_MS = 600_000;
+const TIMEOUT_MS = Number(process.env.KEYSTONE_CHECK_TIMEOUT_MS) || 600_000;
 
 export function git(cwd, ...args) {
   const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -89,7 +90,7 @@ function run(cwd, kind, argv) {
     ? spawnSync([argv[0].replace(/\//g, '\\'), ...argv.slice(1)].map(q).join(' '), { cwd, encoding: 'utf8', timeout: TIMEOUT_MS, shell: true })
     : spawnSync(argv[0], argv.slice(1), { cwd, encoding: 'utf8', timeout: TIMEOUT_MS });
   if (r.error?.code === 'ENOENT') return `${kind}: ${shown} → not run (${argv[0]} not found)`;
-  if (r.error?.code === 'ETIMEDOUT' || r.signal) return `${kind}: ${shown} → fail (timeout after ${TIMEOUT_MS / 1000} s)`;
+  if (r.error?.code === 'ETIMEDOUT' || r.signal) return `${kind}: ${shown} → not run (timeout after ${TIMEOUT_MS / 1000} s)`;
   const out = lines(`${r.stdout || ''}\n${r.stderr || ''}`);
   // a missing tool is caught by toolExists; only `npx --no-install` with a package that is not installed gets here
   if (r.status !== 0 && argv[0] === 'npx' && out.some((l) => /could not determine executable|npm error canceled/i.test(l)) && out.length < 8)
@@ -97,6 +98,36 @@ function run(cwd, kind, argv) {
   // pass: the end of stdout (where runners print their counts); fail: the end of everything, ~20 lines (CHECKS.md)
   const tail = (r.status === 0 ? lines(r.stdout || '').slice(-8) : out.slice(-20)).map((l) => `    ${l}`).join('\n');
   return `${kind}: ${shown} → ${r.status === 0 ? 'pass' : 'fail'}${tail ? `\n${tail}` : ''}`;
+}
+
+// Fingerprint of everything a check can depend on: tracked and untracked files and uncommitted changes, without this
+// task's folder and docs/**/*.md — verify.md, ticks and notes change between runs and no build or test reads them.
+// ponytail: a test that reads docs/*.md gets a stale pass; the line says `reused`, and any code change drops it.
+function codeKey(cwd, plan) {
+  const skip = [`:(exclude)${dirname(plan).replace(/\\/g, '/')}`, ':(exclude,glob)docs/**/*.md'];
+  return createHash('sha1')
+    .update(git(cwd, 'ls-files', '-s', '--', '.', ...skip))
+    .update(git(cwd, 'diff', 'HEAD', '--', '.', ...skip))
+    .update(git(cwd, 'ls-files', '-o', '--exclude-standard', '--', '.', ...skip))
+    .digest('hex');
+}
+
+// A pass on the same code is not run again. Only passes are kept: a failure or a timeout is always measured afresh.
+function checks(cwd, plan) {
+  const file = join(cwd, git(cwd, 'rev-parse', '--git-path', 'keystone-checks.json'));
+  const key = codeKey(cwd, plan);
+  let seen = {};
+  try { seen = JSON.parse(readFileSync(file, 'utf8')); } catch { /* first run */ }
+  const known = seen.key === key ? seen.passes : {};
+  const passes = {};
+  const once = (kind, argv) => {
+    const id = `${kind}:${JSON.stringify(argv)}`;
+    if (known[id]) { passes[id] = known[id]; return known[id].replace(/ → pass/, ' → pass (reused: code unchanged since that run)'); }
+    const line = run(cwd, kind, argv);
+    if (/ → pass/.test(line.split('\n')[0])) passes[id] = line;
+    return line;
+  };
+  return { once, save: () => { try { writeFileSync(file, JSON.stringify({ key, passes })); } catch { /* the cache is optional */ } } };
 }
 
 // Architecture gate: each `MUST NOT:` line written by /keystone:architecture carries `check: <grep>`.
@@ -126,9 +157,11 @@ export function collect(cwd, plan, given) {
   out.push(`files: ${files.length}${dirty.length ? ` (${dirty.length} uncommitted)` : ''}`, ...files.map((f) => `  ${f}`));
   const settings = lines(read(cwd, plan)).find((l) => l.startsWith('Settings:')) || '';
   const d = detect(cwd, files);
-  out.push(run(cwd, 'build', d.build));
-  out.push(/tests\s*—\s*no/.test(settings) ? 'test: not run (Settings tests — no)' : run(cwd, 'test', d.test));
-  out.push(run(cwd, 'lint', d.lint));
+  const c = checks(cwd, plan);
+  out.push(c.once('build', d.build));
+  out.push(/tests\s*—\s*no/.test(settings) ? 'test: not run (Settings tests — no)' : c.once('test', d.test));
+  out.push(c.once('lint', d.lint));
+  c.save();
   out.push('imports: not run (the verifier reads the diff)');
   out.push(...architecture(cwd, files));
   return out.join('\n');

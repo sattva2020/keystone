@@ -249,6 +249,7 @@ export const register: Register = (on, options) => {
   registerNext(on, options)
   registerLinks(on, options)
   let stage = 'other'
+  let costStage = 'other' // like `stage`, but an answer to a menu or a question keeps paying into the stage it serves
   let lastUsd: number | undefined
   let early: Ledger = {}
   let lastPlan: Plan | null = null // verify ends a plan (Status: verified); its own turn is still billed to it
@@ -302,6 +303,7 @@ export const register: Register = (on, options) => {
     const m = e.text.match(STAGE)
     stage = m ? m[1] : 'other' // a plain prompt is not a Keystone stage: no buttons after it, its cost is `other`
     if (m) await bindCommand($, m[1], e.text.slice(m[0].length)).then(() => refresh($)).catch(() => undefined)
+    costStage = m ? m[1] : (await sessionPlan($).catch(() => null)) ? costStage : 'other'
     if (m && (m[1] === 'implement' || m[1] === 'verify')) {
       const p = await sessionPlan($)
       if (p) {
@@ -342,12 +344,12 @@ export const register: Register = (on, options) => {
     lastUsd = now
     const p = (await sessionPlan($)) ?? lastPlan
     if (p) lastPlan = p
-    if (!p && stage !== 'other' && delta > 0) early[stage] = (early[stage] ?? 0) + delta
+    if (!p && costStage !== 'other' && delta > 0) early[costStage] = (early[costStage] ?? 0) + delta
     if (p && (delta > 0 || Object.keys(early).length)) {
       const l = ((await $.store.get(ledgerKey(p))) ?? {}) as Ledger
       for (const [k, v] of Object.entries(early)) l[k] = (l[k] ?? 0) + v
       early = {}
-      l[stage] = (l[stage] ?? 0) + delta
+      l[costStage] = (l[costStage] ?? 0) + delta
       await $.store.set(ledgerKey(p), l)
     }
     await refresh($)

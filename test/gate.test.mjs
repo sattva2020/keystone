@@ -236,3 +236,55 @@ test('0.9.17: AI Factory folders are not Keystone plans — a draft under .ai-fa
   const root = project({}, { files: { '.ai-factory/config.yaml': 'paths:\n  specs: .ai-factory/specs/\n', '.ai-factory/specs/2026-10-12-x/plan.md': 'Status: draft\n- [ ] 1. a' } });
   assert.equal(pre(root, 'Edit', { file_path: join(root, 'src/a.ts') }), null);
 });
+
+const closedBy = (r) => r?.hookSpecificOutput?.permissionDecisionReason ?? '';
+
+test('push gate: follows cd and shell variables to the repository the push goes to', () => {
+  const root = project({ '2026-10-12-x': 'Status: implementing' });
+  const other = project();
+  assert.equal(pre(root, 'Bash', { command: `cd "${other}" && git push origin HEAD` }), null, 'cd');
+  assert.equal(pre(root, 'Bash', { command: `M="${other}"; git -C "$M" push origin HEAD` }), null, 'bash variable');
+  assert.equal(pre(root, 'PowerShell', { command: `$M = "${other}"; git -C $M push origin HEAD` }), null, 'PowerShell variable');
+  assert.ok(denied(pre(other, 'Bash', { command: `cd "${root}" && git push origin HEAD` })), 'cd into the repository with the plan');
+});
+
+test('push gate: a quoted -C path with a space is still a push', () => {
+  const parent = mkdtempSync(join(tmpdir(), 'ks space '));
+  const root = project({ '2026-10-12-x': 'Status: implementing' });
+  assert.ok(parent.includes(' '));
+  assert.ok(denied(pre(parent, 'Bash', { command: `git -C "${root}" push origin HEAD` })));
+});
+
+test('push gate: when git cannot say what ships, it stays closed and says so instead of blaming the plan', () => {
+  const root = project({ '2026-10-12-x': 'Status: implementing' });
+  const r = pre(root, 'Bash', { command: 'git -C "$NOPE" push origin HEAD' });
+  assert.ok(denied(r));
+  assert.match(closedBy(r), /could not tell what this push ships/);
+  assert.doesNotMatch(closedBy(r), /run \/keystone:verify first/);
+});
+
+test('Stop: no block while a background task is unreported; the reminder keeps the answer and asks for Next', () => {
+  const root = project({ '2026-10-12-x': 'Status: implementing' });
+  const at = new Date().toISOString();
+  const bind = { type: 'user', message: { role: 'user', content: '<command-name>/keystone:implement</command-name>\n<command-args>2026-10-12-x</command-args>' } };
+  const started = { type: 'assistant', timestamp: at, message: { role: 'assistant', content: [{ type: 'tool_use', id: 'toolu_1', name: 'Bash', input: { command: 'npm test', run_in_background: true } }] } };
+  const agent = { type: 'user', timestamp: at, message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_2', content: [{ type: 'text', text: 'Async agent launched successfully.' }] }] } };
+  const done = (id) => ({ type: 'attachment', attachment: { type: 'queued_command', prompt: `<task-notification>\n<tool-use-id>${id}</tool-use-id>\n</task-notification>` } });
+  const file = (rows) => { const f = join(root, `.bg${n++}.jsonl`); writeFileSync(f, rows.map((r) => JSON.stringify(r)).join('\n') + '\n'); return { transcript_path: f }; };
+
+  assert.equal(stop(root, false, file([bind, started])), null, 'Bash in the background');
+  assert.equal(stop(root, false, file([bind, agent])), null, 'agent in the background');
+  assert.equal(stop(root, false, file([bind, started, agent, done('toolu_1')])), null, 'one of two still runs');
+  const stale = { ...started, timestamp: new Date(Date.now() - 3 * 3600 * 1000).toISOString() };
+  assert.equal(stop(root, false, file([bind, stale])).decision, 'block', 'a task that never reported stops counting');
+  const r = stop(root, false, file([bind, started, agent, done('toolu_1'), done('toolu_2')]));
+  assert.equal(r.decision, 'block', 'everything reported');
+  assert.match(r.reason, /Next: nothing now — waiting for/);
+  assert.match(r.reason, /do not repeat or replace/);
+});
+
+test('draft gate: decision notes may be written, other code may not', () => {
+  const root = project({ '2026-10-12-x': 'Status: draft' });
+  assert.equal(pre(root, 'Write', { file_path: join(root, 'docs/notes/a.md') }), null);
+  assert.ok(denied(pre(root, 'Write', { file_path: join(root, 'docs/other/a.md') })));
+});

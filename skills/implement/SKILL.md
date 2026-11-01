@@ -51,6 +51,7 @@ Keep going without asking while the next step needs no human decision; stop only
 ## Step 0: Find the plan and load context
 
 1. **Plan:** the argument is a path to `plan.md`. Without it, take the active plan. Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing — or `verified` with open `- [ ] R<n>.` lines in `## Release`. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
+   Plan outside docs/keystone/ → the gates and the band do not see it, so push is not closed: say so once and offer to move its folder under docs/keystone/ before going on.
    No plan found → say "No plan." and ask with AskUserQuestion: `Size the task and plan it — /keystone:start <task>`
    (Recommended) · `Quick change without a plan (level S)` — only when the change fits in one sentence; then follow
    `${CLAUDE_SKILL_DIR}/../start/SKILL.md` for level S · `Show status — /keystone-status` · `Stop here`.
@@ -213,7 +214,7 @@ Close with the level and cost line:
 Before ending the turn, write every question you asked the user that is still unanswered into the plan as a section
 `## Open questions (implement)` (one bullet each); remove the section when none remain.
 
-Do not run verify yourself. If boxes remain `[ ]` without `BLOCKED:`, the Stop hook will remind you once (lift:
+Do not run verify yourself. If boxes remain `[ ]` without `BLOCKED:`, the Stop hook will remind you once per turn, not while a background agent runs (lift:
 `Status: abandoned` in the plan header or `KEYSTONE_GATES=off`). No summary document, no report file.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is

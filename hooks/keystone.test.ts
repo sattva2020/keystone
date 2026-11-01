@@ -508,3 +508,19 @@ test('language: the text sent to the agent stays English in any interface langua
   expect(sent[0]).toContain('Do not commit or push')
   expect(sent[0]).toContain(MARKER)
 })
+
+test('cost: an answer to a menu keeps paying into the stage it serves, also with no buttons after it', async ($, on) => {
+  stubSession(on)
+  on('prompt.submit', () => ({ drop: 'test' }))
+  usd = 1
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit(BIND)
+  await $.turn.complete(TURN)
+  usd = 3
+  await $.prompt.submit({ text: 'Исправить здесь' } as any)
+  await $.turn.complete(TURN)
+  const status = JSON.stringify(await $.command.run({ command: 'keystone-status', args: '' }))
+  expect(status).toContain('$2.00')
+  expect(status).not.toContain('other')
+  usd = undefined
+})

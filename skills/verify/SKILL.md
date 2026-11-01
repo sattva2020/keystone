@@ -62,7 +62,7 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref]`, or `accept`, or empty (= t
 
 ## Step 0 — find the plan, intent, rules
 
-- Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument. If none: ask for the path, or stop with `no plan to verify`.
+- Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument. If none: ask for the path, or stop with `no plan to verify`. Plan outside docs/keystone/ → say once: the gates never saw it.
 - A plan with `Status: draft` was never approved: stop and say so — verify measures an implementation, not a draft.
 - Read the plan header (`Level`, `Mode`, `Status`, `Authority`, `Settings`), the intent named in `Authority:` (or
   `intent.md` next to the plan), and the project rules (those that exist): `CLAUDE.md`, `.claude/CLAUDE.md`,
@@ -76,7 +76,7 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref]`, or `accept`, or empty (= t
 Run from the repository root: `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> [base ref]` — the diff base,
 this task's commits and files (uncommitted ones included) and build / test / lint by `references/CHECKS.md`, one line
 each. **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
-`not run` line is never a pass. Merged-in commits from other branches or sessions never make a file `unrequested`;
+`not run` line is never a pass, (a timeout included); `pass (reused: …)` is a pass (CHECKS.md). Merged-in commits from other branches or sessions never make a file `unrequested`;
 task-folder files (plan.md, intent.md, verify.md) never are. `Mode: fix` plans: note whether existing test files were
 edited (a violation of the fix contract). A check the plan names (a task's `check:`, a read-only `curl` GET against a
 local/staging URL in the plan) may run as a second command.

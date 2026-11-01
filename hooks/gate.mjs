@@ -15,7 +15,8 @@ const TEST_FILE = /(^|\/)(test|tests|__tests__|spec)\/|\.(test|spec)\.[^/]+$|_te
 const NOT_TEST = /(^|\/)(fixtures?|__snapshots__)\//i; // fixtures and snapshots may change with a fix
 // git push (also with -C/-c/--opt global options; not --dry-run) or gh pr create.
 // ponytail: no shell parsing — a quoted "git push" inside e.g. a commit message also matches; fine for a reminder gate.
-const PUSH = /\bgit(\s+(-C\s+\S+|-c\s+\S+|--[\w-]+(=\S+)?))*\s+push\b(?![^|;&]*--dry-run)|\bgh\s+pr\s+create\b/;
+const PUSH = /\bgit(\s+(-C\s+("[^"]*"|'[^']*'|\S+)|-c\s+\S+|--[\w-]+(=\S+)?))*\s+push\b(?![^|;&]*--dry-run)|\bgh\s+pr\s+create\b/;
+const BACKGROUND_MAX_MS = 2 * 60 * 60 * 1000;
 const HOW = 'To lift it: finish the step above, set `Status: abandoned` in the plan header, or start Claude Code with KEYSTONE_GATES=off (the hook reads its own environment; a prefix on one command does not reach it).';
 
 const slash = (p) => p.replace(/\\/g, '/');
@@ -76,23 +77,34 @@ export function activePlan(root, isBound) {
 // Edit/Write/MultiEdit/NotebookEdit calls touched. No transcript_path (an old client) → null: every plan counts as bound.
 function sessionTrail(transcript) {
   if (!transcript) return null;
-  const trail = { commands: [], files: [] };
+  const trail = { commands: [], files: [], background: new Map(), finished: new Set() };
   let raw = '';
   try { raw = readFileSync(transcript, 'utf8'); } catch { return trail; } // nothing written yet → nothing done yet
   for (const line of raw.split('\n')) {
-    if (!line.includes('keystone') && !line.includes('"tool_use"')) continue;
+    if (line.includes('<task-notification>')) for (const m of line.matchAll(/<tool-use-id>(\w+)<\/tool-use-id>/g)) trail.finished.add(m[1]);
+    if (!line.includes('keystone') && !line.includes('"tool_use"') && !line.includes('Async agent launched')) continue;
     let row;
     try { row = JSON.parse(line); } catch { continue; }
     const content = row?.message?.content;
     if (row.type === 'user' && typeof content === 'string') {
       const m = content.match(/<command-name>\/keystone:([a-z-]+)<\/command-name>/);
       if (m) trail.commands.push({ stage: m[1], args: content.match(/<command-args>([\s\S]*?)<\/command-args>/)?.[1] ?? '' });
+    } else if (row.type === 'user' && Array.isArray(content)) {
+      for (const b of content)
+        if (b?.type === 'tool_result' && JSON.stringify(b.content ?? '').includes('Async agent launched')) trail.background.set(b.tool_use_id, Date.parse(row.timestamp) || Date.now());
     } else if (row.type === 'assistant' && Array.isArray(content)) {
       for (const b of content)
         if (b?.type === 'tool_use' && EDIT_TOOLS.includes(b.name)) trail.files.push(slash(String(b.input?.file_path ?? b.input?.notebook_path ?? '')));
+        else if (b?.type === 'tool_use' && b.input?.run_in_background === true) trail.background.set(b.id, Date.parse(row.timestamp) || Date.now());
     }
   }
   return trail;
+}
+
+// A background agent or command started and not yet reported: the turn ends to wait for it, not because work stopped.
+// ponytail: a task that never reports (killed with the app) stops counting after BACKGROUND_MAX_MS.
+function waitingForBackground(trail, now = Date.now()) {
+  return !!trail && [...trail.background].some(([id, at]) => !trail.finished.has(id) && now - at < BACKGROUND_MAX_MS);
 }
 
 // A session works with a plan once it ran `/keystone:<stage>` naming the plan's folder (implement/verify with no
@@ -116,28 +128,50 @@ function openTasks(text) {
   return out;
 }
 
+const unquote = (w) => w.trim().replace(/^["']|["']$/g, '');
+// Git Bash writes /e/My for E:/My
+const nativePath = (p) => (process.platform === 'win32' ? p.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:') : p);
+
+// The shell state a push runs in: earlier `X=…` / `$X = …` assignments and `cd` / Set-Location in the same command.
+// ponytail: a line scan, not a shell — a value set elsewhere stays `$X`, git fails on it and the deny reason says so.
+function shellBefore(text, base) {
+  const vars = {};
+  const expand = (w) => w.replace(/\$\{?(\w+)\}?/g, (all, k) => vars[k] ?? all);
+  let dir = base;
+  for (const raw of text.split(/&&|\|\||[;\n|]/)) {
+    const part = raw.trim().replace(/^\(+\s*/, '');
+    const set = part.match(/^(?:export\s+)?\$?(\w+)\s*=\s*(.+)$/);
+    const cd = part.match(/^(?:cd|pushd|Set-Location|sl)\s+(?:-Path\s+)?(.+)$/i);
+    if (set) vars[set[1]] = expand(unquote(set[2]));
+    else if (cd && unquote(cd[1]) !== '-') dir = resolve(dir, nativePath(expand(unquote(cd[1]))));
+  }
+  return { dir, expand };
+}
+
 // What a push ships: the refs it names (`git push <remote> <src>[:<dst>]…`), else HEAD; --all / --mirror → every branch.
-// Its repository: the last `-C <dir>` before `push`, resolved against the shell's cwd.
+// Its repository: the last `-C <dir>` before `push`, resolved against the directory the command is in by then.
 function pushTarget(cmd, base) {
   const m = cmd.match(PUSH);
-  if (!m || !/push\b/.test(m[0])) return { dir: base, refs: ['HEAD'] }; // gh pr create ships HEAD
-  const dirs = [...m[0].matchAll(/-C\s+("[^"]+"|'[^']+'|\S+)/g)].map((x) => x[1].replace(/^["']|["']$/g, ''));
-  const dir = dirs.length ? resolve(base, dirs[dirs.length - 1]) : base;
+  const { dir: here, expand } = shellBefore(cmd.slice(0, m?.index ?? 0), base);
+  if (!m || !/push\b/.test(m[0])) return { dir: here, refs: ['HEAD'] }; // gh pr create ships HEAD
+  const dirs = [...m[0].matchAll(/-C\s+("[^"]+"|'[^']+'|\S+)/g)].map((x) => nativePath(expand(unquote(x[1]))));
+  const dir = dirs.length ? resolve(here, dirs[dirs.length - 1]) : here;
   // redirections (2>&1, > log, < in) are not refs; cut them before splitting on | ; &
   const rest = cmd.slice(m.index + m[0].length).replace(/\d*>&\d*|\d*>>?\s*\S+|<\s*\S+/g, ' ');
   const words = rest.split(/[|;&]/)[0].trim().split(/\s+/).filter(Boolean);
   if (words.some((w) => w === '--all' || w === '--mirror')) return { dir, refs: ['--branches'] };
-  const args = words.filter((w) => !w.startsWith('-')).map((w) => w.replace(/^["']|["']$/g, ''));
+  const args = words.filter((w) => !w.startsWith('-')).map((w) => expand(unquote(w)));
   const refs = args.slice(1).map((r) => r.replace(/^\+/, '').split(':')[0]).filter(Boolean);
   return { dir, refs: refs.length ? refs : ['HEAD'] };
 }
 
 // The push carries the active plan's work when a commit it ships, not yet on any remote, touches the plan's task folder.
 // Implement commits the plan with every task (checkbox ticks, drift, notes), so an unrelated release passes.
-// Unknown (git fails) → true: the gate stays closed rather than open by mistake.
-function pushCarriesPlan(dir, refs, planFile) {
+// git fails → `error`: the gate stays closed rather than open by mistake, and says it could not tell.
+function pushCheck(dir, refs, planFile) {
   const r = spawnSync('git', ['-C', dir, 'log', '--format=%H', ...refs, '--not', '--remotes', '--', dirname(planFile)], { encoding: 'utf8' });
-  return r.status !== 0 || r.stdout.trim() !== '';
+  if (r.status !== 0) return { carries: true, error: (r.stderr || '').trim().split('\n')[0] || `git exited ${r.status}` };
+  return { carries: r.stdout.trim() !== '' };
 }
 
 // "existing" test = committed in HEAD; a regression test written during this fix stays editable
@@ -156,32 +190,38 @@ export function decide(input, env = process.env) {
   const push = (input.tool_name === 'Bash' || input.tool_name === 'PowerShell') && PUSH.test(ti.command || '') ? pushTarget(ti.command, base) : null;
   const root = projectRoot(abs ? dirname(abs) : push ? push.dir : base);
   // push stays repo-wide (it checks what the commits touch); Stop and the edit gates only bind the session that works with the plan
-  const plan = activePlan(root, push ? undefined : boundTo(sessionTrail(input.transcript_path)));
+  const trail = push ? null : sessionTrail(input.transcript_path);
+  const plan = activePlan(root, push ? undefined : boundTo(trail));
   if (!plan) return null;
 
   if (event === 'Stop') {
     if (input.stop_hook_active) return null; // one block per turn; Claude Code's 8-in-a-row cap is never reached
     if (plan.status !== 'implementing') return null;
     const open = openTasks(plan.text);
-    if (!open.length) return null;
-    return { decision: 'block', reason: `Keystone: ${plan.file} is implementing and ${open.length} task(s) are still [ ] without BLOCKED:. If you are implementing: continue them, or append \`BLOCKED: <reason>\` to the task line of one that cannot run, then give the line-by-line report. If you are waiting for the user's answer or the user asked to pause — say so in one line and end the turn. ${HOW}` };
+    if (!open.length || waitingForBackground(trail)) return null;
+    return { decision: 'block', reason: `Keystone: ${plan.file} is implementing and ${open.length} task(s) are still [ ] without BLOCKED:. If you are implementing: continue them, or append \`BLOCKED: <reason>\` to the task line of one that cannot run, then give the line-by-line report. If you are waiting for the user's answer, the user asked to pause, or you just answered a question — your answer stays as written: do not repeat or replace it, add only \`Next: nothing now — waiting for <what>\` (or the one next step) and end the turn. ${HOW}` };
   }
 
   if (event !== 'PreToolUse') return null;
   const tool = input.tool_name;
 
   if (tool === 'Bash' || tool === 'PowerShell') {
-    if (push && pushCarriesPlan(push.dir, push.refs, plan.file)) return deny(`Keystone: push/PR is closed while ${plan.file} is ${plan.status} — run /keystone:verify first (PASS, or /keystone:verify accept for PASS-UNPROVEN). ${HOW}`);
+    if (push) {
+      const check = pushCheck(push.dir, push.refs, plan.file);
+      if (check.error) return deny(`Keystone: could not tell what this push ships, so it stays closed while ${plan.file} is ${plan.status} — \`git log\` in ${slash(push.dir)} failed: ${check.error}. The plan may have nothing to do with it: run the push with a literal \`git -C <repo> push <remote> <branch>\`. ${HOW}`);
+      if (check.carries) return deny(`Keystone: push/PR is closed while ${plan.file} is ${plan.status} — run /keystone:verify first (PASS, or /keystone:verify accept for PASS-UNPROVEN). ${HOW}`);
+    }
     return null;
   }
 
   if (!EDIT_TOOLS.includes(tool) || !abs) return null;
   const rel = slash(relative(root, abs));
   if (rel.startsWith('..')) return null; // outside the project
-  const inPlans = planRoots(root).some((r) => rel === r || rel.startsWith(r + '/'));
+  // docs/notes: decision records are committed with the change they explain
+  const inPlans = [...planRoots(root), 'docs/notes'].some((r) => rel === r || rel.startsWith(r + '/'));
 
   if (plan.status === 'draft' && !inPlans)
-    return deny(`Keystone: ${plan.file} is still draft — no code edits until it is approved (/keystone:plan <plan path> → Approve). Edits under the plan folder are allowed. ${HOW}`);
+    return deny(`Keystone: ${plan.file} is still draft — no code edits until it is approved (/keystone:plan <plan path> → Approve). Edits under the plan folder and docs/notes are allowed. ${HOW}`);
   if (plan.mode === 'fix' && plan.status === 'implementing' && TEST_FILE.test(rel) && !NOT_TEST.test(rel) && tracked(root, rel))
     return deny(`Keystone: during a fix, committed test files are not edited (${rel}) — write the regression test as a new file; if this test itself is wrong, stop and ask the human. ${HOW}`);
   return null;

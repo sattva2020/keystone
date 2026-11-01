@@ -5,6 +5,31 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.25] — 2026-11-01
+
+From an audit of 79 real sessions across 10 projects: gates stop blocking the wrong push, and the cost meter and verify's
+checks stop misreporting.
+
+### Fixed
+- **Push gate follows the command to its repository.** `cd <dir> && git push`, `X=<dir>; git -C "$X" push` (also
+  PowerShell's `$X = …`), Git Bash `/e/…` paths and a quoted `-C` path with a space. Before, a push to another repository
+  was closed by this one's plan, and `git -C "path with space" push` was not seen as a push at all.
+- **Honest deny reason.** When git cannot say what a push ships, the gate stays closed and says so, instead of telling you
+  to verify a plan that may have nothing to do with it.
+- **Stop hook keeps your answer.** The reminder asked for one line, which replaced the answer and its `Next:`; it now asks
+  to add only `Next: nothing now — waiting for <what>`. No reminder while a background agent or command has not reported.
+- **Draft gate allows `docs/notes/`**: decision records go with the change they explain.
+- **Cost meter.** An answer to a menu or a question keeps paying into the current stage while the session has a plan;
+  it used to land in `other`.
+- **verify: a check over the time limit is `not run`, not `fail`**, so it reads `not proven`. The limit is
+  `KEYSTONE_CHECK_TIMEOUT_MS` (default 10 min).
+
+### Changed
+- **verify reuses a pass on the same code.** Only this task's folder or `docs/**/*.md` changed since → `pass (reused: …)`
+  instead of minutes of the same tests. A failure or a timeout is always measured again.
+- **Plans outside `docs/keystone/`.** A new plan always goes under it; implement and verify say once that the gates and the
+  band do not see a plan elsewhere.
+
 ## [0.9.24] — 2026-10-29
 
 Review stops hiding the bugs it is unsure about, and a PR review reads the PR's own code. Both come from AI Factory 2.20.0.

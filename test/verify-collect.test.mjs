@@ -167,3 +167,28 @@ test('collect: the CLI prints the lines, and an unknown plan is an error with ex
   assert.equal(bad.status, 1);
   assert.match(bad.stdout, /^error: /m);
 });
+
+test('collect: a pass is reused only while the code is unchanged; a failure is measured again', () => {
+  const root = repo();
+  const runs = (s) => /^test: npm test → pass\b/m.test(s) && !/reused/.test(s);
+  commit(root, { 'src/a.js': '1', 'package.json': JSON.stringify({ scripts: { test: 'node -e "process.exit(0)"' } }) }, 'start');
+  commit(root, { [PLAN]: plan() }, 'docs(plan)');
+  commit(root, { 'src/a.js': '2' }, 'feat: a');
+  assert.ok(runs(collect(root, PLAN)), 'first run measures');
+  assert.match(collect(root, PLAN), /^test: npm test → pass \(reused: code unchanged since that run\)/m);
+  commit(root, { 'docs/keystone/2026-10-18-x/verify.md': 'x', 'docs/notes/n.md': 'x' }, 'docs: verify');
+  assert.match(collect(root, PLAN), /^test: npm test → pass \(reused/m, 'task folder and docs do not count');
+  writeFileSync(join(root, 'src/a.js'), '3');
+  assert.ok(runs(collect(root, PLAN)), 'an uncommitted code change drops it');
+  commit(root, { 'package.json': JSON.stringify({ scripts: { test: 'node -e "process.exit(1)"' } }) }, 'break');
+  assert.match(collect(root, PLAN), /^test: npm test → fail/m);
+  assert.match(collect(root, PLAN), /^test: npm test → fail/m, 'a failure is never reused');
+});
+
+test('collect: a check over the time limit is "not run", not a failure', () => {
+  const root = repo();
+  commit(root, { 'src/a.js': '1', 'package.json': JSON.stringify({ scripts: { test: 'node -e "setTimeout(()=>{},4000)"' } }) }, 'start');
+  commit(root, { [PLAN]: plan() }, 'docs(plan)');
+  const r = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8', env: { ...process.env, KEYSTONE_CHECK_TIMEOUT_MS: '500' } });
+  assert.match(r.stdout, /^test: npm test → not run \(timeout after 0\.5 s\)/m);
+});

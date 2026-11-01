@@ -59,5 +59,8 @@ Only lint the changed files to keep output focused.
 
 ## Output handed to the verifier
 
-One line per check: `build: <command> → pass | fail (<first error file:line>) | not run (<reason>)`, likewise `test`
+One line per check: `build: <command> → pass | pass (reused: …) | fail (<first error file:line>) | not run (<reason>, a timeout too)`, likewise `test`
 (with passed/failed counts), `lint`, `imports`. Keep the last ~20 lines of any failing output.
+
+A timeout is `not run`, not a failure (limit: `KEYSTONE_CHECK_TIMEOUT_MS`, default 10 min). `pass (reused: …)` is a pass
+measured earlier on the same code: only this task's folder or docs/**/*.md changed since.

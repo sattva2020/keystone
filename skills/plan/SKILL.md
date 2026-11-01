@@ -69,7 +69,8 @@ security/auth/payments, a module owned by others, unclear "done") makes it L.
 **Task folder.** `docs/keystone/<YYYY-MM-DD>-<slug>/` (slug: lowercase, hyphenated, ≤ 50 characters).
 Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name,
 ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older
-task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
+task folder outside docs/keystone) is used only when its path is given explicitly as the argument. A new plan always goes
+under docs/keystone/ — also when its intent or an older plan lies elsewhere: the gates and the band see only that folder.
 
 **Existing plan (one plan per task).** If the argument is a path to an existing `plan.md` (or its folder) with
 `Status: draft`, do not create a folder or rewrite the plan: go straight to § Before approval → § On Approve (used by
