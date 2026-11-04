@@ -80,7 +80,7 @@ folder. Resolve `qa_dir`:
 1. a given plan path → `<plan folder>/qa/`; a given folder containing `test-cases.md` → that folder; a branch or git ref →
    the folder `/keystone:qa <ref>` created for it (`docs/keystone/qa/*-<ref slug>/`), or the qa folder of the plan whose
    commits are on that branch;
-2. else the active plan — the newest `docs/keystone/*/plan.md` whose Status is draft, approved or implementing → `<its folder>/qa/`; A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
+2. else the active plan — the newest `docs/keystone/*/plan.md` whose Status is draft, approved or implementing, or `verified` with an open `## Debt` line → `<its folder>/qa/`; A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
 3. else the newest `docs/keystone/qa/*/` that has `test-cases.md`.
 
 Check for `<qa_dir>/test-cases.md`. If it is missing, STOP and ask: run `/keystone:qa test-cases` first / cancel.
@@ -93,7 +93,7 @@ Paths: `qa_check_path = <qa_dir>/qa-check.md`, `replay_dir = <qa_dir>/replay/`.
 `source_digest` (`git hash-object --no-filters <test-cases.md>`), a `case_digest` per case (hash of its block from the line
 with `TC-NNN` to the line before the next case, line endings normalized to LF, trailing spaces trimmed), `tested_revision`
 (`git rev-parse HEAD`) and `tree_digest` (hash of `git status --porcelain=v1 --untracked-files=all` plus
-`git diff --binary HEAD --`, excluding `qa_check_path` and `replay_dir`; the digest of the string `clean` when there is
+`git diff --binary HEAD --`, excluding `qa_check_path`, `replay_dir` and the plan file, whose `## Debt` lines qa-check closes; the digest of the string `clean` when there is
 nothing). Not a git work tree → ask the user for a build/version identifier (`manual_build_id`) and do not accept an empty one.
 
 If `qa-check.md` exists, resume from it only after comparing this binding with the stored one:
@@ -199,6 +199,12 @@ a syntax or runner error is an automation defect (repair, re-prove); a missing s
 assertion that fails is `Failed` — regression evidence, not a reason to regenerate the script. After a revision or
 working-tree change, replay all matching scripts including previously passed cases, so regressions show up.
 
+### Debt cases (both modes)
+
+A case with `Covers: D<k>` that just got `Passed` closes line `D<k>` of the plan's `## Debt` right after `qa-check.md` is
+saved: `open` becomes `closed <YYYY-MM-DD> by qa-check TC-NNN — <evidence>` (human mode: `passed by human <YYYY-MM-DD>`
+plus the user's note). `Failed` / `Blocked` leave the line open. Nothing is committed.
+
 ### Step 5 — Final report
 
 Write `qa-check.md` (counts, per-case status, evidence, binding, the browser tool used, target and environment class), then
@@ -209,6 +215,7 @@ QA check: <human|agent> · folder: <qa_dir> · tested: <revision | build id>
 Cases: <n> = passed <a> + failed <b> + blocked <c> + pending <d> + stale <e>
 Intent: <I-n with all cases passed | I-n with a failed/blocked/pending case>   ← when the cases carry `Covers:`
 Failed: <TC-… one line each | none> · Blocked: <TC-… and why | none>
+Debt: closed <D-ids> · open <D-ids> | none
 Files: <qa-check.md> · <replay/ files created or run | none>
 Blocked on me: <authorizations, credentials, decisions | none>
 Next: <failed → fix and rerun /keystone:qa-check <mode>; blocked human-verifiable → /keystone:qa-check human; all passed → /keystone:verify>
@@ -221,7 +228,8 @@ providing the missing command, fixture or service instead.
 
 ## Artifacts and gates
 
-Writes only: `qa-check.md`, `replay/TC-NNN.spec.js`, `replay/history/*`. Never rewrites `test-cases.md`, `test-plan.md` or
+Writes only: `qa-check.md`, `replay/TC-NNN.spec.js`, `replay/history/*`, and the `## Debt` lines of the plan
+(closing only). Never rewrites `test-cases.md`, `test-plan.md` or
 `change-summary.md` and never touches code or context files. Replay scripts under `docs/` are not code edits, so the
 draft-plan gate does not block this skill; lift a gate with `Status: abandoned` or `KEYSTONE_GATES=off`.
 

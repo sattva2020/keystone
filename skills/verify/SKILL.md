@@ -1,7 +1,7 @@
 ---
 name: verify
 description: "Keystone: verify finished work against its plan and intent — runs build/test/lint, then an independent verifier agent in a clean context gives every plan task, Reconciliation row and intent line ok / missing / wrong / not proven / BLOCKED, flags unrequested work, and returns PASS, PASS-UNPROVEN or FAIL. A checked box is not evidence. Writes verify.md; on PASS sets Status verified. Use after implementation on M and L changes, or for 'verify', 'did we miss anything', 'is it really done'. `/keystone:verify accept` records a human decision on unproven rows."
-argument-hint: "[<plan path> [base git ref]] [--strict] [--full] | accept"
+argument-hint: "[<plan path> [base git ref]] [--strict] [--full] | accept | accept [<plan path>] D<k> <proof text>"
 allowed-tools: Read Glob Grep Bash Agent AskUserQuestion Write Edit Skill
 model: sonnet
 effort: high
@@ -13,7 +13,7 @@ effort: high
 Judgment is delegated to the `keystone:verifier` agent, which did not write the code and sees no conversation. This
 skill runs the commands, collects the verdict, and writes the record. **Write/Edit are allowed for exactly two things:**
 `<plan folder>/verify.md` and the `Status:` value in the plan header (plus `Accepted unproven by …` in verify.md for
-`accept`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/keystone:fix` or
+`accept`, and for `accept` the plan's `## Debt` lines — `references/ACCEPT.md`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/keystone:fix` or
 `/keystone:implement`, not this skill — `Fix directly here` in Step 6 hands the turn to the fix skill's rules.
 
 **Roles.** The `keystone:verifier` agent is the judge (the strongest model); this skill is the orchestrator (a mid
@@ -58,10 +58,11 @@ text, without backticks. Link only a file you checked exists.
 anything: answer that this is `/keystone:intent <path>` (intent) or `/keystone:plan <plan path>` (plan), and that verify
 must be run again afterwards. Never attribute to the user an edit the agent made.
 
-Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only with the plan path: judge every row again), or `accept`, or empty (= the active plan).
+Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only with the plan path: judge every row again), or `accept`, or `accept [<plan path>] D<k> <proof text>`, or empty (= the active plan).
 
 ## Step 0 — find the plan, intent, rules
 
+- `accept …` → read `${CLAUDE_SKILL_DIR}/references/ACCEPT.md` first and follow it; it finds the plan itself.
 - Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument. If none: ask for the path, or stop with `no plan to verify`. Plan outside docs/keystone/ → say once: the gates never saw it.
 - A plan with `Status: draft` was never approved: stop and say so — verify measures an implementation, not a draft.
 - Read the plan header (`Level`, `Mode`, `Status`, `Authority`, `Settings`), the intent named in `Authority:` (or
@@ -69,13 +70,12 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only wit
   `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:` rules apply only to matching files), `AGENTS.md`.
   MUST / MUST NOT lines
   there are project rules.
-- `accept` → read `${CLAUDE_SKILL_DIR}/references/ACCEPT.md` and follow it.
 
 ## Step 1 — collect (one command)
 
 Run from the repository root: `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> [base ref] [--full]` — the diff base,
 this task's commits and files (uncommitted ones included), build / test / lint by `references/CHECKS.md`, then `delta:`,
-`judge:`, `rules scope:`, `carried ids:`, the record-only marker, and under it `carried:` / `history:` / `trend menu:`. **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
+`judge:`, `rules scope:`, `release refs:`, `carried ids:`, the record-only marker, and under it `carried:` / `history:` / `trend menu:`. **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
 `not run` line is never a pass, (a timeout included); `pass (reused: …)` is a pass (CHECKS.md). Merged-in commits from other branches or sessions never make a file `unrequested`;
 task-folder files (plan.md, intent.md, verify.md) never are. `Mode: fix` plans: note whether existing test files were
 edited (a violation of the fix contract). A check the plan names (a task's `check:`, a read-only `curl` GET against a
@@ -110,12 +110,12 @@ they are as `## Carried`, the verifier's output exactly as it came as `## Report
 and mark it `(corrected by verify)`. Every `wrong` line
 must carry `Repro: <input / command where the failure shows>`; the verifier also returns an `Unconfirmed — <what could
 not be confirmed> — looked in <where>` section. **Do not print the line-by-line report in the chat**: it lives in
-`verify.md`, and the chat gets only the Final report below. Count again from `## Report` plus `## Carried` (carried rows are `ok`): `ok + missing + wrong + not proven + BLOCKED = n`.
+`verify.md`, and the chat gets only the Final report below. Count again from `## Report` plus `## Carried` (carried rows are `ok`): `ok + missing + wrong + not proven + BLOCKED + pending = n`.
 If the numbers do not add up, fix the count, not the lines, and say so.
 
 Rules you enforce when reading the output (the verifier knows them, you check them):
 - `## Release` steps (`R<n>`) are not tasks: they run after the verdict, so they are never `missing`, `BLOCKED` or
-  open work, and they never block PASS.
+  open work, and they never block PASS. A `pending R<n>` row (`release refs … open`) is planned proof, not open work.
 - `[x]`, "done", "pass" is not evidence. A grep or a code read is presence, not behaviour → `not proven`.
 - A row whose evidence starts with `BLOCKED:` is open work, never `ok`.
 - Formatting noise is not `unrequested`; new logic, files or dependencies without a task / row / `I-n` are.
@@ -151,7 +151,7 @@ Strict mode (L by default, or `--strict`) additionally requires: every task `ok`
 variables in the changed files, Rules gate `pass`. Anything short of that is `wrong` or `not proven` as in Step 1.
 `Advisory:` and `Minor:` lines never change the verdict.
 
-- **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Weakened tests: none` (or each tied to a task); `Decisions: none`; `Settings: ok`; `Rules gate` not `fail`; `Architecture gate` not `fail`; `Security gate` not an unignored `fail`.
+- **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Weakened tests: none` (or each tied to a task); `Decisions: none`; `Settings: ok`; `Rules gate` not `fail`; `Architecture gate` not `fail`; `Security gate` not an unignored `fail`. `pending R<n>` rows never block PASS.
 - **PASS-UNPROVEN** — no `missing` / `wrong` / `unrequested`, `Settings: ok`, Rules gate not `fail`, but at least one
   `not proven` or `BLOCKED` row, or a `Weakened test` line no task asks for.
 - **FAIL** — anything else: a `missing`, `wrong` or `unrequested` line, a `Decision:` line, `Settings: violated`, `Rules gate: fail`, `Architecture gate: fail`, an unignored `Security gate: fail`.
@@ -212,9 +212,11 @@ the ways to lift a gate are in `references/ACCEPT.md`.
 ## Final report (always)
 
 ```text
-<verdict>: <plan path> · base <ref> · <n> rows — ok a, missing b, wrong c, not proven d, BLOCKED e; unrequested u
+<verdict>: <plan path> · base <ref> · <n> rows — ok a, missing b, wrong c, not proven d, BLOCKED e, pending f; unrequested u
 Decisions: <list> | none
 Carried: <k> rows from verify <sha7> | none (full run — <reason>)
+Pending: <Row n → R<k>, I-n → R<k>> | none
+Debt: <k> open — <D<k> row id, …> (the plan's `## Debt`, after Step 5) | none
 Advisory: <a> · Minor: <m>
 Keystone Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>
 Open: <the not proven / BLOCKED / failed rows, one line each> | none

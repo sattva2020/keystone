@@ -99,6 +99,9 @@ Compare the plan against what you found. Use `## Original Request` as the origin
 - Incorrect file paths
 - Missing or incorrect requirement citations, unresolved source conflicts, or a
   missing `## Requirements Reconciliation` section when Step 3.4 requires one
+- A `proved by R<n>` mark in a Reconciliation evidence cell whose step `R<n>` is not in `## Release` or has no
+  `check:`, and a `proved by R<n>` mark outside the Reconciliation rows (a task, `Done means:`) — an `improvements`
+  finding whose text starts `Release ref:`.
 - Missing verification of a supported behavior combination or representative
   real artifact. Respect the plan's testing setting: add a test only when testing
   is enabled; otherwise add a runnable/manual verification step.

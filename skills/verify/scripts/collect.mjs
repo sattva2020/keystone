@@ -161,10 +161,10 @@ const gitTry = (cwd, ...args) => spawnSync('git', ['-c', 'core.quotePath=false',
 const showAt = (cwd, rev, path) => { const r = gitTry(cwd, 'show', `${rev}:${path}`); return r.status === 0 ? r.stdout : null; };
 const folderOf = (plan) => dirname(plan).replace(/\\/g, '/');
 
-// Ticks, Status, BLOCKED tails, Coverage, Implementation notes and Release change on every fix and do not change the plan.
+// Ticks, Status, BLOCKED tails, Coverage, Implementation notes, Release and Debt change on every fix and do not change the plan.
 export function normalizePlan(s) {
   s = (s || '').replace(/\r\n/g, '\n').split(/^## Implementation notes\b/m)[0];
-  s = s.replace(/^## Release\b[\s\S]*?(?=^## |(?![\s\S]))/m, '');
+  s = s.replace(/^## (?:Release|Debt)\b[\s\S]*?(?=^## |(?![\s\S]))/gm, '');
   return s.replace(/(Status:\s*)[^·\n]*/, '$1').replace(/^(\s*- )\[[ xX]\] /gm, '$1')
     .replace(/^(\s*- \d+\..*?) BLOCKED: .*$/gm, '$1').replace(/^Coverage:.*$/gm, '')
     .split('\n').map((l) => l.trimEnd()).filter(Boolean).join('\n'); // blank lines around a cut section are not a change
@@ -187,7 +187,7 @@ export function parseRows(text) {
     cur = null;
     if (/^\s/.test(raw)) continue;
     const l = raw.replace(/^(?:[-*] )?(?:\*\*)?/, '');
-    const m = l.match(/^(.+?) — (ok|missing|wrong|not proven|BLOCKED)\b(.*)$/);
+    const m = l.match(/^(.+?) — (ok|missing|wrong|not proven|BLOCKED|pending R\d+(?:, R\d+)*)\b(.*)$/);
     if (!m || !ROW_ID.test(cleanId(m[1]))) continue;
     cur = { id: cleanId(m[1]), status: m[2], evidence: [m[3].replace(/^\s*—\s*/, '')] };
     rows.push(cur);
@@ -257,6 +257,39 @@ function fullReason(cwd, plan, base, prev, prevText, full, checks) {
   return null;
 }
 
+// `proved by R<k>` in a Reconciliation evidence cell: is step R<k> of ## Release open, done, missing or without a check?
+// Cells split on | outside backticks and not escaped as \|; Row <n> counts data rows from 1, as the verifier does.
+const cells = (l) => {
+  const out = [];
+  let cur = '', tick = false;
+  for (const ch of l.trim().replace(/^\||\|$/g, '')) {
+    if (ch === '`') tick = !tick;
+    if (ch === '|' && !tick && !cur.endsWith('\\')) { out.push(cur.trim()); cur = ''; } else cur += ch;
+  }
+  out.push(cur.trim());
+  return out;
+};
+export function releaseRefs(text) {
+  const steps = new Map();
+  for (const l of lines(section(text, 'Release'))) {
+    const m = l.match(/^- \[([ xX])\] R(\d+)\.(.*)$/);
+    if (m) steps.set(m[2], { done: m[1] !== ' ', check: / — check: \S/.test(m[3]) });
+  }
+  const out = [];
+  let n = 0;
+  for (const l of lines(section(text, 'Requirements Reconciliation'))) {
+    if (!/^\|/.test(l) || /^\|\s*:?-{3}/.test(l) || /^\|\s*Decision\s*\|/.test(l)) continue;
+    n++;
+    const c = cells(l);
+    const ids = [...new Set((c[1] || '').match(/I-\d+/g) || [])];
+    for (const [, k] of (c.at(-1) || '').matchAll(/proved by R(\d+)/g)) {
+      const st = steps.get(k);
+      out.push(`Row ${n}${ids.length ? ` (${ids.join(', ')})` : ''} → R${k} ${!st ? 'no step' : !st.check ? 'no check' : st.done ? 'done' : 'open'}`);
+    }
+  }
+  return out;
+}
+
 export function delta(cwd, plan, base, { full = false, checks = [] } = {}) {
   plan = plan.replace(/^(\.\/)+/, '');
   const vpath = `${folderOf(plan)}/verify.md`;
@@ -278,7 +311,8 @@ export function delta(cwd, plan, base, { full = false, checks = [] } = {}) {
     : reason ? 'rules scope: all task files'
     : `rules scope: files changed since ${prev.slice(0, 7)} + files on the last run's failing rule lines: ${
       [...new Set(failingRules(section(prevText, 'Report')).map((r) => r.fl.replace(/:\d+$/, '')))].join(', ') || 'none'}`;
-  if (reason) return [`delta: full — ${reason}`, 'judge: all rows (full run)', scope, 'carried ids: none', MARKER];
+  const refs = `release refs: ${releaseRefs(read(cwd, plan)).join('; ') || 'none'}`;
+  if (reason) return [`delta: full — ${reason}`, 'judge: all rows (full run)', scope, refs, 'carried ids: none', MARKER];
 
   const sha = prev.slice(0, 7);
   const rows = new Map();
@@ -305,6 +339,7 @@ export function delta(cwd, plan, base, { full = false, checks = [] } = {}) {
     `delta: since ${sha} — ${counted} files changed since the last verify`,
     `judge: ${judge.join(', ') || 'none'}`,
     scope,
+    refs,
     `carried ids: ${carried.map((r) => r.id).join(', ') || 'none'}`,
     MARKER,
     ...carried.map((r) => `carried: ${r.id} — ok — carried from verify ${r.sha} — ${r.evidence}`),

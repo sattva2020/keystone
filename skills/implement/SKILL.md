@@ -63,6 +63,14 @@ Keep going without asking while the next step needs no human decision; stop only
      external or hard-to-undo step (merge into main, push, deploy, a production job or migration) needs an explicit yes
      right before it (AskUserQuestion, one step per question); a smoke check only the human can do becomes
      `BLOCKED: needs the human`. Tick each `R<n>` after its check passes and commit the ticks as `docs(release): <slug>`.
+     Rows with `proved by R<n>` in their Reconciliation evidence cell: the check passed → append
+     `` — proved <YYYY-MM-DD>: `<check output line>` `` to that cell (the output in backticks, so a `|` in it does not
+     split the table row) and close an open `## Debt` line with the same row id
+     (`closed <YYYY-MM-DD> by R<n> check — <output line>`); the check failed or the step is `BLOCKED: needs the human`
+     → add a `## Debt` line per such row unless an open one exists (`- D<k> · <row id> · open · release R<n> check failed
+     <YYYY-MM-DD>: <output line> · prove by: R<n> check — <its check>`; a blocked step writes `release R<n> blocked
+     <YYYY-MM-DD>: <reason>` instead of `check failed …`; format in `../verify/references/ACCEPT.md`),
+     leave `R<n>` unticked and stop release mode. These plan edits go into the same `docs(release)` commit.
      Commit the ticks so far right before a push step, so that push carries them; the push's own tick stays a local
      commit that ships with the next push — say so in one line, never ask a separate push just for ticks.
      The Status stays `verified`. Never touch `## Tasks` or code in release mode.

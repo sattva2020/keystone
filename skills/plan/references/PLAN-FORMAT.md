@@ -52,6 +52,10 @@ Project rules check: read <CLAUDE.md, docs/architecture.md, .claude/rules/*.md, 
 ## Release
 - [ ] R1. <external step after verify: merge into main, push, deploy, a production job or migration, smoke check> — check: <observable result>
 
+## Debt
+<!-- written by /keystone:verify accept and release mode; never by the plan author. Closed by release mode, /keystone:qa-check or /keystone:verify accept D<k> -->
+- D1 · <row id> · open · accepted <YYYY-MM-DD> by <name> (verify <sha7>) · prove by: <what proves it>
+
 ## Implementation notes
 <!-- left empty by /keystone:plan; /keystone:implement appends one line per decision made while building -->
 ```
@@ -75,6 +79,12 @@ Rules for the template:
   checks on production go to `## Release` as `- [ ] R<n>. …` lines (only when the change ships somewhere). They run
   after verify — the push gate opens only on `Status: verified` — by `/keystone:implement` in release mode, each
   external step after the human's yes. Verify does not count them as open work.
+- **A row only a release step can prove** gets `proved by R<n>` in its `Verification evidence` cell, and step `R<n>`
+  must exist in `## Release` with a `check:`. Verify then gives the row `pending R<n>` (no accept needed); release mode
+  writes the proof into the cell when the check passes, or a `## Debt` line when it does not. The mark counts only in
+  Reconciliation rows; `/keystone:check` reports it anywhere else and a missing step or check.
+- **`## Debt`** is not written when the plan is made: `/keystone:verify accept` and release mode add its lines, with no
+  checkbox (`- D<k> · <row id> · open · … · prove by: …`); editing it never counts as a plan change for verify.
 
 ## Example task
 

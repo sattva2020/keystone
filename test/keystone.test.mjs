@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.26');
+  assert.equal(p.version, '0.9.27');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -730,7 +730,7 @@ test('0.9.26: verify carries rows into ## Carried, records the cost, keeps Advis
     'Carried:', 'trend menu: on this FAIL', 'Strictness: **L is strict by default**');
   has('skills/verify/references/LOOP.md', 'Stop and decide', 'cycle cost', '(this run not included)', 'Keystone cost meter', 'cost: verify+fix n/a');
   has('skills/verify/references/AFTER-CHOICE.md', 'Prove now: <check>', '**Accept is never first**', 'read before the Step 6 menu');
-  has('skills/verify/references/CHECKS.md', 'delta:', 'carried:', 'judge:', 'rules scope:', 'history:', 'trend menu:', 'cost:');
+  has('skills/verify/references/CHECKS.md', 'delta:', 'carried:', 'judge:', 'rules scope:', 'release refs:', '## Debt', 'history:', 'trend menu:', 'cost:');
   assert.match(front('skills/verify/SKILL.md'), /argument-hint:.*--full/);
 });
 
@@ -745,4 +745,35 @@ test('0.9.26: fix verify leaves Advisory, Minor and carried rows alone', () => {
 
 test('0.9.26: check finds a contradiction with an accepted decision before Approve, memlab or not', () => {
   has('skills/check/references/ANALYZE.md', 'docs/notes/*.md', 'Status: accepted', 'Decision:');
+});
+
+test('0.9.27 I-1/I-2/I-3: the verifier gives pending R<k> to rows proved by an open release step', () => {
+  has('agents/verifier.md', 'pending R<k>', 'release refs', 'Repro: release refs', 'pending <f>', 'a + b + c + d + e + f = n',
+    'means nothing: judge that line as usual');
+});
+
+test('0.9.27 I-1/I-5/I-6/I-8/I-10: verify passes with pending rows, shows Pending and Debt, accept writes and closes debt', () => {
+  has('skills/verify/SKILL.md', 'Pending:', 'Debt:', 'pending f', 'never block PASS', "the plan's `## Debt` lines", 'release refs:');
+  assert.match(front('skills/verify/SKILL.md'), /argument-hint:.*accept \[<plan path>\] D<k>/);
+  const v = read('skills/verify/SKILL.md');
+  assert.ok(v.indexOf('`accept …` → read') < v.indexOf('Active plan ='), 'accept is routed before the active-plan lookup');
+  has('skills/verify/references/ACCEPT.md', '## Debt', 'prove by:', 'D<k>', 'closed <YYYY-MM-DD>', '(accept)',
+    'docs(verify): close debt', 'only inside `## Debt` is not a change', 'set `Status: verified`', '`Status` does not change');
+});
+
+test('0.9.27 I-2/I-3/I-5: plans mark release-proved rows, ## Debt in the template, check finds a broken release ref', () => {
+  has('skills/plan/references/PLAN-FORMAT.md', 'proved by R<n>', '## Debt', 'prove by:', 'no checkbox');
+  has('skills/plan/SKILL.md', 'proved by R<n>');
+  has('skills/check/references/ANALYZE.md', 'Release ref:', 'proved by R<n>');
+});
+
+test('0.9.27 I-4: release mode writes the proof into the row, or a debt line when the check fails', () => {
+  has('skills/implement/SKILL.md', 'proved by R<n>', '— proved <YYYY-MM-DD>:', '## Debt', 'release R<n> check failed',
+    'by R<n> check', 'Never touch `## Tasks` or code in release mode');
+});
+
+test('0.9.27 I-7/I-8: qa makes a case per open debt line, qa-check closes it when the case passes', () => {
+  for (const f of ['skills/qa/SKILL.md', 'skills/qa-check/SKILL.md']) has(f, '`verified` with an open `## Debt` line', 'Covers: D<k>');
+  has('skills/qa/SKILL.md', 'Debt: <n of m open lines covered');
+  has('skills/qa-check/SKILL.md', 'by qa-check TC-NNN', 'Debt: closed', '## Debt', 'and the plan file', '(closing only)');
 });

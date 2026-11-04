@@ -176,7 +176,8 @@ representative existing artifact in an end-to-end verification path instead of v
 **Keystone rows.** Every intent `Desired outcome` line and every `Constraint` line is its own row of the table in the
 plan's `## Requirements Reconciliation`, cited `intent — I-n` — including "must not break" constraints (prove them with
 a check that the protected code/path is untouched). An intent without IDs: cite `Desired outcome #n` / `Constraint #n`.
-Other material rules cite `<path> — <section>`. Self-check before saving: every non-struck `I-n` has a row; an outcome
+Other material rules cite `<path> — <section>`. An outcome only a release step can prove (a publish, a deploy, a
+production check) gets `proved by R<n>` as its evidence and a step `R<n>` with a `check:` in `## Release`. Self-check before saving: every non-struck `I-n` has a row; an outcome
 without evidence is a gap — add a task or a check, do not drop the row. Without an intent, include the section only
 when several authoritative sources constrain the work, a conflict was resolved, independent dimensions exist, or a
 real artifact is required.

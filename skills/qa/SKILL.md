@@ -78,7 +78,7 @@ Parse `$ARGUMENTS` fully before doing anything else:
    - a git ref (`git rev-parse --verify <arg>` succeeds) → **ref input**: the change is `git diff <ref>...HEAD`;
    - nothing → **working input**: the change is `git diff --cached`, or `git diff` when nothing is staged (say which);
      if an active plan exists (the newest `docs/keystone/*/plan.md`
-     whose Status is draft, approved or implementing), read it and its intent too. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
+     whose Status is draft, approved or implementing, or `verified` with an open `## Debt` line), read it and its intent too. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
    - not a git work tree and no plan → manual change context (see `${CLAUDE_SKILL_DIR}/references/CHANGE-SUMMARY.md`).
 
 A plan input has no diff of its own: take the change from the commits that implement it (`git log` since the plan's
@@ -125,6 +125,9 @@ When a plan exists, QA is judged against what was asked, not only against the di
 - every intent line `I-n` that has observable behaviour gets at least one test case; cite it in the case as `Covers: I-n`;
 - the plan's `Done means:` line is turned into acceptance criteria of the test plan and into cases (each clause → a check);
 - an intent line with no way to test it manually is listed under "Not testable manually" with the reason — never dropped;
+- every open line of the plan's `## Debt` (`- D<k> · <row id> · open · … · prove by: …`) gets a case `Covers: D<k>, <row id>`
+  whose check is its `prove by:` — or goes to "Not testable manually" with the reason; `/keystone:qa-check` closes the
+  line when that case passes;
 - a plan row or diff area with no intent line stays in the cases as `Covers: unrequested` and is flagged in the summary.
 
 Without a plan there is nothing to cite — the cases are grounded in the diff alone; say so in the summary.
@@ -134,7 +137,7 @@ Without a plan there is nothing to cite — the cases are grounded in the diff a
 ```text
 QA: <change-summary | test-plan | test-cases | all> · input: <plan | ref | staged | working> · folder: <qa_dir>
 Saved: <files written>
-Covers: <n> of <m> intent lines (I-n) · Done means: <n clauses covered of m | no plan>
+Covers: <n> of <m> intent lines (I-n) · Done means: <n clauses covered of m | no plan> · Debt: <n of m open lines covered | none>
 Blocked on me: <missing change context, decisions only the user can take | none>
 Next: run the cases with `/keystone:qa-check human` or `/keystone:qa-check agent`. Context is heavy — suggest `/clear`.
 ```

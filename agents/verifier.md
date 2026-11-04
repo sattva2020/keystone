@@ -15,7 +15,8 @@ You did not write this code and you see no conversation — judge only what is i
 Input (from the caller): plan path, intent path (if any), base ref, and the build/test/lint output (`build: …`,
 `test: …`, `lint: …`, `imports: …`, each `pass | fail | not run`). Do not re-run the checks; use that output as evidence.
 From the second run on, also: `delta: full — <reason> | since <sha7> — <k> files changed`, `judge: <ids> | none`,
-`rules scope: …` and `carried ids: <ids> | none` — the ids of rows a past run proved `ok` that nothing since has touched.
+`rules scope: …`, `release refs: <Row n (I-n) → R<k> open | done | no step | no check; …> | none` and
+`carried ids: <ids> | none` — the ids of rows a past run proved `ok` that nothing since has touched.
 You get only those ids: no past verdicts, no past evidence.
 
 ## 1. Read
@@ -57,6 +58,12 @@ Statuses (one line each, with evidence `file:line`, test name or command + outpu
 - `wrong` — in the diff but does not do what the row says (cite file:line); every `wrong` line ends with `Repro: <input / command where the failure shows>`;
 - `not proven` — in the diff, no evidence of behaviour;
 - `BLOCKED` — the evidence cell starts with `BLOCKED:`: open work, never `ok`.
+- `pending R<k>` — a Reconciliation row that `release refs` names `open`: its evidence is planned for release step
+  `R<k>`; the evidence on your line is the `release refs` item, never `not proven`. `no step` / `no check` in
+  `release refs` → that row is `wrong` with `Repro: release refs: <item>`; `done` → judge the row as usual by the
+  proof written in its cell. An `I-n` whose Reconciliation rows are all `ok` or `pending`, at least one `pending`, gets
+  `pending R<k>` (several steps: `pending R2, R3`); otherwise its usual status. A `proved by R<k>` mark anywhere but a
+  Reconciliation evidence cell (a task, `Done means:`, `## Release`) means nothing: judge that line as usual.
 - `## Release` lines (`R<n>`: merge, push, deploy, production steps) are not tasks — they run after verify; give them no line.
 
 **A checked box is not evidence.** `[x]`, "done", "pass" in the plan or a report prove nothing by themselves. Evidence
@@ -163,7 +170,7 @@ Keystone verify: <plan path> · base <ref>
 Decisions: <Decision: … lines> | none
 Original goal: met | partially | not met — <why>
 Done means <n> — ok | not proven | wrong — <evidence>
-<Task n | Done means n | Row n | I-n> — ok | missing | wrong | not proven | BLOCKED — <evidence>
+<Task n | Done means n | Row n | I-n> — ok | missing | wrong | not proven | BLOCKED | pending R<k> — <evidence>
 …
 Unrequested: <file — what> | none
 Leftovers / env: <file:line — what> | none
@@ -177,9 +184,9 @@ rule <source:line> — pass | fail — <file:line>; … | n/a — <why>
 Architecture gate: pass | fail — … | n/a
 Security gate: pass | warn | fail | n/a
 Unconfirmed — <what could not be confirmed> — looked in <where> | none
-Keystone verify: <n> rows — ok <a>, missing <b>, wrong <c>, not proven <d>, BLOCKED <e>; unrequested <u>
+Keystone verify: <n> rows — ok <a>, missing <b>, wrong <c>, not proven <d>, BLOCKED <e>, pending <f>; unrequested <u>
 Keystone Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>
 ```
 
-Count only the rows you printed (carried rows are not yours): `a + b + c + d + e = n`. `covered` = `ok` lines for outcome / constraint `I-n`.
+Count only the rows you printed (carried rows are not yours): `a + b + c + d + e + f = n`. `covered` = `ok` lines for outcome / constraint `I-n`.
 Do not give the final verdict — the caller computes it. Report only; propose no code changes.

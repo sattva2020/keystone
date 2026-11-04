@@ -5,6 +5,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.27] — 2026-11-04
+
+### Added
+- **Rows proved by a release step.** A Reconciliation row whose evidence says `proved by R<n>` is `pending R<n>` in
+  verify when step `R<n>` of `## Release` is still open: no accept is needed, PASS is possible, and the final report
+  lists it under `Pending:`. An `I-n` resting on such rows gets the same status. `collect.mjs` checks the marks
+  mechanically and prints `release refs:`; a mark whose step is missing or has no `check:` is `wrong` in verify and a
+  `Release ref:` finding in `/keystone:check`.
+- **Release mode closes them.** `/keystone:implement` on a verified plan writes ` — proved <date>: <output>` into the
+  row when the step's check passes; when it fails, the row goes to the plan's `## Debt`.
+- **Debt after accept.** `/keystone:verify accept` also writes one `## Debt` line per accepted row (id, date, who, what
+  would prove it). `/keystone:qa` makes a `Covers: D<k>` case for each open line, `/keystone:qa-check` closes the line
+  when that case passes, and `/keystone:verify accept D<k> <proof>` closes one by hand after a confirmation. Open debt
+  shows in the plan and in the final reports of verify and qa-check; the plan stays `verified`. Editing `## Debt` never
+  makes verify run in full. Old accepts are not migrated.
+
 ## [0.9.26] — 2026-11-04
 
 ### Changed

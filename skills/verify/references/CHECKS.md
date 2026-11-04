@@ -71,8 +71,8 @@ The last committed `verify.md` of the task folder is the past run. Lines for the
 
 - `delta: full — <reason>` — every row is judged. Reasons, in this order: `first verify`, `--full`, `history rewritten`
   (a commit listed under `commits:` of the past run is no longer an ancestor of HEAD), `base moved`, `merge since the
-  last verify`, `plan changed` (ticks, `Status:`, `BLOCKED:` tails, `Coverage:`, `## Implementation notes` and
-  `## Release` do not count), `intent changed`, `checks failed` (build or test `→ fail`).
+  last verify`, `plan changed` (ticks, `Status:`, `BLOCKED:` tails, `Coverage:`, `## Implementation notes`,
+  `## Release` and `## Debt` do not count), `intent changed`, `checks failed` (build or test `→ fail`).
 - `delta: since <sha7> — <k> files changed since the last verify` — only rows in `judge:` and plan rows not carried.
   `<k>` counts every file but `verify.md`, the plan and intent included, so `0` means nothing changed. A rename counts
   as old path + new path; an untracked file older than the last verify commit is not counted (still carried as changed).
@@ -81,6 +81,9 @@ The last committed `verify.md` of the task folder is the past run. Lines for the
   test-backed evidence while build / test is `not run`, or evidence that cites a row already in `judge:` (`see Row 13`).
 - `rules scope: all task files[ — rule files changed: <list>] | files changed since <sha7> + files on the last run's
   failing rule lines: <files> | none`.
+- `release refs: <Row n (I-n) → R<k> open | done | no step | no check; …> | none` — every `proved by R<k>` in a
+  Reconciliation evidence cell (`Row <n>` counts the table's data rows from 1) against step `R<k>` of `## Release`:
+  `open` = unticked with a `check:`, `done` = ticked, `no step` = no such step, `no check` = the step has no `check:`.
 - `carried ids: <ids> | none`.
 
 Then `--- record only (not for the verifier) ---`, and under it, for the record only:

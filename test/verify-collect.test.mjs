@@ -1,11 +1,11 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, utimesSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, utimesSync, rmSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { collect, findBase, taskFiles, git, parseRows, history, trend } from '../skills/verify/scripts/collect.mjs';
+import { collect, findBase, taskFiles, git, parseRows, history, trend, releaseRefs } from '../skills/verify/scripts/collect.mjs';
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'verify', 'scripts', 'collect.mjs');
 const PLAN = 'docs/keystone/2026-10-18-x/plan.md';
@@ -584,4 +584,77 @@ test('collect: the CLI rejects an unknown flag with usage and exit 2', () => {
   const r = spawnSync(process.execPath, [SCRIPT, PLAN, '--ful'], { cwd: root, encoding: 'utf8' });
   assert.equal(r.status, 2);
   assert.match(r.stderr, /usage: node collect\.mjs/);
+});
+
+// --- proved by R<n>: release refs, pending rows, ## Debt outside the plan comparison ---
+
+const RECON = (rows) => `\n## Requirements Reconciliation\n\n| Decision | Source | Verification evidence |\n|---|---|---|\n${rows.join('\n')}\n`;
+
+test('collect: release refs name each proved-by row as open, no step, no check or done', () => {
+  const text = taskPlan(RECON([
+    '| a | intent — I-1 | proved by R1 |',
+    '| b | intent — I-2 | `x | y` proved by R5 |',
+    '| c | intent — I-3 | proved by R2 |',
+    '| d | intent — I-4 | Task 1 test; proved by R3 |',
+  ]) + '\n## Release\n- [ ] R1. ship — check: test -f shipped.txt\n- [ ] R2. deploy\n- [x] R3. tag — check: git tag\n');
+  assert.deepEqual(releaseRefs(text), ['Row 1 (I-1) → R1 open', 'Row 2 (I-2) → R5 no step', 'Row 3 (I-3) → R2 no check', 'Row 4 (I-4) → R3 done']);
+  assert.deepEqual(releaseRefs(taskPlan(RECON(['| a | intent — I-1 | Task 1 test |']))), []);
+  // an escaped \| in a cell, a release-mode proof whose output has a | in backticks, two marks in one cell
+  assert.deepEqual(releaseRefs(taskPlan(RECON([
+    '| a \\| b | intent — I-1 | proved by R1 |',
+    '| c | intent — I-2 | proved by R3 — proved 2026-11-05: `out a | b` |',
+    '| e | intent — I-5 | proved by R1 and proved by R3 |',
+  ]) + '\n## Release\n- [ ] R1. ship — check: test -f shipped.txt\n- [x] R3. tag — check: git tag\n')),
+  ['Row 1 (I-1) → R1 open', 'Row 2 (I-2) → R3 done', 'Row 3 (I-5) → R1 open', 'Row 3 (I-5) → R3 done']);
+  const root = repo();
+  commit(root, { 'README.md': 'x' }, 'start');
+  commit(root, { [PLAN]: text }, 'docs(plan)');
+  commit(root, { 'src/a.js': '1' }, 'feat: a');
+  const ls = collect(root, PLAN).split('\n');
+  const i = ls.findIndex((l) => l.startsWith('release refs: '));
+  assert.equal(ls[i], 'release refs: Row 1 (I-1) → R1 open; Row 2 (I-2) → R5 no step; Row 3 (I-3) → R2 no check; Row 4 (I-4) → R3 done');
+  assert.ok(ls.findIndex((l) => l.startsWith('rules scope:')) < i && i < ls.indexOf(MARK), 'after rules scope, above the marker');
+});
+
+test('collect: a plan without proved-by marks prints release refs: none; the frozen copy of the real plan reads Row 14 open', () => {
+  const { root } = looped();
+  commit(root, { 'src/b.js': '2' }, 'fix: b');
+  assert.match(collect(root, PLAN), /^release refs: none$/m);
+  const real = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'proved-by-plan.md'), 'utf8');
+  assert.ok(releaseRefs(real).includes('Row 14 (I-14) → R2 open'), releaseRefs(real).join('; '));
+});
+
+test('collect: a pending R<n> row parses, is never carried and is not a finding', () => {
+  assert.deepEqual(parseRows('Row 1 — pending R1 — release refs: Row 1 (I-1) → R1 open'), [{ id: 'Row 1', status: 'pending R1', evidence: 'release refs: Row 1 (I-1) → R1 open' }]);
+  assert.equal(parseRows('I-2 — pending R1, R3 — rows 1 and 2')[0].status, 'pending R1, R3');
+  const root = repo();
+  commit(root, { 'README.md': 'x', [INTENT]: 'I-1 a\n' }, 'start');
+  commit(root, { [PLAN]: taskPlan() }, 'docs(plan)');
+  commit(root, { 'src/a.js': '1', 'src/b.js': '1' }, 'feat: a b');
+  const base = findBase(root, PLAN).base;
+  commit(root, { [VERIFY]: vmd(base, `${REPORT}- Row 1 — pending R1 — release refs: Row 1 (I-1) → R1 open\n`) }, 'docs: verify 1');
+  commit(root, { 'src/b.js': '2' }, 'fix: b');
+  const out = collect(root, PLAN);
+  assert.ok(line(out, /^judge: /).includes('Row 1'), line(out, /^judge: /));
+  assert.doesNotMatch(line(out, /^carried ids: /), /Row 1/);
+  assert.match(line(out, /^run 1 /), /open 1 /, 'only the wrong Task 3 is a finding');
+});
+
+test('collect: editing ## Debt is not a plan change, in the middle of the plan or as the last section', () => {
+  const debt = (s) => `\n## Debt\n- D1 · Row 1 · ${s} · accepted 2026-11-04 by t (verify abc1234) · prove by: the first real report\n`;
+  for (const [before, after] of [
+    [taskPlan(), taskPlan(debt('open'))],
+    [taskPlan(debt('open') + '\n## Release\n- [ ] R1. ship — check: x\n'), taskPlan(debt('closed 2026-11-05 by qa-check TC-001 — passed') + '\n## Release\n- [ ] R1. ship — check: x\n')],
+  ]) {
+    const root = repo();
+    commit(root, { 'README.md': 'x', [INTENT]: 'I-1 a\n' }, 'start');
+    commit(root, { [PLAN]: before }, 'docs(plan)');
+    commit(root, { 'src/a.js': '1', 'src/b.js': '1' }, 'feat: a b');
+    const base = findBase(root, PLAN).base;
+    commit(root, { [VERIFY]: vmd(base, REPORT) }, 'docs: verify 1');
+    commit(root, { [PLAN]: after }, 'docs(verify): accept x');
+    const out = collect(root, PLAN);
+    assert.match(out, /^delta: since [0-9a-f]{7} /m);
+    assert.doesNotMatch(out, /plan changed/);
+  }
 });
