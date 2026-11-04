@@ -173,3 +173,12 @@ findings that affect correctness or the intent; no style preferences. Return the
 
 If the caller says memlab is available, run `search_decisions` for the plan's area before the rule checklist: a task
 that contradicts a prior decision, ADR or postmortem is a `rule-violation` finding citing that record (`path:line`).
+
+## Accepted decisions (always, memlab or not)
+
+Take the paths and key terms of the plan's tasks (directories, file names, tool and product names) and grep the
+accepted intents of other task folders (`docs/keystone/*/intent.md` with `Status: accepted`: their `I-n` lines and
+Decisions log) and `docs/notes/*.md` for them. A task that contradicts an accepted decision the plan does not
+explicitly supersede is a `rule-violation` finding whose text starts with
+`Decision: <intent path:I-n | note path> — contradicted by Task <n> — <how>`. Catching it here, before Approve, is
+cheaper than a verify FAIL after the code is written.

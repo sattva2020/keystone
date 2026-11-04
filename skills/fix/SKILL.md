@@ -117,12 +117,12 @@ verdict FAIL until fixed or until their rule changes.
 
 Read `verify.md` next to the active plan. Its verdict is not FAIL → say so and STOP. Otherwise collect **every**
 finding into one list: each `rule … — fail` line with all its `file:line`, every `wrong` line (with its `Repro:`),
-`Settings: violated`, an `Architecture gate: fail`. `not proven`, `BLOCKED` and `Unconfirmed` items are not defects —
-leave them. Print the list numbered, then fix all of them in one pass inside the active plan: no new plan, no mode
+`Settings: violated`, an `Architecture gate: fail`. `not proven`, `BLOCKED` and `Unconfirmed` items, `Advisory:` and
+`Minor:` lines and the `## Carried` rows are not defects — leave them out of the list and do not fix them. Print the list numbered, then fix all of them in one pass inside the active plan: no new plan, no mode
 question, one finding = one smallest change; a `wrong` behaviour finding still follows the Regression-First Policy, a
 rule finding (types, a swallowed error, a naming rule) is checked by build, lint and the related tests. Before
 committing, re-check each failing rule against **all** changed files of the plan (not only the cited lines) and fix
-other places that break it too. Add one line per finding to the plan's `## Implementation notes`, commit code and plan
+other lines this task added or changed that break it too. Add one line per finding to the plan's `## Implementation notes`, commit code and plan
 together, and report each finding as `fixed — <file:line>` or `not fixed — <why>`. Next: `/keystone:verify <plan>`.
 
 ### Step 1: Understand the problem and choose the mode

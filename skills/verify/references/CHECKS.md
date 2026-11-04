@@ -64,3 +64,31 @@ One line per check: `build: <command> → pass | pass (reused: …) | fail (<fir
 
 A timeout is `not run`, not a failure (limit: `KEYSTONE_CHECK_TIMEOUT_MS`, default 10 min). `pass (reused: …)` is a pass
 measured earlier on the same code: only this task's folder or docs/**/*.md changed since.
+
+## Between runs (lines after the checks)
+
+The last committed `verify.md` of the task folder is the past run. Lines for the verifier:
+
+- `delta: full — <reason>` — every row is judged. Reasons, in this order: `first verify`, `--full`, `history rewritten`
+  (a commit listed under `commits:` of the past run is no longer an ancestor of HEAD), `base moved`, `merge since the
+  last verify`, `plan changed` (ticks, `Status:`, `BLOCKED:` tails, `Coverage:`, `## Implementation notes` and
+  `## Release` do not count), `intent changed`, `checks failed` (build or test `→ fail`).
+- `delta: since <sha7> — <k> files changed since the last verify` — only rows in `judge:` and plan rows not carried.
+  `<k>` counts every file but `verify.md`, the plan and intent included, so `0` means nothing changed. A rename counts
+  as old path + new path; an untracked file older than the last verify commit is not counted (still carried as changed).
+- `judge: <ids> | none` — past rows to judge again: not `ok`, or their evidence names a changed file (path or a suffix
+  at `/` or `.`), or a `Task <n>` whose `files:` changed (a path, a folder above the file, its short name, or a glob such as `skills/*/SKILL.md`, `old/**`), or
+  test-backed evidence while build / test is `not run`, or evidence that cites a row already in `judge:` (`see Row 13`).
+- `rules scope: all task files[ — rule files changed: <list>] | files changed since <sha7> + files on the last run's
+  failing rule lines: <files> | none`.
+- `carried ids: <ids> | none`.
+
+Then `--- record only (not for the verifier) ---`, and under it, for the record only:
+
+- `carried: <id> — ok — carried from verify <sha7> — <evidence>` — the sha and evidence of the run that judged the row.
+- `history: <n> runs · FAIL <f>` and `run <i> · <date> · <verdict> · open <o> · new <n> · closed <c> · cycle cost
+  <$x.xx | n/a>` — findings are `wrong` / `missing` ids, each `file:line` of a failing `rule` line, `Decision:` and
+  `Unrequested:` lines; `Advisory:` and `Minor:` are not findings.
+- `trend menu: on this FAIL` — two or more FAIL runs already; a FAIL now gets the menu of `LOOP.md`.
+
+`cost: verify+fix $x.xx | n/a` is not printed by the script: verify adds it to `## Checks` from the mod's cost line.

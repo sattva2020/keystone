@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.25');
+  assert.equal(p.version, '0.9.26');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -516,7 +516,8 @@ test('no $<digit> in skills: Claude Code reads it as an argument placeholder and
 
 test('verify/fix loop: Rules gate lists every rule and violation; fix verify takes all findings in one pass', () => {
   has('agents/verifier.md', 'One line per rule', 'never stop at the first violation');
-  has('skills/verify/SKILL.md', '/keystone:fix verify', 'Code unchanged since the last FAIL');
+  has('skills/verify/SKILL.md', '/keystone:fix verify', 'references/LOOP.md');
+  has('skills/verify/references/LOOP.md', 'Code unchanged since the last FAIL');
   has('skills/fix/SKILL.md', '### Verify findings mode', 'fix all of them in one pass');
 });
 
@@ -711,4 +712,37 @@ test('0.9.19: verify — orchestrator on the mid model, judge on Opus, report wr
   assert.ok(readFileSync(join(root, 'skills/verify/SKILL.md')).length <= 22000, 'verify SKILL.md ≤ 22000 bytes');
   for (const f of ['skills/verify/scripts/collect.mjs', 'skills/verify/references/ACCEPT.md', 'skills/verify/references/AFTER-CHOICE.md'])
     assert.ok(existsSync(join(root, f)), f);
+});
+
+// verify-fix-convergence (docs/keystone/2026-11-01-verify-fix-convergence/intent.md)
+test('0.9.26: verifier judges only judge/uncarried rows, fixed ids, Advisory and Minor, Decisions first', () => {
+  has('agents/verifier.md', 'Advisory:', 'Minor:', 'judge:', 'rules scope:', 'carried ids:', '`Done means <n>`', '`Row <n>`',
+    'Do not read a past `verify.md`', 'no past verdicts, no past evidence', 'in doubt → not minor', 'MUST → not minor',
+    'Advisory never applies to them');
+  const out = read('agents/verifier.md').split('## Output')[1];
+  const at = (s) => out.indexOf(s);
+  assert.ok(at('Decisions:') > 0 && at('Decisions:') < at('Original goal:') && at('Original goal:') < at('<Task n'), 'Decisions → Original goal → rows');
+});
+
+test('0.9.26: verify carries rows into ## Carried, records the cost, keeps Advisory/Minor out of the verdict, trend menu', () => {
+  has('skills/verify/SKILL.md', 'above the record-only marker', '0 files changed', 'recomputed with carried rows', 'before asking',
+    'Keystone cost meter', 'cost: verify+fix', 'counts as 0.00', '--history', '--full', '## Carried', 'Advisory', 'Minor',
+    'Carried:', 'trend menu: on this FAIL', 'Strictness: **L is strict by default**');
+  has('skills/verify/references/LOOP.md', 'Stop and decide', 'cycle cost', '(this run not included)', 'Keystone cost meter', 'cost: verify+fix n/a');
+  has('skills/verify/references/AFTER-CHOICE.md', 'Prove now: <check>', '**Accept is never first**', 'read before the Step 6 menu');
+  has('skills/verify/references/CHECKS.md', 'delta:', 'carried:', 'judge:', 'rules scope:', 'history:', 'trend menu:', 'cost:');
+  assert.match(front('skills/verify/SKILL.md'), /argument-hint:.*--full/);
+});
+
+test('0.9.26: the trend menu routes — fix every finding in a clean session, stop and decide asks twice before abandoned', () => {
+  has('skills/verify/references/AFTER-CHOICE.md', 'Stop and decide', '/keystone:intent', 'Mark the plan abandoned?', 'Next: /keystone:fix verify');
+});
+
+test('0.9.26: fix verify leaves Advisory, Minor and carried rows alone', () => {
+  const sentence = read('skills/fix/SKILL.md').replace(/\s+/g, ' ').split('. ').find((s) => s.includes('not defects')) || '';
+  for (const x of ['Advisory', 'Minor', '## Carried']) assert.ok(sentence.includes(x), x);
+});
+
+test('0.9.26: check finds a contradiction with an accepted decision before Approve, memlab or not', () => {
+  has('skills/check/references/ANALYZE.md', 'docs/notes/*.md', 'Status: accepted', 'Decision:');
 });

@@ -5,6 +5,24 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.26] — 2026-11-04
+
+### Changed
+- **verify judges only what changed.** From the second run `collect.mjs` compares with the last committed `verify.md`:
+  rows proved `ok` whose files did not change are carried into a new `## Carried` section with the sha of the run that
+  proved them; the verifier gets only their ids, never their past verdicts or evidence, and judges the rest. Build and
+  tests always run. A full run comes back on `/keystone:verify <plan> --full`, a moved base, a merge, rewritten history,
+  a changed plan task or intent, or a failing check; a timed-out check sends test-backed rows back to the judge. Changed
+  project rules widen the Rules gate to all task files.
+- **Advisory and Minor.** A finding on a line the task did not add or change is `Advisory:`, a wording-only one (comment,
+  name, docs) is `Minor:`; both stay in `verify.md`, never fail the verdict, and `/keystone:fix verify` leaves them.
+  Strict L is unchanged: TODO / FIXME / HACK, lint warnings and undocumented env variables stay `wrong`.
+- **Decisions first.** The verifier prints `Decisions:` before every other row, and `/keystone:check` now greps accepted
+  intents and `docs/notes/*.md` for a contradicted decision before Approve, with or without memlab.
+- **Trend after the third FAIL.** `collect.mjs --history` counts open, new and closed findings per run and the cost of
+  each verify + fix cycle (from the mod's cost line); from the third FAIL verify shows the table, says whether the loop
+  converges, and offers `Fix every finding` or `Stop and decide` (narrow the intent or abandon the plan).
+
 ## [0.9.25] — 2026-11-01
 
 From an audit of 79 real sessions across 10 projects: gates stop blocking the wrong push, and the cost meter and verify's

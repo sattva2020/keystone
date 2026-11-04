@@ -2,7 +2,27 @@
 
 # Keystone verify — after the Step 6 choice
 
-Read by `/keystone:verify` once the human picked an option, and when the diff may have made a context file stale.
+Read by `/keystone:verify`: read before the Step 6 menu on FAIL / PASS / PASS-UNPROVEN, and after the pick; also when
+the diff may have made a context file stale.
+
+## Step 6 options
+
+Recommended first and marked `(Recommended)`:
+
+- **FAIL** — `Fix directly here — every finding, in this session` (Recommended when the findings are few and small) ·
+  `Fix critical only — wrong behaviour and security / architecture gate fails` (only when there are non-critical
+  findings too) · `Fix every finding in a clean session — /keystone:fix verify` (Recommended when the context is
+  large or the findings are many) · `Finish an unfinished task — /keystone:implement <plan>` (only when a row is
+  `missing`) · `Stop here`. With `trend menu: on this FAIL` the menu of `LOOP.md` replaces this one.
+- **PASS-UNPROVEN** — one `Prove now: <check>` option for each group of open rows that can be proven before
+  production (a test to run, a read-only query against the database, `/keystone:security <plan>` for a security
+  row, a local run) · `Accept as unproven (<n> rows: <short list>)` · on L `Run /keystone:review first` ·
+  `Stop here`. A `Prove now` option goes first whenever one exists. **Accept is never first** when an open row or the
+  Security gate concerns security (RLS, grants, auth, permissions) — then the security check is the recommendation.
+- **PASS** with open `## Release` steps — `Release: /keystone:implement <plan>` (on L `Run /keystone:review first`
+  goes first) · `Stop here`.
+- **PASS** without release steps — `Review the diff — /keystone:review` (Recommended on L) · `Security check —
+  /keystone:security <plan>` (when the diff touches auth, data or user input) · `Push` · `Stop here`.
 
 **Context drift (a second question, only when found).** Verify never edits context files. Compare the diff with
 `docs/architecture.md`, `CLAUDE.md` / `.claude/CLAUDE.md` and `.claude/rules/**`: a new module, top-level folder or
@@ -30,5 +50,10 @@ After the choice:
 - `Review`, `Security check` → run that skill now the same way (read its SKILL.md and follow it).
 - `Fix … in a clean session`, `Finish an unfinished task`, `Push` → not run here: the command becomes the `Next:`
   line (a clean session, or an irreversible step the human starts).
+- `Fix every finding — /keystone:fix verify` (the trend menu of `LOOP.md`) → the same as `Fix … in a clean session`:
+  `Next: /keystone:fix verify`.
+- `Stop and decide` → nothing runs and verify edits neither the intent nor the plan: `Next: /keystone:intent <intent
+  path>` to narrow the intent. `Status: abandoned` goes into the plan header only after a second explicit yes —
+  AskUserQuestion `Mark the plan abandoned?` with `Yes` / `No`; `No` leaves the plan as it is.
 - AskUserQuestion unavailable (`claude -p`, CI) → no menu: print the options as a numbered list and put the first one
   in `Next:`.

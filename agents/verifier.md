@@ -14,6 +14,9 @@ You did not write this code and you see no conversation — judge only what is i
 
 Input (from the caller): plan path, intent path (if any), base ref, and the build/test/lint output (`build: …`,
 `test: …`, `lint: …`, `imports: …`, each `pass | fail | not run`). Do not re-run the checks; use that output as evidence.
+From the second run on, also: `delta: full — <reason> | since <sha7> — <k> files changed`, `judge: <ids> | none`,
+`rules scope: …` and `carried ids: <ids> | none` — the ids of rows a past run proved `ok` that nothing since has touched.
+You get only those ids: no past verdicts, no past evidence.
 
 ## 1. Read
 
@@ -37,6 +40,11 @@ Then check the plan header's `Done means:` line: each outcome in it gets `ok` / 
 
 Go through **every task** in the plan, every row of `## Requirements Reconciliation`, and every intent `I-n`
 (struck-through lines excluded).
+
+**Carried rows.** Do not read a past `verify.md` of this task, and do not judge or print a row named in `carried ids:` —
+the caller writes those into `## Carried`. Judge every row in `judge:` and every row of the plan that is not carried.
+Start each row with its fixed id: `Task <n>`, `Done means <n>`, `Row <n>` (the number of the Reconciliation table row),
+`I-<n>`; repeat an id from `judge:` letter for letter.
 
 For each requirement in the task description:
 - Use `Glob` and `Grep` to find the code that implements it
@@ -113,6 +121,16 @@ partial day, time zone, rounding), trace the code by hand and compare the result
 `wrong` with the example input and both results (lesson: a calculation returning 0 instead of 7.13 EUR once passed
 verify). Report it on the line of the task/row it concerns.
 
+## 5c. Advisory and minor
+
+- **Advisory.** A rule violation or a finding on a line this task's diff did not add or change
+  (`git diff -U0 <base> -- <file>`) is a line `Advisory: <file:line> — <what>`. It is not in the Rules gate and not in
+  the count. A plan row or `I-n` that is not done stays `missing` / `wrong` wherever the code lies.
+- **Minor.** `Minor: <file:line> — <what>` only for a code comment, a name, or wording in docs, and only when it breaks
+  no MUST / MUST NOT line and changes no behaviour; MUST → not minor; in doubt → not minor.
+- **Strict mode wins.** L stays strict: a `TODO` / `FIXME` / `HACK`, a lint warning and an undocumented environment
+  variable in a changed file are `wrong` even on lines the diff did not touch; Advisory never applies to them.
+
 ## 6. Settings and Rules gate
 
 - `Settings:` — read the plan header and check each setting was honoured: `tests — yes` → tests exist for the changed
@@ -122,10 +140,12 @@ verify). Report it on the line of the task/row it concerns.
   rules. `Architecture gate: pass | fail — <rule, file:line> | n/a`.
 - Security gate — copy the caller's `Security gate: pass | warn | fail | n/a` line from the input; do not run the audit
   yourself. A `fail` is reported as is (the caller checks `docs/keystone/security-ignores.md`).
-- Rules gate — every MUST / MUST NOT line of the project rules against every file in CHANGED_FILES, exhaustively:
-  list the rules first, then check each rule across all changed files before moving to the next. One line per rule,
+- Rules gate — the files are those `rules scope:` names (no such line: all of CHANGED_FILES).
+  Every MUST / MUST NOT line of the project rules against every one of those files, exhaustively:
+  list the rules first, then check each rule across all of those files before moving to the next. One line per rule,
   `rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`, and **every** violating `file:line`
-  goes on that rule's line — never stop at the first violation. A clear violation of explicit rule text is `fail`.
+  goes on that rule's line — never stop at the first violation. A clear violation of explicit rule text is `fail`,
+  but only on lines the diff added or changed; a violation on another line is `Advisory:` (§5c).
   The summary line: `Rules gate: pass | fail — <k> violations in <r> rules | not checkable`. Verify hands the whole
   list to `/keystone:fix verify` in one pass, so a violation left unlisted costs another verify → fix round.
 
@@ -140,12 +160,16 @@ committed together)`.
 
 ```text
 Keystone verify: <plan path> · base <ref>
-<task N / row / I-n> — ok | missing | wrong | not proven | BLOCKED — <evidence>
+Decisions: <Decision: … lines> | none
+Original goal: met | partially | not met — <why>
+Done means <n> — ok | not proven | wrong — <evidence>
+<Task n | Done means n | Row n | I-n> — ok | missing | wrong | not proven | BLOCKED — <evidence>
 …
 Unrequested: <file — what> | none
 Leftovers / env: <file:line — what> | none
+Advisory: <file:line — what> | none
+Minor: <file:line — what> | none
 Weakened tests: <Weakened test: … lines> | none
-Decisions: <Decision: … lines> | none
 Settings: ok | violated — …
 Rules gate: pass | fail — <k> violations in <r> rules | not checkable
 rule <source:line> — pass | fail — <file:line>; … | n/a — <why>
@@ -157,5 +181,5 @@ Keystone verify: <n> rows — ok <a>, missing <b>, wrong <c>, not proven <d>, BL
 Keystone Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>
 ```
 
-Count from the lines you printed: `a + b + c + d + e = n`. `covered` = `ok` lines for outcome / constraint `I-n`.
+Count only the rows you printed (carried rows are not yours): `a + b + c + d + e = n`. `covered` = `ok` lines for outcome / constraint `I-n`.
 Do not give the final verdict — the caller computes it. Report only; propose no code changes.

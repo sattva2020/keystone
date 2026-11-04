@@ -1,7 +1,7 @@
 ---
 name: verify
 description: "Keystone: verify finished work against its plan and intent — runs build/test/lint, then an independent verifier agent in a clean context gives every plan task, Reconciliation row and intent line ok / missing / wrong / not proven / BLOCKED, flags unrequested work, and returns PASS, PASS-UNPROVEN or FAIL. A checked box is not evidence. Writes verify.md; on PASS sets Status verified. Use after implementation on M and L changes, or for 'verify', 'did we miss anything', 'is it really done'. `/keystone:verify accept` records a human decision on unproven rows."
-argument-hint: "[<plan path> [base git ref]] [--strict] | accept"
+argument-hint: "[<plan path> [base git ref]] [--strict] [--full] | accept"
 allowed-tools: Read Glob Grep Bash Agent AskUserQuestion Write Edit Skill
 model: sonnet
 effort: high
@@ -58,7 +58,7 @@ text, without backticks. Link only a file you checked exists.
 anything: answer that this is `/keystone:intent <path>` (intent) or `/keystone:plan <plan path>` (plan), and that verify
 must be run again afterwards. Never attribute to the user an edit the agent made.
 
-Arguments: `$ARGUMENTS` — `<plan path> [base ref]`, or `accept`, or empty (= the active plan).
+Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only with the plan path: judge every row again), or `accept`, or empty (= the active plan).
 
 ## Step 0 — find the plan, intent, rules
 
@@ -73,9 +73,9 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref]`, or `accept`, or empty (= t
 
 ## Step 1 — collect (one command)
 
-Run from the repository root: `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> [base ref]` — the diff base,
-this task's commits and files (uncommitted ones included) and build / test / lint by `references/CHECKS.md`, one line
-each. **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
+Run from the repository root: `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> [base ref] [--full]` — the diff base,
+this task's commits and files (uncommitted ones included), build / test / lint by `references/CHECKS.md`, then `delta:`,
+`judge:`, `rules scope:`, `carried ids:`, the record-only marker, and under it `carried:` / `history:` / `trend menu:`. **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
 `not run` line is never a pass, (a timeout included); `pass (reused: …)` is a pass (CHECKS.md). Merged-in commits from other branches or sessions never make a file `unrequested`;
 task-folder files (plan.md, intent.md, verify.md) never are. `Mode: fix` plans: note whether existing test files were
 edited (a violation of the fix contract). A check the plan names (a task's `check:`, a read-only `curl` GET against a
@@ -95,19 +95,22 @@ lint warning, an unfinished-work marker (TODO / FIXME / HACK) or an undocumented
 ## Step 3 — the verifier
 
 Call the agent (Agent tool, `subagent_type: "keystone:verifier"`). Its prompt contains **only** facts, no opinion:
-plan path, intent path, base ref, the Step-1 lines (incl. the Architecture and Security gate lines), and the project-rules file list. It returns one line per task,
-Reconciliation row and `I-n`, then `Unrequested`, `Settings`, `Rules gate` with one `rule …` line per project rule
+plan path, intent path, base ref, the Step-1 lines above the record-only marker (incl. the gate lines; never the
+evidence of carried rows), and the project-rules file list. It returns one line per task, Reconciliation row and `I-n`
+not carried, then `Unrequested`, `Settings`, `Rules gate` with one `rule …` line per project rule
 (every violating `file:line` on it), the count line and the `Keystone Chain` line.
-Its first line is `Original goal: met | partially | not met` — the user's verbatim goal against the diff, independent of
+Its first line is `Decisions:`, then `Original goal: met | partially | not met` — the user's verbatim goal against the diff, independent of
 the intent; `partially`/`not met` without a confirmed `Goal check:` in the intent is `wrong` (PASS is impossible). Then
 `Done means:` — every outcome there gets ok / not proven / wrong.
-**Write `verify.md` once**, in the Step 5 layout: the Step-1 lines as `## Checks`, the verifier's output exactly as it
-came as `## Report` — never retyped or summarised. Then **cross-check every `ok` and `wrong` line** against the cited
+**Cost.** Take the `Keystone cost meter` line from this prompt's context: `cost: verify+fix $<verify + fix>` (a part
+missing counts as 0.00); no line or `not measured yet` → `cost: verify+fix n/a`. It is the cost before this run.
+**Write `verify.md` once**, in the Step 5 layout: the Step-1 lines and `cost:` as `## Checks`, the `carried:` lines as
+they are as `## Carried`, the verifier's output exactly as it came as `## Report` — never retyped or summarised. Then **cross-check every `ok` and `wrong` line** against the cited
 `file:line` (open it and confirm it says what the line claims); on a mismatch, fix that line in `verify.md` with Edit
 and mark it `(corrected by verify)`. Every `wrong` line
 must carry `Repro: <input / command where the failure shows>`; the verifier also returns an `Unconfirmed — <what could
 not be confirmed> — looked in <where>` section. **Do not print the line-by-line report in the chat**: it lives in
-`verify.md`, and the chat gets only the Final report below. Count again from the lines in `verify.md`: `ok + missing + wrong + not proven + BLOCKED = n`.
+`verify.md`, and the chat gets only the Final report below. Count again from `## Report` plus `## Carried` (carried rows are `ok`): `ok + missing + wrong + not proven + BLOCKED = n`.
 If the numbers do not add up, fix the count, not the lines, and say so.
 
 Rules you enforce when reading the output (the verifier knows them, you check them):
@@ -124,12 +127,10 @@ Rules you enforce when reading the output (the verifier knows them, you check th
 ## Step 3b — what the verifier must not be talked into
 
 - Do not pass your own conclusions ("it works", "tests pass") into the prompt — only command output and paths.
-- Do not shorten the plan or hide rows to keep the report small: every task, every Reconciliation row, every `I-n`
-  gets a line, even when it is obviously `ok`.
-- Do not re-run the verifier hoping for a milder verdict. A second run is justified only after the code or the evidence
-  changed. Code unchanged since the last FAIL (no new commit, no relevant uncommitted change) → do not call the
-  verifier: say so, keep `verify.md`, and make the Next command `/keystone:fix verify` — the open findings need a fix,
-  not another verify.
+- Do not shorten the plan or hide rows: every task, Reconciliation row and `I-n` has a line in `## Report` (judged)
+  or in `## Carried`; none drops out of both.
+- Do not re-run the verifier hoping for a milder verdict: last verdict FAIL and `delta: since <sha7> — 0 files changed`
+  → do not call it; Next `/keystone:fix verify` (`references/LOOP.md`).
 - A Rules gate `fail` with a single `rule` line while the project has more MUST / MUST NOT lines is incomplete: the
   verifier must give one line per rule. Send it back once with the missing rules named.
 - A missing or unreadable intent: say so, verify against the plan alone, and report the outcome / constraint counts
@@ -148,6 +149,7 @@ unexplained deviation is not a FAIL by itself; list it under `Found:` so the hum
 Strict mode (L by default, or `--strict`) additionally requires: every task `ok` (no partial), build and tests pass
 (tests are required there unless `tests — no`), lint clean, no unfinished-work markers and no undocumented env
 variables in the changed files, Rules gate `pass`. Anything short of that is `wrong` or `not proven` as in Step 1.
+`Advisory:` and `Minor:` lines never change the verdict.
 
 - **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Weakened tests: none` (or each tied to a task); `Decisions: none`; `Settings: ok`; `Rules gate` not `fail`; `Architecture gate` not `fail`; `Security gate` not an unignored `fail`.
 - **PASS-UNPROVEN** — no `missing` / `wrong` / `unrequested`, `Settings: ok`, Rules gate not `fail`, but at least one
@@ -163,11 +165,14 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
    # Verify: <plan name>
    Date: <YYYY-MM-DD> · Base: <ref> · Verdict: <PASS | PASS-UNPROVEN | FAIL>
    ## Checks
-   <the Step-1 lines>
+   <the Step-1 lines, cost:>
+   ## Carried
+   <the carried: lines | none>
    ## Report
-   <the verifier output, unchanged, incl. the Keystone Chain line>
+   <the verifier output, unchanged>
    ## Verdict
    <verdict> — <one line: what is open>
+   <ok + … = n and Keystone Chain, recomputed with carried rows>
    ```
 2. **PASS** → set `Status: verified` in the plan header (nothing else in the plan), then commit **only** `verify.md`
    and the plan: `git add <plan folder>/verify.md <plan>` and `git commit -m "docs(verify): <slug>"`. Check
@@ -190,30 +195,16 @@ commit.
 
 ## Step 6 — the choice (AskUserQuestion)
 
-A verdict that leaves a decision ends with a menu, not with one command — the human picks, then goes on. Print the
-Final report and the three-heading summary first, then call AskUserQuestion once. Options, recommended first and marked
-`(Recommended)`:
-
-- **FAIL** — `Fix directly here — every finding, in this session` (Recommended when the findings are few and small) ·
-  `Fix critical only — wrong behaviour and security / architecture gate fails` (only when there are non-critical
-  findings too) · `Fix every finding in a clean session — /keystone:fix verify` (Recommended when the context is
-  large or the findings are many) · `Finish an unfinished task — /keystone:implement <plan>` (only when a row is
-  `missing`) · `Stop here`.
-- **PASS-UNPROVEN** — one `Prove now: <check>` option for each group of open rows that can be proven before
-  production (a test to run, a read-only query against the database, `/keystone:security <plan>` for a security
-  row, a local run) · `Accept as unproven (<n> rows: <short list>)` · on L `Run /keystone:review first` ·
-  `Stop here`. A `Prove now` option goes first whenever one exists. **Accept is never first** when an open row or the
-  Security gate concerns security (RLS, grants, auth, permissions) — then the security check is the recommendation.
-- **PASS** with open `## Release` steps — `Release: /keystone:implement <plan>` (on L `Run /keystone:review first`
-  goes first) · `Stop here`.
-- **PASS** without release steps — `Review the diff — /keystone:review` (Recommended on L) · `Security check —
-  /keystone:security <plan>` (when the diff touches auth, data or user input) · `Push` · `Stop here`.
+A verdict that leaves a decision ends with a menu, not with one command. Print the Final report and the summary first,
+then call AskUserQuestion once with the options of `references/AFTER-CHOICE.md` — read it before asking. FAIL and
+Step 1 printed `trend menu: on this FAIL` → after the Step 5 commit run `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> --history`, show its
+output, and ask the menu of `references/LOOP.md` instead.
 
 **Context drift.** If the diff makes `docs/architecture.md`, `CLAUDE.md` or `.claude/rules` clearly stale, add a
 second question to the same AskUserQuestion call as `references/AFTER-CHOICE.md` says; the final report carries
 `Context drift: <file — what is stale> | none` either way.
 
-After the pick, read `${CLAUDE_SKILL_DIR}/references/AFTER-CHOICE.md` and carry the choice out as it says.
+After the pick, carry the choice out as `AFTER-CHOICE.md` says.
 
 **Gates.** The hooks close `git push` / `gh pr create` for this plan's commits until `Status: verified`; `accept` and
 the ways to lift a gate are in `references/ACCEPT.md`.
@@ -222,6 +213,9 @@ the ways to lift a gate are in `references/ACCEPT.md`.
 
 ```text
 <verdict>: <plan path> · base <ref> · <n> rows — ok a, missing b, wrong c, not proven d, BLOCKED e; unrequested u
+Decisions: <list> | none
+Carried: <k> rows from verify <sha7> | none (full run — <reason>)
+Advisory: <a> · Minor: <m>
 Keystone Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>
 Open: <the not proven / BLOCKED / failed rows, one line each> | none
 Unconfirmed: <what could not be confirmed — looked in <where>, one line each | none>
@@ -232,7 +226,7 @@ Status: <verified | unchanged (reason)> · verify.md: <path> · commit: <sha> do
 The heading `Unconfirmed:` is mandatory verbatim in the chat answer (not only in verify.md); a list or `none`.
 Run the correctness review below **before** printing the final report.
 
-The `Keystone Chain` line is mandatory and printed verbatim even when everything passes. `rework signals`: the intent
+The `Keystone Chain` line is mandatory, recomputed with carried rows, even when everything passes. `rework signals`: the intent
 changed after the plan's first commit → name it; intent and plan first committed together → `not measurable`.
 
 **Correctness review:** run the built-in `/code-review` — verify checks the plan against the diff, not whether the code
