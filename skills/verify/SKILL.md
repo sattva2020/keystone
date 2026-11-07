@@ -12,7 +12,7 @@ effort: high
 
 Judgment is delegated to the `keystone:verifier` agent, which did not write the code and sees no conversation. This
 skill runs the commands, collects the verdict, and writes the record. **Write/Edit are allowed for exactly two things:**
-`<plan folder>/verify.md` and the `Status:` value in the plan header (plus `Accepted unproven by …` in verify.md for
+`<plan folder>/verify.md` and the `Status:` value in the plan header (plus `Accepted unproven by …` / `Accepted violation by …` in verify.md for
 `accept`, and for `accept` the plan's `## Debt` lines — `references/ACCEPT.md`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/keystone:fix` or
 `/keystone:implement`, not this skill — `Fix directly here` in Step 6 hands the turn to the fix skill's rules.
 
@@ -75,7 +75,7 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only wit
 
 Run from the repository root: `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> [base ref] [--full]` — the diff base,
 this task's commits and files (uncommitted ones included), build / test / lint by `references/CHECKS.md`, then `delta:`,
-`judge:`, `rules scope:`, `release refs:`, `carried ids:`, the record-only marker, and under it `carried:` / `history:` / `trend menu:`. **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
+`judge:`, `rules scope:`, `release refs:`, `left the plan:`, `carried ids:`, the record-only marker, and under it `edited:` / `late watch:` / `accepted violations:` / `carried:` / `history:` / `trend menu:`. `verifier: not called` → no verifier (`references/LOOP.md`). **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
 `not run` line is never a pass, (a timeout included); `pass (reused: …)` is a pass (CHECKS.md). Merged-in commits from other branches or sessions never make a file `unrequested`;
 task-folder files (plan.md, intent.md, verify.md) never are. `Mode: fix` plans: note whether existing test files were
 edited (a violation of the fix contract). A check the plan names (a task's `check:`, a read-only `curl` GET against a
@@ -104,7 +104,7 @@ the intent; `partially`/`not met` without a confirmed `Goal check:` in the inten
 `Done means:` — every outcome there gets ok / not proven / wrong.
 **Cost.** Take the `Keystone cost meter` line from this prompt's context: `cost: verify+fix $<verify + fix>` (a part
 missing counts as 0.00); no line or `not measured yet` → `cost: verify+fix n/a`. It is the cost before this run.
-**Write `verify.md` once**, in the Step 5 layout: the Step-1 lines and `cost:` as `## Checks`, the `carried:` lines as
+**Write `verify.md` once**, in the Step 5 layout: the Step-1 lines (one per line) and `cost:` as `## Checks`, the `carried:` lines as
 they are as `## Carried`, the verifier's output exactly as it came as `## Report` — never retyped or summarised. Then **cross-check every `ok` and `wrong` line** against the cited
 `file:line` (open it and confirm it says what the line claims); on a mismatch, fix that line in `verify.md` with Edit
 and mark it `(corrected by verify)`. Every `wrong` line
@@ -119,7 +119,6 @@ Rules you enforce when reading the output (the verifier knows them, you check th
 - `[x]`, "done", "pass" is not evidence. A grep or a code read is presence, not behaviour → `not proven`.
 - A row whose evidence starts with `BLOCKED:` is open work, never `ok`.
 - Formatting noise is not `unrequested`; new logic, files or dependencies without a task / row / `I-n` are.
-- Build or test failing in Step 1 → every row it covers is at best `wrong`.
 - A green test run proves nothing about a test the diff loosened: each `Weakened test` line without a task / row that
   asks for it keeps the verdict at PASS-UNPROVEN until the human accepts it. A `Decision:` line (the change contradicts
   an accepted decision of an earlier intent or note that this plan does not supersede) is a FAIL.
@@ -128,8 +127,8 @@ Rules you enforce when reading the output (the verifier knows them, you check th
 
 - Do not pass your own conclusions ("it works", "tests pass") into the prompt — only command output and paths.
 - Do not shorten the plan or hide rows: every task, Reconciliation row and `I-n` has a line in `## Report` (judged)
-  or in `## Carried`; none drops out of both.
-- Do not re-run the verifier hoping for a milder verdict: last verdict FAIL and `delta: since <sha7> — 0 files changed`
+  or in `## Carried`; none drops out of both (ids in `left the plan:` excepted).
+- Do not re-run the verifier hoping for a milder verdict: `delta: since <sha7> — 0 files changed`, run <sha7> FAIL
   → do not call it; Next `/keystone:fix verify` (`references/LOOP.md`).
 - A Rules gate `fail` with a single `rule` line while the project has more MUST / MUST NOT lines is incomplete: the
   verifier must give one line per rule. Send it back once with the missing rules named.
@@ -154,7 +153,7 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
 - **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Weakened tests: none` (or each tied to a task); `Decisions: none`; `Settings: ok`; `Rules gate` not `fail`; `Architecture gate` not `fail`; `Security gate` not an unignored `fail`. `pending R<n>` rows never block PASS.
 - **PASS-UNPROVEN** — no `missing` / `wrong` / `unrequested`, `Settings: ok`, Rules gate not `fail`, but at least one
   `not proven` or `BLOCKED` row, or a `Weakened test` line no task asks for.
-- **FAIL** — anything else: a `missing`, `wrong` or `unrequested` line, a `Decision:` line, `Settings: violated`, `Rules gate: fail`, `Architecture gate: fail`, an unignored `Security gate: fail`.
+- **FAIL** — anything else: a `missing`, `wrong` or `unrequested` line, a `Decision:` line, `Settings: violated`, `Rules gate: fail` (all its `file:line` under `accepted violations:` → pass, ACCEPT.md), `Architecture gate: fail`, an unignored `Security gate: fail`.
 
 ## Step 5 — record
 
@@ -172,6 +171,7 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
    <the verifier output, unchanged>
    ## Verdict
    <verdict> — <one line: what is open>
+   Late: <ids, LOOP.md> | none
    <ok + … = n and Keystone Chain, recomputed with carried rows>
    ```
 2. **PASS** → set `Status: verified` in the plan header (nothing else in the plan), then commit **only** `verify.md`
@@ -196,9 +196,9 @@ commit.
 ## Step 6 — the choice (AskUserQuestion)
 
 A verdict that leaves a decision ends with a menu, not with one command. Print the Final report and the summary first,
-then call AskUserQuestion once with the options of `references/AFTER-CHOICE.md` — read it before asking. FAIL and
-Step 1 printed `trend menu: on this FAIL` → after the Step 5 commit run `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> --history`, show its
-output, and ask the menu of `references/LOOP.md` instead.
+then call AskUserQuestion once with the options of `references/AFTER-CHOICE.md` — read it before asking. FAIL (not after a
+`verifier: not called` run) → after the Step 5 commit run `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> --history`, show
+it; `rules menu: on this FAIL` → ask the rules menu of `references/LOOP.md`, else `trend menu: on this FAIL` → its trend menu.
 
 **Context drift.** If the diff makes `docs/architecture.md`, `CLAUDE.md` or `.claude/rules` clearly stale, add a
 second question to the same AskUserQuestion call as `references/AFTER-CHOICE.md` says; the final report carries

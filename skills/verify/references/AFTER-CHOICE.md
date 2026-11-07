@@ -13,7 +13,7 @@ Recommended first and marked `(Recommended)`:
   `Fix critical only — wrong behaviour and security / architecture gate fails` (only when there are non-critical
   findings too) · `Fix every finding in a clean session — /keystone:fix verify` (Recommended when the context is
   large or the findings are many) · `Finish an unfinished task — /keystone:implement <plan>` (only when a row is
-  `missing`) · `Stop here`. With `trend menu: on this FAIL` the menu of `LOOP.md` replaces this one.
+  `missing`) · `Stop here`. With `rules menu: on this FAIL` or `trend menu: on this FAIL` the menu of `LOOP.md` replaces this one.
 - **PASS-UNPROVEN** — one `Prove now: <check>` option for each group of open rows that can be proven before
   production (a test to run, a read-only query against the database, `/keystone:security <plan>` for a security
   row, a local run) · `Accept as unproven (<n> rows: <short list>)` · on L `Run /keystone:review first` ·
@@ -52,6 +52,10 @@ After the choice:
   line (a clean session, or an irreversible step the human starts).
 - `Fix every finding — /keystone:fix verify` (the trend menu of `LOOP.md`) → the same as `Fix … in a clean session`:
   `Next: /keystone:fix verify`.
+- `Fix the whole class, then one last verify — /keystone:fix verify` (the rules menu of `LOOP.md`) → the same, in a
+  clean session: `Next: /keystone:fix verify`.
+- `Accept the violation consciously` (the rules menu) → the click is the confirmation: go to **Accept a rule
+  violation** of `ACCEPT.md` without asking again.
 - `Stop and decide` → nothing runs and verify edits neither the intent nor the plan: `Next: /keystone:intent <intent
   path>` to narrow the intent. `Status: abandoned` goes into the plan header only after a second explicit yes —
   AskUserQuestion `Mark the plan abandoned?` with `Yes` / `No`; `No` leaves the plan as it is.

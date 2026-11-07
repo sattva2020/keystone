@@ -5,6 +5,37 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.29] — 2026-11-07
+
+### Changed
+- **A finding comes with its class.** Every `wrong` line of the verifier names `Class:` — what its defects have in
+  common — and lists every defect of the row and every place of that class in the task's files, not the first one
+  found. A failing Rules gate line keeps the violations on changed lines before ` — sites to cover:` and lists after it
+  the other places of the class one shared fix must cover, then `Class:`; the places after the label are not findings.
+- **`/keystone:fix verify` closes the whole class in one pass.** It widens the verifier's class over all task files
+  and fixes it at the shared point (or every place), runs each `Repro:` before and after, writes one new test per class
+  that is red on revert, checks its own diff against the project's MUST rules before the commit and records each finding
+  with its sites in `## Implementation notes`. A `Decision:` line gets one question that supersedes every
+  contradicted `I-n` of the earlier intent at once; the same class in two runs in a row offers a rule via
+  `/keystone:evolve` (only after a yes); a finding that needs new work is sent to `/keystone:plan`.
+- **An edit of the plan or intent judges only what it touched.** A rewritten task, a changed Reconciliation row, a
+  changed `Done means:` line or a changed `I-n` (with the rows that cite it) goes to judge; Design, Risks and other
+  text judge nothing. A struck `~~I-n~~` and the rows resting only on it are listed as `left the plan:` and never
+  judged. A full run comes back on `--full`, a moved base, a merge, rewritten history, or a changed `Level:` /
+  `Settings:` / `Authority:` line. An `ok` row on a file of a past `wrong` row is judged again even if the file did
+  not change.
+- **A failed build or test stops verify before the judge.** `collect.mjs` prints `verifier: not called — test failed`,
+  verify writes `not judged` and FAIL and sends you to `/keystone:fix verify`; a timeout or a failing lint does not
+  stop it.
+
+### Added
+- **Late findings.** A row that was `ok`, whose files did not change, and is `wrong` now is marked on a `Late:` line
+  of the verdict and as ` · late <l>` in the run history; the verdict stays FAIL.
+- **Rules menu and an accepted violation.** Two FAIL runs in a row that rest only on Rules gate lines bring a menu at
+  once: fix the whole class and verify once more, or accept the violation consciously. Accepting writes
+  `Accepted violation by <name> <date>: rule <source> — <file:line>; …` into `verify.md`; only those places stop being
+  findings, a new place of the same rule fails again, and the Security gate is never accepted this way.
+
 ## [0.9.28] — 2026-11-07
 
 ### Added

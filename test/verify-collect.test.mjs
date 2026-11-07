@@ -5,7 +5,7 @@ import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { collect, findBase, taskFiles, git, parseRows, history, trend, releaseRefs } from '../skills/verify/scripts/collect.mjs';
+import { collect, findBase, taskFiles, git, parseRows, history, trend, releaseRefs, findings, parseAccepted, lateWatch } from '../skills/verify/scripts/collect.mjs';
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'verify', 'scripts', 'collect.mjs');
 const PLAN = 'docs/keystone/2026-10-18-x/plan.md';
@@ -339,11 +339,16 @@ test('collect: full-run reasons — --full, another base, merge, plan text, inte
   commit(r.root, { [PLAN]: taskPlan().replace('- [ ] 1. a', '- [x] 1. a').replace('Status: implementing', 'Status: verified') + '\n## Implementation notes\n- 2026-11-01 Task 1 — x\n' }, 'fix: notes');
   assert.match(collect(r.root, PLAN), /^delta: since /m, 'ticks, Status and notes are not a plan change');
   commit(r.root, { [PLAN]: taskPlan().replace('1. a', '1. a and more') }, 'plan edit');
-  assert.match(collect(r.root, PLAN), /^delta: full — plan changed$/m);
+  const pe = collect(r.root, PLAN);
+  assert.match(pe, /^delta: since /m, 'a task text edit judges that task, not every row');
+  assert.ok(ids(pe, /^judge: /).includes('Task 1'), line(pe, /^judge: /));
+  assert.ok(line(pe, /^carried ids: /).includes('Task 2'), line(pe, /^carried ids: /));
 
   r = looped();
   commit(r.root, { [INTENT]: 'I-1 b\n' }, 'intent edit');
-  assert.match(collect(r.root, PLAN), /^delta: full — intent changed$/m);
+  const ie = collect(r.root, PLAN);
+  assert.match(ie, /^delta: since /m);
+  assert.ok(ids(ie, /^judge: /).includes('I-1'), line(ie, /^judge: /));
 });
 
 test('collect: a verify.md without Base is a full run, never an error', () => {
@@ -370,14 +375,16 @@ test('collect: an amended task commit below the verify commit → history rewrit
   assert.match(collect(root, PLAN), /^delta: full — history rewritten$/m);
 });
 
-test('collect: a failing test is a full run; a timed-out test sends test-backed ok rows to judge', () => {
+test('collect: a failing test stops the run before the verifier; a timed-out test sends test-backed ok rows to judge', () => {
   const root = repo();
   commit(root, { 'README.md': 'x', 'package.json': JSON.stringify({ scripts: { test: 'node -e "process.exit(1)"' } }) }, 'start');
   commit(root, { [PLAN]: taskPlan() }, 'docs(plan)');
   commit(root, { 'src/a.js': '1' }, 'feat: a');
   const base = findBase(root, PLAN).base;
   commit(root, { [VERIFY]: vmd(base, '- Task 1 — ok — src/a.js:1\n- Task 9 — ok — npm test 5 pass\n') }, 'docs: verify');
-  assert.match(collect(root, PLAN), /^delta: full — checks failed$/m);
+  const stop = collect(root, PLAN);
+  assert.match(stop, /^verifier: not called — test failed$/m);
+  assert.doesNotMatch(stop, /^delta: /m);
   commit(root, { 'package.json': JSON.stringify({ scripts: { test: 'node -e "setTimeout(()=>{},4000)"' } }) }, 'slow test');
   const r = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8', env: { ...process.env, KEYSTONE_CHECK_TIMEOUT_MS: '500' } });
   assert.match(r.stdout, /^test: npm test → not run \(timeout/m);
@@ -534,9 +541,9 @@ test('collect: Authority is read from the header line only — a body mention of
   const base = findBase(root, PLAN).base;
   commit(root, { [VERIFY]: vmd(base, '- Task 1 — ok — src/a.js:1\n') }, 'docs: verify');
   commit(root, { 'CLAUDE.md': 'r2\n' }, 'rules');
-  assert.doesNotMatch(collect(root, PLAN), /intent changed/);
+  assert.match(collect(root, PLAN), /^edited: none$/m);
   commit(root, { [INTENT]: 'I-1 b\n' }, 'intent edit');
-  assert.match(collect(root, PLAN), /^delta: full — intent changed$/m);
+  assert.match(collect(root, PLAN), /^edited: I-1 \(intent line\)$/m);
 });
 
 test('collect: only fixed row ids are rows — no line of the verifier template becomes a row or a finding', () => {
@@ -656,5 +663,199 @@ test('collect: editing ## Debt is not a plan change, in the middle of the plan o
     const out = collect(root, PLAN);
     assert.match(out, /^delta: since [0-9a-f]{7} /m);
     assert.doesNotMatch(out, /plan changed/);
+  }
+});
+
+// --- 0.9.28: plan / intent edits judge only what they touched, left the plan, I-13 files, stop on failed checks, late watch ---
+
+function edited(before, intent, report) { // one committed verify over `before`; each test edits from here
+  const root = repo();
+  commit(root, { 'README.md': 'x', [INTENT]: intent }, 'start');
+  commit(root, { [PLAN]: before }, 'docs(plan)');
+  commit(root, { 'src/a.js': '1', 'src/b.js': '1' }, 'feat: a b');
+  const base = findBase(root, PLAN).base;
+  const v = commit(root, { [VERIFY]: vmd(base, report) }, 'docs: verify 1');
+  return { root, base, v };
+}
+const ids = (out, re) => line(out, re).replace(/^[^:]+: /, '').split(', ');
+const ROWS3 = taskPlan(RECON(['| x | intent — I-1 | t |', '| y | intent — I-1, I-2 | t |', '| z | intent — I-3 | t |']));
+const REP3 = '- Task 1 — ok — src/a.js:1\n- Task 2 — ok — src/b.js:1\n- Row 1 — ok — fine\n- Row 2 — ok — fine\n- Row 3 — ok — fine\n- I-1 — ok — fine\n- I-2 — ok — fine\n- I-3 — ok — fine\n';
+
+test('0.9.28 collect: a rewritten task is judged alone and listed under edited:', () => {
+  const { root } = edited(taskPlan(), 'I-1 a\n', REPORT);
+  commit(root, { [PLAN]: taskPlan().replace('1. a —', '1. a rewritten —') }, 'plan edit');
+  const out = collect(root, PLAN);
+  assert.match(out, /^delta: since /m);
+  assert.ok(ids(out, /^judge: /).includes('Task 1'));
+  assert.match(out, /^edited: Task 1 \(task text\)$/m);
+  assert.ok(ids(out, /^carried ids: /).includes('Task 2'));
+});
+
+test('0.9.28 collect: a changed or new I-n judges itself and the rows that cite it; a rewritten row is judged', () => {
+  const { root } = edited(ROWS3, 'I-1 a\nI-2 b\nI-3 c\n', REP3);
+  commit(root, { [INTENT]: 'I-1 a\nI-2 b changed\nI-3 c\n' }, 'intent edit');
+  let j = ids(collect(root, PLAN), /^judge: /);
+  for (const id of ['I-2', 'Row 2']) assert.ok(j.includes(id), `${id} in ${j}`);
+  for (const id of ['Row 1', 'Row 3', 'I-1', 'I-3']) assert.ok(!j.includes(id), `${id} not in ${j}`);
+  commit(root, { [INTENT]: 'I-1 a\nI-2 b changed\nI-3 c\nI-4 new\n' }, 'intent add');
+  assert.match(line(collect(root, PLAN), /^edited: /), /I-4 \(intent line\)/);
+  commit(root, { [PLAN]: ROWS3.replace('| z |', '| z rewritten |') }, 'row edit');
+  j = ids(collect(root, PLAN), /^judge: /);
+  assert.ok(j.includes('Row 3'), j.join(', '));
+});
+
+test('0.9.28 collect: a struck I-n leaves the plan with the rows that cite only it — never judged or carried', () => {
+  const { root } = edited(ROWS3, 'I-1 a\nI-2 b\nI-3 c\n', REP3);
+  commit(root, { [INTENT]: '~~I-1 a~~\nI-2 b\nI-3 c\n' }, 'strike I-1');
+  const out = collect(root, PLAN);
+  assert.match(out, /^left the plan: I-1, Row 1$/m);
+  assert.ok(!ids(out, /^judge: /).includes('Row 1') && !ids(out, /^carried ids: /).includes('Row 1'));
+  assert.ok(!ids(out, /^judge: /).includes('I-1') && !ids(out, /^carried ids: /).includes('I-1'));
+  // the first verify, with a struck I-n already in the intent
+  const first = repo();
+  commit(first, { 'README.md': 'x', [INTENT]: '~~I-1 a~~\nI-2 b\n' }, 'start');
+  commit(first, { [PLAN]: taskPlan(RECON(['| x | intent — I-1 | t |'])) }, 'docs(plan)');
+  commit(first, { 'src/a.js': '1' }, 'feat');
+  assert.match(collect(first, PLAN), /^left the plan: I-1, Row 1$/m);
+});
+
+test('0.9.28 collect: an I-n of another intent in Source is not own; "I-2; I-1" after ; is own', () => {
+  const plan = taskPlan(RECON(['| x | `other/intent.md` — I-1 | t |', '| y | intent — I-2; I-1 | t |']));
+  const { root } = edited(plan, 'I-1 a\nI-2 b\n', '- Row 1 — ok — fine\n- Row 2 — ok — fine\n');
+  commit(root, { [INTENT]: 'I-1 changed\nI-2 b\n' }, 'intent edit');
+  const j = ids(collect(root, PLAN), /^judge: /);
+  assert.ok(j.includes('Row 2') && !j.includes('Row 1'), j.join(', '));
+  commit(root, { [INTENT]: '~~I-1 changed~~\nI-2 b\n' }, 'strike');
+  assert.match(collect(root, PLAN), /^left the plan: I-1$/m);
+});
+
+test('0.9.28 collect: a changed Done means line judges the past Done means rows; a Design edit judges nothing', () => {
+  const dm = (s) => taskPlan('\n## Design\n- d1\n').replace('Settings: tests — yes\n', `Settings: tests — yes\nDone means: ${s}\n`);
+  const { root } = edited(dm('x'), 'I-1 a\n', '- Task 1 — ok — src/a.js:1\n- Done means 1 — ok — fine\n');
+  commit(root, { [PLAN]: dm('x').replace('- d1', '- d2') }, 'design edit');
+  let out = collect(root, PLAN);
+  assert.match(out, /^delta: since /m);
+  assert.match(out, /^edited: none$/m);
+  assert.match(out, /^judge: none$/m);
+  commit(root, { [PLAN]: dm('y').replace('- d1', '- d2') }, 'done means edit');
+  out = collect(root, PLAN);
+  assert.ok(ids(out, /^judge: /).includes('Done means 1'), line(out, /^judge: /));
+});
+
+test('0.9.28 collect: an ok row on a file of a past wrong row is judged even if the file did not change (I-13)', () => {
+  const rep = '- Task 1 — ok — src/a.js:1 does it\n- Task 2 — wrong — Class: c — src/b.js:1 Repro: x\n- Row 1 — ok — src/b.js:3 covers it\n';
+  const { root } = edited(taskPlan(), 'I-1 a\n', rep);
+  const out = collect(root, PLAN);
+  assert.match(out, /^delta: since [0-9a-f]{7} — 0 files changed/m);
+  assert.ok(ids(out, /^judge: /).includes('Row 1'), line(out, /^judge: /));
+  assert.deepEqual(ids(out, /^carried ids: /), ['Task 1']);
+});
+
+test('0.9.28 collect: a failed test stops before the verifier; the next delta counts from the last judged run', () => {
+  const { root, base, v } = edited(taskPlan(), 'I-1 a\n', REPORT);
+  commit(root, { 'package.json': JSON.stringify({ scripts: { test: 'node -e "process.exit(1)"' } }) }, 'break');
+  const stop = collect(root, PLAN);
+  assert.match(stop, /^verifier: not called — test failed$/m);
+  assert.doesNotMatch(stop, /^(delta|judge): /m);
+  assert.match(stop, /^history: /m);
+  const stopped = `# Verify: x\nDate: 2026-11-02 · Base: ${base.slice(0, 7)} · Verdict: FAIL\n\n## Checks\n- test: npm test → fail\n## Carried\nnone\n## Report\n\n\`\`\`text\nnot judged — test failed (verifier not called)\n\`\`\`\n\n## Verdict\nFAIL — test failed\n`;
+  commit(root, { [VERIFY]: stopped }, 'docs: verify stop');
+  commit(root, { 'package.json': JSON.stringify({ scripts: { test: 'node -e "process.exit(0)"' } }) }, 'fix');
+  assert.match(collect(root, PLAN), new RegExp(`^delta: since ${v.slice(0, 7)} `, 'm'));
+});
+
+test('0.9.28 collect: late watch lists past ok rows judged again although their files and text did not change', () => {
+  const { root } = edited(taskPlan(), 'I-1 a\n', '- Task 1 — ok — src/a.js:1\n- Task 2 — ok — src/b.js:1\n');
+  let out = collect(root, PLAN, undefined, { full: true });
+  assert.deepEqual(ids(out, /^late watch: /), ['Task 1', 'Task 2']);
+  commit(root, { 'src/b.js': '2' }, 'fix b');
+  out = collect(root, PLAN, undefined, { full: true });
+  assert.deepEqual(ids(out, /^late watch: /), ['Task 1']);
+  commit(root, { [PLAN]: taskPlan().replace('1. a —', '1. a rewritten —') }, 'plan edit');
+  out = collect(root, PLAN, undefined, { full: true });
+  assert.match(out, /^late watch: none$/m);
+  // edited: and late watch: are for the record; left the plan: is for the verifier
+  const ls = out.split('\n');
+  assert.ok(ls.findIndex((l) => l.startsWith('left the plan:')) < ls.indexOf(MARK));
+  for (const k of ['edited:', 'late watch:']) assert.ok(ls.findIndex((l) => l.startsWith(k)) > ls.indexOf(MARK), k);
+  assert.match(collect(root, PLAN), /^late watch: none$/m, 'a delta run judges no quiet row here');
+});
+
+test('0.9.28 collect: a changed Level or Settings header is a full run — plan header changed', () => {
+  for (const edit of [(p) => p.replace('Level: M', 'Level: L'), (p) => p.replace('Settings: tests — yes', 'Settings: tests — no')]) {
+    const { root } = edited(taskPlan(), 'I-1 a\n', REPORT);
+    commit(root, { [PLAN]: edit(taskPlan()) }, 'header edit');
+    assert.match(collect(root, PLAN), /^delta: full — plan header changed$/m);
+  }
+  const { root } = edited(taskPlan(), 'I-1 a\n', REPORT);
+  commit(root, { [PLAN]: taskPlan().replace('Status: implementing', 'Status: verified') }, 'status');
+  assert.match(collect(root, PLAN), /^delta: since /m, 'Status is not the header');
+});
+
+// --- 0.9.28 history: late findings, stop runs, accepted violations, rules menu, sites to cover, a real verify.md ---
+
+test('0.9.28 history: a late-watch id given wrong adds · late <l> to its run; a run without late ones has no tail', () => {
+  const { root, base } = edited(taskPlan(), 'I-1 a\n', REPORT);
+  commit(root, { [VERIFY]: vmd(base, '- Task 1 — wrong — x. Repro: y\n- Task 2 — ok — fine\n', { checks: '- late watch: Task 1, Task 2\n' }) }, 'verify 2');
+  const h = history(root, PLAN);
+  assert.match(h[1], /cycle cost n\/a$/);
+  assert.match(h[2], / · late 1$/);
+});
+
+test('0.9.28 history: a stop run keeps every open finding and adds check: test failed', () => {
+  const { root, base } = edited(taskPlan(), 'I-1 a\n', REPORT);
+  commit(root, { [VERIFY]: vmd(base, '- Task 1 — wrong — a\n- Task 2 — missing — b\nrule CLAUDE.md:3 — fail — src/a.js:4\n') }, 'verify 2');
+  const stopped = `# Verify: x\nDate: 2026-11-02 · Base: ${base.slice(0, 7)} · Verdict: FAIL\n\n## Checks\n- test: npm test → fail\n## Carried\nnone\n## Report\nnot judged — test failed (verifier not called)\n\n## Verdict\nFAIL — test failed\n`;
+  commit(root, { [VERIFY]: stopped }, 'verify stop');
+  assert.match(history(root, PLAN)[3], /open 4 · new 1 · closed 0/);
+  assert.ok(findings(stopped).has('check: test failed'));
+});
+
+test('0.9.28 history: places after sites to cover: / Class: on a rule line are not findings', () => {
+  const k = findings(vmd('a'.repeat(7), 'rule .claude/rules/x.md:3 — fail — src/a.js:1; src/b.js:2 — sites to cover: src/c.js:9 — Class: c\n'));
+  assert.deepEqual([...k].sort(), ['rule .claude/rules/x.md:3 src/a.js:1', 'rule .claude/rules/x.md:3 src/b.js:2']);
+});
+
+test('0.9.28 history: the real M37 verify.md lines parse — fenced report, glued Checks, `file.ts:45-57` places', () => {
+  const real = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'm37-verify-lines.md'), 'utf8');
+  const keys = findings(real);
+  assert.deepEqual([...keys].sort(), ['rule .claude/rules/keystone.md:10 frontend/lib/hooks/use-site-backups.ts:45',
+    'rule .claude/rules/keystone.md:10 frontend/lib/hooks/use-site-backups.ts:90']);
+  assert.deepEqual(lateWatch(real), ['Done means 2']);
+  const acc = parseAccepted('Accepted violation by t 2026-11-06: rule .claude/rules/keystone.md:10 — `frontend/lib/hooks/use-site-backups.ts:45`; frontend/lib/hooks/use-site-backups.ts:90');
+  assert.equal(findings(real, acc).size, 0, 'the accepted places match the backticked, ranged ones');
+  // judged: the fenced report after a blank line is a judged run; `not judged` inside the fence is a stop run
+  const failed = real.replace(/\r\n/g, '\n').replace('→ pass', '→ fail');
+  assert.ok(!findings(failed).has('check: build failed'), 'a judged run has no check: key');
+  assert.ok(findings(failed.replace('```text\nKeystone verify:', '```text\nnot judged — build failed\nKeystone verify:')).has('check: build failed'));
+});
+
+test('0.9.28 history: an accept-violation commit is not a run; accepted places are not findings, a new place is', () => {
+  const { root, base } = edited(taskPlan(), 'I-1 a\n', REPORT);
+  const run = vmd(base, 'rule .claude/rules/x.md:3 — fail — src/a.js:1; src/b.js:2\n');
+  commit(root, { [VERIFY]: run }, 'verify 2');
+  commit(root, { [VERIFY]: `${run}Accepted violation by t 2026-11-06: rule .claude/rules/x.md:3 — src/a.js:1; src/b.js:2\n` }, 'docs(verify): accept violation x');
+  assert.match(history(root, PLAN)[0], /^history: 2 runs/);
+  assert.match(collect(root, PLAN), /^accepted violations: rule \.claude\/rules\/x\.md:3 — src\/a\.js:1; src\/b\.js:2$/m);
+  commit(root, { [VERIFY]: vmd(base, 'rule .claude/rules/x.md:3 — fail — src/a.js:1; src/c.js:5\n') }, 'verify 3');
+  const h = history(root, PLAN);
+  assert.match(h[2], /open 0 /, 'run 2 rests only on accepted places');
+  assert.match(h[3], /open 1 · new 1 /, 'only src/c.js:5 is a finding');
+  const ls = collect(root, PLAN).split('\n');
+  assert.ok(ls.findIndex((l) => l.startsWith('accepted violations:')) > ls.indexOf(MARK));
+});
+
+test('0.9.28 trend: two rules-only FAIL runs print rules menu: on this FAIL; history does not', () => {
+  const { root, base } = edited(taskPlan(), 'I-1 a\n', REPORT);
+  commit(root, { [VERIFY]: vmd(base, 'rule .claude/rules/x.md:3 — fail — src/a.js:1\n') }, 'verify 2');
+  commit(root, { [VERIFY]: vmd(base, 'rule .claude/rules/x.md:3 — fail — src/b.js:2\n') }, 'verify 3');
+  assert.ok(trend(root, PLAN).includes('rules menu: on this FAIL'));
+  assert.ok(trend(root, PLAN).indexOf('rules menu: on this FAIL') < trend(root, PLAN).findIndex((l) => l.startsWith('trend: ')));
+  assert.ok(!history(root, PLAN).includes('rules menu: on this FAIL'));
+  for (const extra of ['- Task 1 — wrong — a\n', 'Settings: violated — no tests\n']) {
+    const r = edited(taskPlan(), 'I-1 a\n', REPORT);
+    commit(r.root, { [VERIFY]: vmd(r.base, 'rule .claude/rules/x.md:3 — fail — src/a.js:1\n') }, 'verify 2');
+    commit(r.root, { [VERIFY]: vmd(r.base, `rule .claude/rules/x.md:3 — fail — src/b.js:2\n${extra}`) }, 'verify 3');
+    assert.ok(!trend(r.root, PLAN).includes('rules menu: on this FAIL'), extra);
   }
 });

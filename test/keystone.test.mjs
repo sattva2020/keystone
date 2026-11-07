@@ -20,7 +20,7 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.28');
+  assert.equal(p.version, '0.9.29');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -757,6 +757,49 @@ test('0.9.26: fix verify leaves Advisory, Minor and carried rows alone', () => {
 
 test('0.9.26: check finds a contradiction with an accepted decision before Approve, memlab or not', () => {
   has('skills/check/references/ANALYZE.md', 'docs/notes/*.md', 'Status: accepted', 'Decision:');
+});
+
+// verify-fix-class-sweep (docs/keystone/2026-11-03-verify-fix-class-sweep/intent.md)
+test('0.9.28 I-1/I-15/I-16: the verifier names the class and every place of it; rule lines carry sites to cover and Class', () => {
+  has('agents/verifier.md', 'Class:', 'every place of the class', 'left the plan:', '— Class: <', 'sites to cover:', 'shared point',
+    'only on lines the diff added or changed', 'One line per rule', 'never stop at the first violation',
+    'Do not read a past `verify.md`', 'no past verdicts, no past evidence');
+  const out = read('agents/verifier.md').split('## Output')[1];
+  assert.match(out, /— wrong — Class: <class> — <file:line>; … — <evidence> Repro:/);
+  assert.match(out, /rule <source:line> — fail — <file:line>; … — sites to cover: <file:line>; … — Class: <class>/);
+});
+
+test('0.9.28 I-5/I-6/I-17/I-20: verify stops without a judge, marks late findings, counts accepted violations, rules menu first', () => {
+  const flat = (f) => read(f).replace(/\s+/g, ' ');
+  const v = flat('skills/verify/SKILL.md');
+  for (const s of ['verifier: not called', 'Late:', 'late watch:', 'accepted violations:', 'rules menu: on this FAIL',
+    '`Accepted violation by …`', 'ids in `left the plan:` excepted', 'not after a `verifier: not called` run', 'one per line'])
+    assert.ok(v.includes(s), s);
+  assert.ok(!v.includes('every row it covers is at best'));
+  const step6 = v.split('## Step 6')[1];
+  assert.ok(step6.indexOf('rules menu: on this FAIL') < step6.indexOf('trend menu: on this FAIL'), 'rules menu is checked first');
+  const loop = flat('skills/verify/references/LOOP.md');
+  for (const s of ['not judged', 'verifier not called', 'Rules-only FAIL twice', 'Fix the whole class, then one last verify',
+    'Accept the violation consciously', 'Late', '/keystone:fix verify']) assert.ok(loop.includes(s), s);
+  const acc = flat('skills/verify/references/ACCEPT.md');
+  for (const s of ['Accepted violation by', 'docs(verify): accept violation', 'only the listed', 'Security gate']) assert.ok(acc.includes(s), s);
+  assert.match(acc.split('## Accept — ')[1].split('### ')[0], /PASS-UNPROVEN[^.]*Accepted violation by/, 'a recomputed PASS-UNPROVEN may be accepted');
+  has('skills/verify/references/AFTER-CHOICE.md', 'Fix the whole class', 'Accept the violation consciously');
+  const checks = flat('skills/verify/references/CHECKS.md');
+  for (const s of ['verifier: not called', 'plan header changed', 'left the plan:', 'edited:', 'late watch:', 'accepted violations:',
+    'rules menu: on this FAIL', '· late <l>', 'check: <kind> failed', 'sites to cover:', '`Accepted violation by` lines are not a run',
+    '`## Release` and `## Debt` are never edits']) assert.ok(checks.includes(s), s);
+  for (const s of ['plan changed`', 'intent changed`', 'checks failed`']) assert.ok(!checks.includes(s), s);
+});
+
+test('0.9.28 I-2/I-3/I-4/I-14/I-15/I-17/I-18/I-19: fix verify closes the whole class, proves it, asks before rules and decisions', () => {
+  has('skills/fix/SKILL.md', 'Class', 'every place of its class', 'shared point', 'Repro before:', 'red on revert', 'Decision:',
+    'supersedes <path> I-a, I-b, I-c', '/keystone:evolve', 'rules self-check', 'new work', '/keystone:plan <plan path>', 'not judged',
+    'accepted violations:', 'sites to cover:', 'every `Unrequested:` item', '### Verify findings mode', 'fix all of them in one pass');
+  const mode = read('skills/fix/SKILL.md').split('### Verify findings mode')[1].split('\n### ')[0];
+  const six = mode.split('6. **The same class again.**')[1].split('7. **')[0];
+  assert.ok(six && !/subject/i.test(six), 'the past run is found by its content, never by the commit subject');
+  assert.ok(mode.indexOf('2. **New work') < mode.indexOf('3. **The whole class'), 'new work is sorted out before fixing');
 });
 
 test('0.9.27 I-1/I-2/I-3: the verifier gives pending R<k> to rows proved by an open release step', () => {

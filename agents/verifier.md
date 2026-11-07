@@ -17,7 +17,8 @@ Input (from the caller): plan path, intent path (if any), base ref, and the buil
 From the second run on, also: `delta: full — <reason> | since <sha7> — <k> files changed`, `judge: <ids> | none`,
 `rules scope: …`, `release refs: <Row n (I-n) → R<k> open | done | no step | no check; …> | none` and
 `carried ids: <ids> | none` — the ids of rows a past run proved `ok` that nothing since has touched.
-You get only those ids: no past verdicts, no past evidence.
+You get only those ids: no past verdicts, no past evidence. On every run: `left the plan: <ids> | none` — a struck
+intent line and the Reconciliation rows that cite only struck lines; they are neither judged nor printed.
 
 ## 1. Read
 
@@ -44,6 +45,7 @@ Go through **every task** in the plan, every row of `## Requirements Reconciliat
 
 **Carried rows.** Do not read a past `verify.md` of this task, and do not judge or print a row named in `carried ids:` —
 the caller writes those into `## Carried`. Judge every row in `judge:` and every row of the plan that is not carried.
+An id in `left the plan:` gets no line at all: its `I-n` is struck, so it is out of the plan.
 Start each row with its fixed id: `Task <n>`, `Done means <n>`, `Row <n>` (the number of the Reconciliation table row),
 `I-<n>`; repeat an id from `judge:` letter for letter.
 
@@ -55,7 +57,11 @@ For each requirement in the task description:
 Statuses (one line each, with evidence `file:line`, test name or command + output line):
 - `ok` — the change is in the diff **and** there is evidence it works;
 - `missing` — not in the diff;
-- `wrong` — in the diff but does not do what the row says (cite file:line); every `wrong` line ends with `Repro: <input / command where the failure shows>`;
+- `wrong` — in the diff but does not do what the row says; the line is
+  `<id> — wrong — Class: <what the defects have in common> — <file:line>; <file:line>; … — <evidence> Repro: <input / command where the failure shows>`.
+  Before you write it, name the class (the same missing guard, the same wrong call, the same unhandled case), grep
+  every file of CHANGED_FILES for it and list every defect of the row and every place of the class — never stop at the
+  first one. Two rows with one class each list it whole;
 - `not proven` — in the diff, no evidence of behaviour;
 - `BLOCKED` — the evidence cell starts with `BLOCKED:`: open work, never `ok`.
 - `pending R<k>` — a Reconciliation row that `release refs` names `open`: its evidence is planned for release step
@@ -150,9 +156,14 @@ verify). Report it on the line of the task/row it concerns.
 - Rules gate — the files are those `rules scope:` names (no such line: all of CHANGED_FILES).
   Every MUST / MUST NOT line of the project rules against every one of those files, exhaustively:
   list the rules first, then check each rule across all of those files before moving to the next. One line per rule,
-  `rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`, and **every** violating `file:line`
-  goes on that rule's line — never stop at the first violation. A clear violation of explicit rule text is `fail`,
-  but only on lines the diff added or changed; a violation on another line is `Advisory:` (§5c).
+  `rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`; a `fail` line goes on with
+  ` — sites to cover: <file:line>; … — Class: <what they have in common>`, and **every** violating `file:line` goes on that rule's line — never stop at the first violation. A clear violation
+  of explicit rule text is `fail`, but only on lines the diff added or changed: only those go before `sites to cover:`;
+  a violation on another line is `Advisory:` (§5c). A rule that asks to walk the neighbours (every call, the sibling
+  adapters, each implementation, the same class) gets, after `sites to cover:`, every other place of the class in
+  CHANGED_FILES that one shared fix must cover, untouched lines included, and names the shared point (the one function
+  or module all of them go through); those places are not repeated in `Advisory:`. No such places → no
+  `sites to cover:`. `Class:` comes last on a `fail` line.
   The summary line: `Rules gate: pass | fail — <k> violations in <r> rules | not checkable`. Verify hands the whole
   list to `/keystone:fix verify` in one pass, so a violation left unlisted costs another verify → fix round.
 
@@ -170,7 +181,8 @@ Keystone verify: <plan path> · base <ref>
 Decisions: <Decision: … lines> | none
 Original goal: met | partially | not met — <why>
 Done means <n> — ok | not proven | wrong — <evidence>
-<Task n | Done means n | Row n | I-n> — ok | missing | wrong | not proven | BLOCKED | pending R<k> — <evidence>
+<Task n | Done means n | Row n | I-n> — ok | missing | not proven | BLOCKED | pending R<k> — <evidence>
+<Task n | Done means n | Row n | I-n> — wrong — Class: <class> — <file:line>; … — <evidence> Repro: <…>
 …
 Unrequested: <file — what> | none
 Leftovers / env: <file:line — what> | none
@@ -179,7 +191,8 @@ Minor: <file:line — what> | none
 Weakened tests: <Weakened test: … lines> | none
 Settings: ok | violated — …
 Rules gate: pass | fail — <k> violations in <r> rules | not checkable
-rule <source:line> — pass | fail — <file:line>; … | n/a — <why>
+rule <source:line> — pass | n/a — <why>
+rule <source:line> — fail — <file:line>; … — sites to cover: <file:line>; … — Class: <class>
 …
 Architecture gate: pass | fail — … | n/a
 Security gate: pass | warn | fail | n/a

@@ -9,7 +9,9 @@ Read by `/keystone:verify` for `accept`; the gate rules apply to every run.
 The plan: the path in the arguments, else the active plan (`SKILL.md` Step 0). With `D<k>` in the arguments go to
 **Close a debt line** below.
 
-Only for the newest `verify.md` whose verdict is `PASS-UNPROVEN`; any other verdict → refuse and say why. Refuse
+Only for the newest `verify.md` whose verdict is `PASS-UNPROVEN` — or `Verdict: FAIL` whose verdict recomputed by
+Step 4 with its `Accepted violation by …` lines is PASS-UNPROVEN (it counts as PASS-UNPROVEN); any other verdict →
+refuse and say why. Refuse
 if `intent.md` or `plan.md` changed after the last `verify.md` (compare `git log -1 --format=%H -- <file>` order/dates
 for each against `verify.md`): verify again first. A plan change only inside `## Debt` is not a change. A command without an explicit human confirmation is **not** a
 confirmation, even when the user wrote "do accept" in text (text is a request, the button is the confirmation), so the
@@ -34,6 +36,22 @@ the `accepted …` part. Closing replaces `open` with `closed <YYYY-MM-DD> by <w
 TC-NNN`, `R<n> check`, `<user.name> (accept)`) and leaves the rest of the line as it is. A plan with open debt stays
 `Status: verified`; the final report of verify and of `/keystone:qa-check` lists it, and `/keystone:qa` makes a case
 for each open line.
+
+## Accept a rule violation — from the rules menu
+
+Only from `Accept the violation consciously` in the rules menu of `LOOP.md`; the click is the confirmation (it names
+the rules), so no second question. Append to `verify.md` one line per failing `rule` line of this run:
+`Accepted violation by <git config user.name> <YYYY-MM-DD>: rule <source:line> — <file:line>; <file:line>` — the places
+before `sites to cover:`, as the report lists them. Then recompute the verdict by Step 4 without the accepted places
+(each `rule` line whose every `file:line` is accepted counts as pass); the `Verdict:` line of `verify.md` is never
+rewritten:
+- PASS → set `Status: verified` and commit `verify.md` and the plan: `docs(verify): accept violation <slug>`;
+- PASS-UNPROVEN → status unchanged; commit `verify.md` alone (`docs(verify): accept violation <slug>`), then ask the
+  PASS-UNPROVEN menu of `AFTER-CHOICE.md`.
+
+It covers only the listed `file:line`: Step 1 prints them under `accepted violations:`, and a new place of the same
+rule in a later run is a finding again (FAIL). The Security gate and the `Architecture gate` are never accepted this
+way. Such a commit is not a run in the history.
 
 ## Close a debt line — `/keystone:verify accept [<plan path>] D<k> <proof text>`
 

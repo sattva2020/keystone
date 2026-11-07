@@ -115,15 +115,55 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
 `fail`. The rest (rule-only findings, `Settings: violated`) are listed as `left open` in the report — they keep the
 verdict FAIL until fixed or until their rule changes.
 
-Read `verify.md` next to the active plan. Its verdict is not FAIL → say so and STOP. Otherwise collect **every**
-finding into one list: each `rule … — fail` line with all its `file:line`, every `wrong` line (with its `Repro:`),
-`Settings: violated`, an `Architecture gate: fail`. `not proven`, `BLOCKED` and `Unconfirmed` items, `Advisory:` and
-`Minor:` lines and the `## Carried` rows are not defects — leave them out of the list and do not fix them. Print the list numbered, then fix all of them in one pass inside the active plan: no new plan, no mode
-question, one finding = one smallest change; a `wrong` behaviour finding still follows the Regression-First Policy, a
-rule finding (types, a swallowed error, a naming rule) is checked by build, lint and the related tests. Before
-committing, re-check each failing rule against **all** changed files of the plan (not only the cited lines) and fix
-other lines this task added or changed that break it too. Add one line per finding to the plan's `## Implementation notes`, commit code and plan
-together, and report each finding as `fixed — <file:line>` or `not fixed — <why>`. Next: `/keystone:verify <plan>`.
+Read `verify.md` next to the active plan. Its verdict is not FAIL → say so and STOP. `not proven`, `BLOCKED` and
+`Unconfirmed` items, `Advisory:` and `Minor:` lines and the `## Carried` rows are not defects — leave them out of the
+list and do not fix them. Otherwise fix all of them in one pass inside the active plan — every finding and every place
+of its class: no new plan, no mode question. The task files are the `files:` list in `## Checks` of that `verify.md`
+plus the files changed since its commit. In this order:
+
+1. **The list.** Each `rule … — fail` line with all its `file:line`, the places after `sites to cover:` and its
+   `Class:` — minus the places under `accepted violations:` in `## Checks`; every `wrong` line with its `Class:` and
+   `Repro:`; every `Decision:` line; every `Unrequested:` item; `Settings: violated`; an `Architecture gate: fail`.
+   An `Unrequested:` item is fixed by tracing it: a change inside the scope of an existing task (the same class of
+   fix, a neighbour its rule asked to walk) → write it into that task's text in the plan (a drift edit, not only a
+   note); a change no task covers → revert it; a change worth keeping that no task covers → new work (item 2). A `## Report` that is
+   `not judged — … failed`: each `build:` / `test:` line of `## Checks` with ` → fail` is a finding, and its output is
+   the regression check. Print the list numbered.
+2. **New work is not a fix.** A finding whose fix needs a function, task, endpoint, screen or behaviour that no task,
+   row or `I-n` asks for is not fixed here: `not fixed — new work: <what> → /keystone:plan <plan path>`, and then that
+   command is the `Next:` line.
+3. **The whole class.** The verifier's `Class:` is a hint: widen it and grep every task file for the same call, guard,
+   pattern, missing step and the neighbouring places. Print each as `Class <name>: <file:line>; …`. Fix at the shared
+   point where there is one (one guard in the function every call goes through, one reset for the whole module);
+   otherwise fix every place in this same pass.
+4. **Repro and a test for the class.** Before the change run the `Repro:` of every `wrong` line and quote the failure
+   (Regression-First Policy); after it, the same `Repro:` and its passing line. One NEW test file per class that walks
+   every place or checks the shared point; run it on the code before the fix (revert the fix, run, restore) and quote
+   the red line — `red on revert`.
+5. **`Decision:`.** Read the named earlier intent whole and find every `I-n` and confirmed decision the diff or this
+   plan contradicts, not only the named one. Ask once (AskUserQuestion): `Supersede <path> I-a, I-b, I-c? (<why, one
+   line>)` — Yes / No. Yes → one line in this task's intent `## Decisions log` (the only intent edit fix ever makes,
+   by the rule of `/keystone:intent`): `- <YYYY-MM-DD> Q: <path> conflicts with this change → A: supersedes <path> I-a, I-b, I-c (<why>)`.
+   No → `not fixed — the decision stands; change the code or the intent with /keystone:intent`.
+6. **The same class again.** The past run is the newest earlier commit of `git log --format=%H -- <verify.md>` that
+   is a run (its text without `Accepted … by …` lines differs from the commit before it) and was judged (its
+   `## Report`, past blank lines and a ``` fence, does not start with `not judged`); never judge a commit by its message.
+   A class of the same nature as one of its `Class:` (even named differently) is a repeat: the class test of item 4 is
+   then required for a rule finding too (a guard script that greps the task files and fails on any new place will do),
+   and ask (AskUserQuestion) `Add a rule via /keystone:evolve: "<MUST … line>"?` — Yes → read
+   `${CLAUDE_SKILL_DIR}/../evolve/SKILL.md` and follow its `add` path with that line (it shows the diff and asks
+   itself); No → a line in the notes. No rule is written without that yes.
+7. **Rules before the commit.** Check every MUST / MUST NOT line of the project rules (Step 0, item 2) against fix's
+   own diff (`git diff` and new files) — red on revert for new tests, walking the neighbours — and fix a break before
+   committing. Re-check each failing rule against **all** changed files of the plan (not only the cited lines) and fix
+   other lines this task added or changed that break it too.
+8. **Notes and the commit.** In `## Implementation notes`, one line per finding: `- <YYYY-MM-DD> fix verify — <finding
+   id> — Class: <name> — sites: <file:line; …> — fixed at <shared point | each site> — Repro before: <line> → after:
+   <line> — test: <file> (red on revert: <output line>)`; and one line `- <YYYY-MM-DD> fix verify — rules self-check:
+   <r> rules — pass <p>, n/a <n>; fixed before commit: <rule — file:line> | none`. Commit code, plan (and intent after
+   item 5) together.
+
+Report each finding as `fixed — <file:line>` or `not fixed — <why>`. Next: `/keystone:verify <plan>`.
 
 ### Step 1: Understand the problem and choose the mode
 
@@ -266,7 +306,8 @@ Found: <defects, surprises, open questions | none>
 7. **Tests in HEAD are untouchable** — the regression test is a new file (your own uncommitted one is editable); a wrong
    existing test is the human's call.
 8. **Root cause** — fix the actual problem, not symptoms. **Minimal changes**; **one fix at a time**, no scope creep —
-   except `/keystone:fix verify`, which fixes every finding of the FAIL `verify.md` in one pass.
+   except `/keystone:fix verify`, which fixes every finding of the FAIL `verify.md` in one pass — every finding and
+   every place of its class.
 
 **DO NOT:** apply a fix when the user chose "Plan first"; skip the active-plan check; refactor unrelated code; add
 features; edit test files that exist in HEAD; claim `pass` for a check that did not run in this session.
