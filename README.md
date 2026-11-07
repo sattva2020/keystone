@@ -177,12 +177,12 @@ see **[What to run next — scenarios](docs/scenarios.md)**.
 
 ## Commands
 
-All 25 commands in five groups; each one with its parameters, model and "when to use" is in the
+All 26 commands in five groups; each one with its parameters, model and "when to use" is in the
 [skills reference](docs/skills.md).
 
 | Group | Commands |
 |---|---|
-| **Task chain** | `start` · `grill` · `intent` · `plan` · `check` · `implement` · `verify` · `fix` |
+| **Task chain** | `start` · `grill` · `intent` · `plan` · `check` · `implement` · `verify` · `fix` · `sessions` |
 | **Project context** | `setup` · `architecture` · `docs` |
 | **Checks and quality** | `security` · `review` · `qa` · `qa-check` · `ask` · `pentest` · `optimize` |
 | **Build and ship** | `dockerize` · `ci` |
@@ -195,7 +195,8 @@ Every command is `/keystone:<name>`, for example `/keystone:plan <intent or task
 Gates apply only while there is an active plan. While it is `draft`, code edits outside the task folder are denied;
 `git push` and `gh pr create` for the plan's commits stay closed until `/keystone:verify` returns PASS; in a fix,
 committed tests are locked. Release steps (`## Release`) run after verify, each after your yes. To lift a gate:
-`Status: abandoned` in the plan or `KEYSTONE_GATES=off`. Task files live in `docs/keystone/<YYYY-MM-DD>-<slug>/`.
+`Status: abandoned` in the plan or `KEYSTONE_GATES=off`. The automatic sort of child sessions (`/keystone:sessions`,
+run on the app's side-sessions event) has its own switch, `KEYSTONE_SESSIONS=off`. Task files live in `docs/keystone/<YYYY-MM-DD>-<slug>/`.
 
 Every gate, release mode and the plan status flow: [`docs/gates.md`](docs/gates.md).
 

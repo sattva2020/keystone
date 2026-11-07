@@ -10,7 +10,7 @@ const read = (p) => readFileSync(join(root, p), 'utf8').replace(/\r/g, '');
 const json = (p) => JSON.parse(read(p));
 const front = (p) => read(p).split('---')[1];
 const body = (p) => read(p).split('\n').filter((l) => !l.includes('derived from ai-factory@')).join('\n');
-const SKILLS = ['architecture', 'ask', 'check', 'ci', 'distill', 'dockerize', 'docs', 'evolve', 'fix', 'grill', 'implement', 'intent', 'optimize', 'pentest', 'plan', 'qa', 'qa-check', 'reference', 'review', 'roadmap', 'security', 'setup', 'start', 'transfer', 'verify'];
+const SKILLS = ['architecture', 'ask', 'check', 'ci', 'distill', 'dockerize', 'docs', 'evolve', 'fix', 'grill', 'implement', 'intent', 'optimize', 'pentest', 'plan', 'qa', 'qa-check', 'reference', 'review', 'roadmap', 'security', 'sessions', 'setup', 'start', 'transfer', 'verify'];
 const AGENTS = ['analyzer.md', 'review-validator.md', 'validator.md', 'verifier.md'];
 const allSkillFiles = () => SKILLS.flatMap((s) => {
   const refs = existsSync(join(root, 'skills', s, 'references')) ? readdirSync(join(root, 'skills', s, 'references')).map((f) => `skills/${s}/references/${f}`) : [];
@@ -20,13 +20,25 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.27');
+  assert.equal(p.version, '0.9.28');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
+  const ups = json('hooks/hooks.json').hooks.UserPromptSubmit?.[0]?.hooks?.[0];
+  assert.deepEqual([ups?.command, ups?.args], ['node', ['${CLAUDE_PLUGIN_ROOT}/hooks/sessions-event.mjs']]);
 });
 
-test('I-2: exactly the 25 skills and four agents; name = file', () => {
+test('sessions: family only, three groups, text never changed, read-only without session tools, no prompt to archive', () => {
+  const s = read('skills/sessions/SKILL.md');
+  for (const p of ['{"linked": true}', 'unarchive_session', '**Archived**', '**Messaged**', '**Waiting for you**',
+    'A group with no items is not printed', '**exactly as given** — nothing is added', 'triage.mjs git', 'read-only view',
+    "in the user's language", '[title](#<sessionId>)']) assert.ok(s.includes(p), p);
+  const fm = front('skills/sessions/SKILL.md');
+  for (const tool of ['list_sessions', 'get_session', 'archive_session', 'send_message']) assert.match(fm, new RegExp(`^allowed-tools:.*mcp__ccd_session_mgmt__${tool}`, 'm'), tool);
+  assert.doesNotMatch(fm, /disable-model-invocation/);
+});
+
+test('I-2: exactly the 26 skills and four agents; name = file', () => {
   assert.deepEqual(readdirSync(join(root, 'skills')).sort(), SKILLS);
   assert.deepEqual(readdirSync(join(root, 'agents')).sort(), AGENTS);
   for (const s of SKILLS) assert.equal(front(`skills/${s}/SKILL.md`).match(/^name:\s*(\S+)/m)?.[1], s);

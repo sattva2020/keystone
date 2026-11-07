@@ -61,6 +61,9 @@ task and its header holds the status.
 ### Waiting for an external event (deploy, a WAF rule, a colleague)
 Run nothing. The task keeps its status; when the event happens, `/keystone-status` shows where to resume.
 
+### The main session started child sessions
+When a child session ends a turn, the app tells the main session and Keystone sorts the family by itself (`/keystone:sessions`; run it by hand any time): finished ones are archived, an unfinished idle one gets one message with its next step, and the rest are listed as waiting for you with a reason. In the CLI the same sort is shown read-only for the worktrees.
+
 ### A new project, or no CLAUDE.md
 `/keystone:setup` (context, rules, MCP) → optionally `/keystone:architecture`, `/keystone:docs`, `/keystone:dockerize`,
 `/keystone:ci` → then ordinary tasks through `/keystone:start`.

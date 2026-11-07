@@ -2,12 +2,15 @@
 
 ## What Keystone runs on your machine
 
-- **Hooks.** `hooks/hooks.json` registers one Node script, `hooks/gate.mjs`, on `PreToolUse` (for
+- **Hooks.** `hooks/hooks.json` registers two Node scripts. `hooks/gate.mjs` runs on `PreToolUse` (for
   `Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell`) and on `Stop`. It reads the hook JSON from stdin and the plan
   files under `docs/keystone/` (or the AI Factory `paths.specs` folder), and runs `git cat-file -e` to see whether a
-  test file is committed. It writes only a JSON decision to stdout. It makes no network calls and writes no files.
-- **Permissions.** The hook runs with your user's permissions. It can deny a tool call or remind at `Stop`; it cannot
-  approve anything. `KEYSTONE_GATES=off` disables it.
+  test file is committed. It writes only a JSON decision to stdout. `hooks/sessions-event.mjs` runs on
+  `UserPromptSubmit`: it reads only the hook JSON from stdin and, on a side-sessions event, prints only a JSON context
+  line; it runs no git and reads no files. Neither makes network calls or writes files.
+- **Permissions.** The hooks run with your user's permissions. `gate.mjs` can deny a tool call or remind at `Stop`; it
+  cannot approve anything. `KEYSTONE_GATES=off` disables `gate.mjs`; `KEYSTONE_SESSIONS=off` disables
+  `sessions-event.mjs`.
 - **Skills and agents** are prompts. They use only the tools Claude Code already grants the session. The optional memlab
   integration calls an MCP server you configured yourself.
 

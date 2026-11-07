@@ -1,5 +1,5 @@
 {
-  "description": "Keystone gates: no code edits while the active plan is draft; no edits to existing tests during a fix; Stop reminder while plan tasks are open; no push/PR before /keystone:verify. Off: KEYSTONE_GATES=off.",
+  "description": "Keystone gates: no code edits while the active plan is draft; no edits to existing tests during a fix; Stop reminder while plan tasks are open; no push/PR before /keystone:verify. Off: KEYSTONE_GATES=off. On a side-sessions event, asks the model for /keystone:sessions (not a gate). Off: KEYSTONE_SESSIONS=off.",
   "hooks": {
     "PreToolUse": [
       {
@@ -26,6 +26,20 @@
               "${CLAUDE_PLUGIN_ROOT}/hooks/gate.mjs"
             ],
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/sessions-event.mjs"
+            ],
+            "timeout": 5
           }
         ]
       }

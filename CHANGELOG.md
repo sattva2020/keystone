@@ -5,6 +5,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.28] — 2026-11-07
+
+### Added
+- **`/keystone:sessions` — child sessions get sorted out.** A main session that started side sessions gets one report
+  in three groups with links: **Archived** (finished: idle, branch merged into its base, no uncommitted files, and in
+  its own worktree no git-ignored files such as `.env`; `unarchive_session` brings one back), **Messaged** (an idle
+  unfinished session gets one fixed message with the step an agent can do itself: implement, verify, `fix verify`,
+  commit) and **Waiting for you** (merge, push, release, accept, approve, a failed turn, a refused archive — with a
+  one-line reason). The decision is mechanical (`skills/sessions/scripts/triage.mjs`: git + plan files); a session's
+  plans are only its unmerged commits and uncommitted files. Only this session's family (`linked: true`) is touched;
+  the same step is never sent twice. Without session tools (CLI, `claude -p`) it shows the same sort for the worktrees,
+  read-only.
+- **Runs by itself.** A `UserPromptSubmit` hook (`hooks/sessions-event.mjs`) asks for the sort when the app reports on
+  side sessions; `KEYSTONE_SESSIONS=off` turns it off (independent of `KEYSTONE_GATES=off`).
+
 ## [0.9.27] — 2026-11-04
 
 ### Added
