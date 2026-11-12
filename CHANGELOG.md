@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.30] — 2026-11-12
+
+### Fixed
+- **Push gate in a cloud session.** A cloud session's VM is thrown away, so the cloud's own Stop hook asks to push the
+  work branch at the end of a turn — and the push gate closed that same push until `/keystone:verify`, leaving the
+  agent with two opposite demands. With `CLAUDE_CODE_REMOTE=true` a push whose every destination is a branch other
+  than the default one (`origin/HEAD`, `main`, `master`) now passes; a push to the default branch, `--all`/`--mirror`,
+  a detached HEAD and `gh pr create` stay closed until verify. Local sessions are unchanged. In the cloud the gate's
+  way out points to the environment's variables instead of restarting Claude Code with `KEYSTONE_GATES=off`. Found by
+  running the gates in a cloud session on a sandbox repository.
+
 ## [0.9.29] — 2026-11-07
 
 ### Changed

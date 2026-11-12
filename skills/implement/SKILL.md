@@ -279,7 +279,8 @@ sessions on a long plan.
 - Add tasks that are not in the plan, or skip tasks without the user's permission.
 - Mark incomplete tasks as done; a checked box is not evidence.
 - Violate the project's architecture and file-placement conventions.
-- Run `git push` or open a PR — the gate denies it until the plan is `verified`.
+- Run `git push` or open a PR — the gate denies it until the plan is `verified`. In a cloud session the work branch
+  may be pushed (the cloud keeps work only on the remote); the default branch and a PR still wait for `verified`.
 
 ## Critical rules
 

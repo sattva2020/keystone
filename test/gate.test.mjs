@@ -288,3 +288,29 @@ test('draft gate: decision notes may be written, other code may not', () => {
   assert.equal(pre(root, 'Write', { file_path: join(root, 'docs/notes/a.md') }), null);
   assert.ok(denied(pre(root, 'Write', { file_path: join(root, 'docs/other/a.md') })));
 });
+
+test('cloud session: the work branch may be pushed before verify; the default branch and a PR stay closed', () => {
+  const root = project({ '2026-11-12-x': 'Status: implementing' });
+  const remote = mkdtempSync(join(tmpdir(), 'ks-remote-'));
+  spawnSync('git', ['init', '-q', '--bare', remote]);
+  git(root, 'remote', 'add', 'origin', remote);
+  git(root, 'branch', '-M', 'main');
+  git(root, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
+  git(root, 'fetch', '-q', 'origin');
+  git(root, 'remote', 'set-head', 'origin', 'main');
+  git(root, 'checkout', '-q', '-b', 'claude/work');
+  writeFileSync(join(root, 'docs/keystone/2026-11-12-x/verify.md'), 'x'); // a commit of the plan's own work
+  git(root, 'add', '-A');
+  git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'plan work');
+  const cloud = (command) => decide({ hook_event_name: 'PreToolUse', cwd: root, tool_name: 'Bash', tool_input: { command } }, { CLAUDE_CODE_REMOTE: 'true' });
+  const P = 'git' + ' push';
+  for (const c of [`${P} -u origin HEAD`, `${P} origin claude/work`, `${P} origin HEAD:refs/heads/claude/work`])
+    assert.equal(cloud(c), null, c);
+  for (const c of [`${P} origin HEAD:main`, `${P} origin claude/work:main`, `${P} --all origin`, 'gh pr create --fill'])
+    assert.ok(denied(cloud(c)), c);
+  assert.match(closedBy(cloud(`${P} origin HEAD:main`)), /cloud environment/, 'the way out names what a cloud session can change');
+  assert.ok(denied(pre(root, 'Bash', { command: `${P} -u origin HEAD` })), 'outside the cloud the work branch stays closed');
+  git(root, 'checkout', '-q', 'main');
+  git(root, 'merge', '-q', '--ff-only', 'claude/work');
+  assert.ok(denied(cloud(`${P} -u origin HEAD`)), 'HEAD on the default branch');
+});

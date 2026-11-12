@@ -64,6 +64,8 @@ AskUserQuestion, in plain text: yes/no). Only on Yes: the line becomes `closed <
 ## Gates and recovery
 
 - Hooks close `git push` / `gh pr create` only for pushes that carry this plan's commits; `Status: verified` opens them.
+  In a cloud session a push to the work branch passes anyway (the cloud keeps work only on the remote); the default
+  branch and a PR stay closed. There `KEYSTONE_GATES=off` goes into the cloud environment's variables, then a new session.
 - Verify never marks a task `[x]` and never edits the Reconciliation table. If a row's evidence is stale, say which
   cell and what to write; the human or `/keystone:implement` makes the edit.
 - `Status: abandoned` or `KEYSTONE_GATES=off` lift the gates; they do not make a plan verified.

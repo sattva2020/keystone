@@ -1,5 +1,5 @@
 {
-  "description": "Keystone gates: no code edits while the active plan is draft; no edits to existing tests during a fix; Stop reminder while plan tasks are open; no push/PR before /keystone:verify. Off: KEYSTONE_GATES=off. On a side-sessions event, asks the model for /keystone:sessions (not a gate). Off: KEYSTONE_SESSIONS=off.",
+  "description": "Keystone gates: no code edits while the active plan is draft; no edits to existing tests during a fix; Stop reminder while plan tasks are open; no push/PR before /keystone:verify (a cloud session may push its work branch). Off: KEYSTONE_GATES=off. On a side-sessions event, asks the model for /keystone:sessions (not a gate). Off: KEYSTONE_SESSIONS=off.",
   "hooks": {
     "PreToolUse": [
       {

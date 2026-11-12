@@ -193,8 +193,9 @@ Every command is `/keystone:<name>`, for example `/keystone:plan <intent or task
 ## Gates (hooks)
 
 Gates apply only while there is an active plan. While it is `draft`, code edits outside the task folder are denied;
-`git push` and `gh pr create` for the plan's commits stay closed until `/keystone:verify` returns PASS; in a fix,
-committed tests are locked. Release steps (`## Release`) run after verify, each after your yes. To lift a gate:
+`git push` and `gh pr create` for the plan's commits stay closed until `/keystone:verify` returns PASS (in a cloud
+session a push to the work branch passes, since the cloud keeps work only on the remote; the default branch and a PR
+stay closed); in a fix, committed tests are locked. Release steps (`## Release`) run after verify, each after your yes. To lift a gate:
 `Status: abandoned` in the plan or `KEYSTONE_GATES=off`. The automatic sort of child sessions (`/keystone:sessions`,
 run on the app's side-sessions event) has its own switch, `KEYSTONE_SESSIONS=off`. Task files live in `docs/keystone/<YYYY-MM-DD>-<slug>/`.
 

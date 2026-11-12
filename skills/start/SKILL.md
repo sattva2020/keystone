@@ -108,7 +108,7 @@ from the higher row appears — say so; never re-size down silently.
   file); L → `/keystone:verify` recommends `/keystone:review` before push; a new project → `/keystone:setup`,
   later `/keystone:dockerize` and `/keystone:ci` on request. S gets none of these.
 - After Approve: commit, then a **fresh session** (`/clear`, not `/compact`) → `/keystone:implement <plan>` on Sonnet →
-  `/keystone:verify <plan>` in a fresh session. Until verify passes, `git push` / `gh pr create` are closed by the hook.
+  `/keystone:verify <plan>` in a fresh session. Until verify passes, `git push` / `gh pr create` are closed by the hook (a cloud session may push its work branch).
 
 ## 4. Report — always
 

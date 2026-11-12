@@ -3,6 +3,8 @@
 // that works with it — ran /keystone:<stage> on it or edited its task folder (read from transcript_path).
 // Off switch: KEYSTONE_GATES=off in Claude Code's environment (set before it starts).
 // Push gate: only a push that ships commits touching the active plan's task folder is closed.
+// Cloud session (CLAUDE_CODE_REMOTE=true): its VM is thrown away, so the work branch must reach the remote — the cloud's
+// own Stop hook asks for that push. There a push to a non-default branch passes; the default branch and a PR stay closed.
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, resolve, relative, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -17,9 +19,11 @@ const NOT_TEST = /(^|\/)(fixtures?|__snapshots__)\//i; // fixtures and snapshots
 // ponytail: no shell parsing — a quoted "git push" inside e.g. a commit message also matches; fine for a reminder gate.
 const PUSH = /\bgit(\s+(-C\s+("[^"]*"|'[^']*'|\S+)|-c\s+\S+|--[\w-]+(=\S+)?))*\s+push\b(?![^|;&]*--dry-run)|\bgh\s+pr\s+create\b/;
 const BACKGROUND_MAX_MS = 2 * 60 * 60 * 1000;
-const HOW = 'To lift it: finish the step above, set `Status: abandoned` in the plan header, or start Claude Code with KEYSTONE_GATES=off (the hook reads its own environment; a prefix on one command does not reach it).';
+const HOW_LOCAL = 'To lift it: finish the step above, set `Status: abandoned` in the plan header, or start Claude Code with KEYSTONE_GATES=off (the hook reads its own environment; a prefix on one command does not reach it).';
+const HOW_CLOUD = 'To lift it: finish the step above, set `Status: abandoned` in the plan header, or add KEYSTONE_GATES=off to the variables of this cloud environment and start a new session (a prefix on one command does not reach the hook).';
 
 const slash = (p) => p.replace(/\\/g, '/');
+const isCloud = (env) => String(env.CLAUDE_CODE_REMOTE).toLowerCase() === 'true';
 
 function projectRoot(start) {
   for (let d = resolve(start); ; d = dirname(d)) {
@@ -149,20 +153,37 @@ function shellBefore(text, base) {
 }
 
 // What a push ships: the refs it names (`git push <remote> <src>[:<dst>]…`), else HEAD; --all / --mirror → every branch.
+// Where it lands: `dsts`, the <dst> of each refspec (<src> when there is none), else HEAD; null = every branch or a PR.
 // Its repository: the last `-C <dir>` before `push`, resolved against the directory the command is in by then.
 function pushTarget(cmd, base) {
   const m = cmd.match(PUSH);
   const { dir: here, expand } = shellBefore(cmd.slice(0, m?.index ?? 0), base);
-  if (!m || !/push\b/.test(m[0])) return { dir: here, refs: ['HEAD'] }; // gh pr create ships HEAD
+  if (!m || !/push\b/.test(m[0])) return { dir: here, refs: ['HEAD'], dsts: null }; // gh pr create ships HEAD
   const dirs = [...m[0].matchAll(/-C\s+("[^"]+"|'[^']+'|\S+)/g)].map((x) => nativePath(expand(unquote(x[1]))));
   const dir = dirs.length ? resolve(here, dirs[dirs.length - 1]) : here;
   // redirections (2>&1, > log, < in) are not refs; cut them before splitting on | ; &
   const rest = cmd.slice(m.index + m[0].length).replace(/\d*>&\d*|\d*>>?\s*\S+|<\s*\S+/g, ' ');
   const words = rest.split(/[|;&]/)[0].trim().split(/\s+/).filter(Boolean);
-  if (words.some((w) => w === '--all' || w === '--mirror')) return { dir, refs: ['--branches'] };
+  if (words.some((w) => w === '--all' || w === '--mirror')) return { dir, refs: ['--branches'], dsts: null };
   const args = words.filter((w) => !w.startsWith('-')).map((w) => expand(unquote(w)));
-  const refs = args.slice(1).map((r) => r.replace(/^\+/, '').split(':')[0]).filter(Boolean);
-  return { dir, refs: refs.length ? refs : ['HEAD'] };
+  const specs = args.slice(1).map((r) => r.replace(/^\+/, ''));
+  const refs = specs.map((s) => s.split(':')[0]).filter(Boolean);
+  const dsts = specs.map((s) => (s.includes(':') ? s.split(':')[1] : s)).filter(Boolean);
+  return { dir, refs: refs.length ? refs : ['HEAD'], dsts: dsts.length ? dsts : ['HEAD'] };
+}
+
+// Cloud session, push to the work branch: every destination is a named branch other than the default one (origin/HEAD,
+// main, master). HEAD resolves to the current branch; a detached HEAD, every-branch push or PR → not a work-branch push.
+// ponytail: only `origin` is asked for its default branch; another remote falls back to main/master.
+function workBranchPush(push) {
+  if (!push.dsts) return false;
+  const git = (...a) => spawnSync('git', ['-C', push.dir, ...a], { encoding: 'utf8' }).stdout?.trim() ?? '';
+  const head = git('rev-parse', '--abbrev-ref', 'HEAD');
+  const shipped = new Set(['main', 'master', git('symbolic-ref', '--short', 'refs/remotes/origin/HEAD').replace(/^[^/]+\//, '')]);
+  return push.dsts.every((d) => {
+    const b = (d === 'HEAD' ? head : d).replace(/^refs\/heads\//, '');
+    return b && b !== 'HEAD' && !shipped.has(b);
+  });
 }
 
 // The push carries the active plan's work when a commit it ships, not yet on any remote, touches the plan's task folder.
@@ -193,6 +214,7 @@ export function decide(input, env = process.env) {
   const trail = push ? null : sessionTrail(input.transcript_path);
   const plan = activePlan(root, push ? undefined : boundTo(trail));
   if (!plan) return null;
+  const HOW = isCloud(env) ? HOW_CLOUD : HOW_LOCAL;
 
   if (event === 'Stop') {
     if (input.stop_hook_active) return null; // one block per turn; Claude Code's 8-in-a-row cap is never reached
@@ -207,6 +229,7 @@ export function decide(input, env = process.env) {
 
   if (tool === 'Bash' || tool === 'PowerShell') {
     if (push) {
+      if (isCloud(env) && workBranchPush(push)) return null;
       const check = pushCheck(push.dir, push.refs, plan.file);
       if (check.error) return deny(`Keystone: could not tell what this push ships, so it stays closed while ${plan.file} is ${plan.status} — \`git log\` in ${slash(push.dir)} failed: ${check.error}. The plan may have nothing to do with it: run the push with a literal \`git -C <repo> push <remote> <branch>\`. ${HOW}`);
       if (check.carries) return deny(`Keystone: push/PR is closed while ${plan.file} is ${plan.status} — run /keystone:verify first (PASS, or /keystone:verify accept for PASS-UNPROVEN). ${HOW}`);
