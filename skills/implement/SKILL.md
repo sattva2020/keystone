@@ -56,6 +56,10 @@ Keep going without asking while the next step needs no human decision; stop only
    (Recommended) · `Quick change without a plan (level S)` — only when the change fits in one sentence; then follow
    `${CLAUDE_SKILL_DIR}/../start/SKILL.md` for level S · `Show status — /keystone-status` · `Stop here`.
 2. **Status** (header line `Level: … · Mode: … · Status: …`):
+   - **Take the plan first.** For `approved`, `implementing` and release mode, right after reading Status and before
+     any write to `plan.md` (the `approved → implementing` edit included):
+     `node "${CLAUDE_SKILL_DIR}/scripts/owner.mjs" take <plan> --stage implement` — see "One session per plan".
+     Exit 3 → stop here, before any edit.
    - `draft` → STOP: "Approve the plan first (`/keystone:plan <plan path>`), then run implement."
    - `approved` → set `Status: implementing` now (this edit goes into the baseline commit below).
    - `implementing` → continue (resume, Step 0.1).
@@ -73,8 +77,11 @@ Keep going without asking while the next step needs no human decision; stop only
      leave `R<n>` unticked and stop release mode. These plan edits go into the same `docs(release)` commit.
      Commit the ticks so far right before a push step, so that push carries them; the push's own tick stays a local
      commit that ships with the next push — say so in one line, never ask a separate push just for ticks.
-     The Status stays `verified`. Never touch `## Tasks` or code in release mode.
-   - `verified` with no open `## Release` steps / `abandoned` → STOP and say so.
+     The Status stays `verified`. Never touch `## Tasks` or code in release mode. Before each `R<n>` run `beat`
+     (see "One session per plan").
+   - `verified` with no open `## Release` steps / `abandoned` → run
+     `node "${CLAUDE_SKILL_DIR}/scripts/owner.mjs" release --any <plan>` (drops a record a crashed run left), then STOP
+     and say so.
 3. **Settings** are mandatory. Read the header line `Settings: tests — … · logging — … · docs — …`:
    - `tests — yes`: every task that changes behaviour gets a test in the same task.
    - `tests — no`: write none, unless a task lists one.
@@ -128,6 +135,9 @@ corrected. No `TaskCreate` (`claude -p`, CI) → skip the list; the progress dis
 
 ## Step 2: Execute the current task
 
+**2.0 Beat.** Before each task: `node "${CLAUDE_SKILL_DIR}/scripts/owner.mjs" beat <plan> --stage implement`. Exit 3
+(`taken`) → STOP as "One session per plan" says, with no edit.
+
 **2.1 Read the task** in full: its files, check and any cited Risks. Mark its live task `in_progress`.
 
 **2.2 Run the requirement consistency gate.** Before marking a behavior-changing task in progress:
@@ -160,7 +170,8 @@ path rather than relying only on synthetic fixtures.
 
 **2.6 Commit.** Commit after each task, or at the points marked in `## Commit Plan` when the plan has one. Use a
 conventional commit message by the project's rules (`type(scope): subject`). Do not ask permission per commit unless the
-project requires it. Before every commit run `git diff --cached --stat` (see Drift).
+project requires it. Before every commit run `git diff --cached --stat` (see Drift) and `beat` (2.0); `taken` → STOP
+without the commit.
 **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
 `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
 if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(plan)`, `docs(release)`).
@@ -195,6 +206,29 @@ to the END of that task's `- [ ] N.` line (not a nested bullet). Write it litera
 `BLOCKED: smoke needs the DB`, never `BLOCKED (smoke):`; parsers count rows by the exact `BLOCKED:` prefix. A task whose
 mandatory step is blocked stays `[ ]` with `BLOCKED: <reason>` — never `[x]`. Tell the user.
 
+## One session per plan
+
+implement takes the plan so that a second session (another worktree, another machine, the cloud) cannot run it at the
+same time. The record lives on the service branch `keystone/owners` (`<plan folder>.json`, pushed to origin by the
+script); the work tree, HEAD and the plan folder are not touched. Script:
+`node "${CLAUDE_SKILL_DIR}/scripts/owner.mjs" take|beat|release <plan> [--stage implement] [--force] [--any]` — one JSON
+line; exit 0 = go on, 3 = stop, 1 = error (say it in one line and go on: the guard never blocks the work by itself).
+Run every call as a command of its own and read its exit code before the next step — never chained with the task's
+work (`;`, `&&`).
+
+- `take` exit 3 → print `План <folder> ведёт <place> · ветка <branch> · <stage> с <since>, последний признак жизни
+  <beat>` and ask (AskUserQuestion): a live owner (`stale: false`) → `Стоп (Recommended)` · `Забрать план`; a stale one
+  (no beat for 2 h, `stale: true`) → `Забрать план (Recommended)` · `Стоп`. `Забрать план` → `take --force`; `Стоп` →
+  STOP, `Next:` = the same `/keystone:implement <plan>` for later. No AskUserQuestion (`claude -p`, CI) → STOP with the
+  owner message for a live and a stale owner alike: `--force` only on a human's explicit pick.
+- `beat` exit 3 (`taken: true`) → STOP: `План забрала <place> в <since> — эта сессия останавливается`; no edit, no
+  tick, no commit. Same place (folder or cloud session) and branch = the same owner, so `/clear` and resume pass.
+- `release <plan>` after the last task of the run (every box `[x]` or `BLOCKED:`, or the end of release mode) and its
+  commit.
+- `remote: "local"` with a `warning` (no origin, offline, push refused) → the mark is seen only on this machine; say
+  the warning once and go on. `KEYSTONE_GATES=off` → `{ "off": true }`, nothing is guarded.
+- The final report gets the line `Владелец: <remote>; <warning>` (`Владелец: off` when off).
+
 ## Final report — one line per table row
 
 After the last task, walk `## Requirements Reconciliation` row by row, without merging rows, and report each as
@@ -215,6 +249,8 @@ to 3 new rules at the end of the task. Ask once (AskUserQuestion, one option per
 explicit yes, write each to `.claude/rules/<topic>.md` (`paths:` frontmatter when it applies to part of the tree). Never
 edit an existing rule silently: a change to an existing rule is shown as a diff and needs its own yes. No yes → write
 nothing.
+
+Then `release` the plan (One session per plan) and add the line `Владелец: <remote>; <warning>`.
 
 Close with the level and cost line:
 `Level: <S|M|L from the plan> · cost: $<X> (from /cost) | cost: not measured`.

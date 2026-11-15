@@ -175,8 +175,8 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
    <ok + … = n and Keystone Chain, recomputed with carried rows>
    ```
 2. **PASS** → set `Status: verified` in the plan header (nothing else in the plan), then commit **only** `verify.md`
-   and the plan: `git add <plan folder>/verify.md <plan>` and `git commit -m "docs(verify): <slug>"`. Check
-   `git diff --cached --stat` lists exactly those two files before committing. The push gate (hook) opens now.
+   and the plan: `git add <plan folder>/verify.md <plan>` and `git commit -m "docs(verify): <slug>"`;
+   `git diff --cached --stat` lists exactly those two. Then the owner `release --any` (`ACCEPT.md`). Push opens now.
 3. **PASS-UNPROVEN** → status unchanged, `git push` stays closed. Commit `verify.md` alone (`docs(verify): <slug>`).
    The human chooses in **Step 6**: prove the open rows now and verify again, or accept them consciously.
    **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in

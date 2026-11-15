@@ -5,6 +5,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.34] — 2026-11-15
+
+### Added
+- **One session per plan.** `/keystone:implement` and `/keystone:fix` take the plan before their first edit, so a
+  second session (another worktree, another machine, the cloud) cannot run the same plan at the same time. The owner
+  record — place (worktree folder or cloud session), branch, stage, time; no machine name, no path — lives on the
+  service branch `keystone/owners` and is pushed to origin by `skills/implement/scripts/owner.mjs` (plumbing only: the
+  work tree, HEAD, `main` and the plan folder are untouched, the push gate is unchanged). A second session stops with
+  who runs the plan and asks `Стоп` / `Забрать план`; without AskUserQuestion it stops, and `--force` is only a human's
+  pick. The owner beats before each task and commit; no beat for 2 h = stale, and taking over becomes the recommended
+  answer. A taken-over session stops at its next beat. The end of a run, `verified` and `abandoned` (verify, accept,
+  start, fix) drop the record. Of two takes on one tip exactly one wins (push without force + one retry; on the local
+  branch a CAS on the decision's snapshot). Offline or without origin the mark stays local with one warning.
+  `/keystone:sessions` does not wake a child whose plan another live session runs. `KEYSTONE_GATES=off` turns it off.
+
 ## [0.9.33] — 2026-11-15
 
 ### Fixed

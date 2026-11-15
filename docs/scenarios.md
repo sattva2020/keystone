@@ -64,6 +64,9 @@ Run nothing. The task keeps its status; when the event happens, `/keystone-statu
 ### The main session started child sessions
 When a child session ends a turn, the app tells the main session and Keystone sorts the family by itself (`/keystone:sessions`; run it by hand any time): finished ones are archived, an unfinished idle one gets one message with its next step, and the rest are listed as waiting for you with a reason. In the CLI the same sort is shown read-only for the worktrees.
 
+### A second session on the same plan
+The second `/keystone:implement` (or `/keystone:fix`) stops before any edit: «План <folder> ведёт <place> · ветка …». Answer `Стоп` and run it later, or `Забрать план` when the first session is gone (after 2 h without a beat that is the recommended answer); the first one stops at its next task. Offline or without origin the guard covers only the worktrees of this machine.
+
 ### A new project, or no CLAUDE.md
 `/keystone:setup` (context, rules, MCP) → optionally `/keystone:architecture`, `/keystone:docs`, `/keystone:dockerize`,
 `/keystone:ci` → then ordinary tasks through `/keystone:start`.

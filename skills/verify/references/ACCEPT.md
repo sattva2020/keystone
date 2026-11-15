@@ -22,7 +22,7 @@ but a clear Yes → change nothing. On Yes:
 - one line per accepted item in the plan's `## Debt` section (format below; create the section after `## Release`, or
   after `## Commit Plan` / `## Tasks` when there is none, before `## Implementation notes`);
 - set `Status: verified` in the plan header;
-- commit both: `docs(verify): accept <slug>`.
+- commit both: `docs(verify): accept <slug>`, then `release --any` (**Owner record** below).
 
 ### `## Debt` lines
 
@@ -45,7 +45,8 @@ the rules), so no second question. Append to `verify.md` one line per failing `r
 before `sites to cover:`, as the report lists them, each in backticks (Prettier rewrites a bare `__x__`). Then recompute the verdict by Step 4 without the accepted places
 (each `rule` line whose every `file:line` is accepted counts as pass); the `Verdict:` line of `verify.md` is never
 rewritten:
-- PASS → set `Status: verified` and commit `verify.md` and the plan: `docs(verify): accept violation <slug>`;
+- PASS → set `Status: verified` and commit `verify.md` and the plan: `docs(verify): accept violation <slug>`, then
+  `release --any` (**Owner record** below);
 - PASS-UNPROVEN → status unchanged; commit `verify.md` alone (`docs(verify): accept violation <slug>`), then ask the
   PASS-UNPROVEN menu of `AFTER-CHOICE.md`.
 
@@ -69,3 +70,10 @@ AskUserQuestion, in plain text: yes/no). Only on Yes: the line becomes `closed <
 - Verify never marks a task `[x]` and never edits the Reconciliation table. If a row's evidence is stale, say which
   cell and what to write; the human or `/keystone:implement` makes the edit.
 - `Status: abandoned` or `KEYSTONE_GATES=off` lift the gates; they do not make a plan verified.
+
+## Owner record
+
+implement and fix keep the plan's owner on the service branch `keystone/owners`; a plan that became `verified` or
+`abandoned` drops it, so a crashed run leaves no record behind. verify never takes a plan and stops no one:
+`node "${CLAUDE_SKILL_DIR}/../implement/scripts/owner.mjs" release --any <plan>`. The result never changes the
+verdict; an error (exit 1) → one line in the report.

@@ -65,7 +65,7 @@ Ask once: `Level: M — <one-line reason>. OK / S / L?` (AskUserQuestion, recomm
 record the level in the plan header or the report.
 
 **An active plan already exists.** Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. If this is a different task → ask once: continue that plan, or mark it `Status: abandoned` and start
-this one. Its gates (no edits while draft, no push before verify) apply until you choose.
+this one (after `abandoned`: `node "${CLAUDE_SKILL_DIR}/../implement/scripts/owner.mjs" release --any <that plan>`). Its gates (no edits while draft, no push before verify) apply until you choose.
 
 **The task already has an intent or a plan.** Only record the level; create no new artifacts. If the user picked M while
 an intent exists for the task and then runs `/keystone:intent`, warn that this is an L route and offer L.

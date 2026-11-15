@@ -199,6 +199,13 @@ stay closed); in a fix, committed tests are locked. Release steps (`## Release`)
 `Status: abandoned` in the plan or `KEYSTONE_GATES=off`. The automatic sort of child sessions (`/keystone:sessions`,
 run on the app's side-sessions event) has its own switch, `KEYSTONE_SESSIONS=off`. Task files live in `docs/keystone/<YYYY-MM-DD>-<slug>/`.
 
+**One session per plan.** `/keystone:implement` and `/keystone:fix` take the plan before their first edit: the owner
+record (worktree folder or cloud session, branch, stage, time) lives on the service branch `keystone/owners` and is
+pushed to origin, so other worktrees, machines and the cloud see it; work branches, `main` and the plan folder are
+untouched. A second session stops with who runs the plan and asks `Стоп` / `Забрать план`; after 2 h without a beat
+the record is stale and taking over becomes the recommended answer. Offline or without origin the mark stays local,
+with one warning. `KEYSTONE_GATES=off` turns it off too.
+
 Every gate, release mode and the plan status flow: [`docs/gates.md`](docs/gates.md).
 
 ## Benchmarks

@@ -58,6 +58,7 @@ After the choice:
   violation** of `ACCEPT.md` without asking again.
 - `Stop and decide` → nothing runs and verify edits neither the intent nor the plan: `Next: /keystone:intent <intent
   path>` to narrow the intent. `Status: abandoned` goes into the plan header only after a second explicit yes —
-  AskUserQuestion `Mark the plan abandoned?` with `Yes` / `No`; `No` leaves the plan as it is.
+  AskUserQuestion `Mark the plan abandoned?` with `Yes` / `No`; `No` leaves the plan as it is. After `abandoned` →
+  `release --any` (**Owner record** of `ACCEPT.md`).
 - AskUserQuestion unavailable (`claude -p`, CI) → no menu: print the options as a numbered list and put the first one
   in `Next:`.

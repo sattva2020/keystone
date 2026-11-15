@@ -86,13 +86,15 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
 
 1. **Active plan.** It is the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
    - `$ARGUMENTS` empty and the active plan has `Mode: fix` → "Found existing fix plan. Executing the fix based on the
-     plan." Skip Step 1; if `approved`, set `Status: implementing`; if `draft`, STOP ("Approve it in `/keystone:plan`
-     first"). Go to Step 2 using the plan as a guide, still applying the Regression-First Policy.
+     plan." Skip Step 1; if `draft`, STOP ("Approve it in `/keystone:plan` first"); otherwise `take` it (see "One
+     session per plan") and only then, if `approved`, set `Status: implementing`. Go to Step 2 using the plan as a
+     guide, still applying the Regression-First Policy.
    - `$ARGUMENTS` empty and no fix plan → "No fix plan and no problem description. Run `/keystone:fix <description>`."
      STOP.
-   - `$ARGUMENTS` is `verify` or `verify critical` → **Verify findings mode** below; it works inside the active plan,
-     no question.
-   - `$ARGUMENTS` given while another plan is active → say which one and ask: finish it, or mark it `abandoned`.
+   - `$ARGUMENTS` is `verify` or `verify critical` → `take` the active plan, then **Verify findings mode** below; it
+     works inside the active plan, no question.
+   - `$ARGUMENTS` given while another plan is active → say which one and ask: finish it, or mark it `abandoned`; after
+     setting `abandoned`, run `release --any <that plan>` (see "One session per plan").
 2. **Project context.** Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
    `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`.
    Use them to avoid fixes that violate project structure or conventions; MUST / MUST NOT lines
@@ -128,7 +130,8 @@ plus the files changed since its commit. In this order:
    fix, a neighbour its rule asked to walk) → write it into that task's text in the plan (a drift edit, not only a
    note); a change no task covers → revert it; a change worth keeping that no task covers → new work (item 2). A `## Report` that is
    `not judged — … failed`: each `build:` / `test:` line of `## Checks` with ` → fail` is a finding, and its output is
-   the regression check. Print the list numbered.
+   the regression check. Print the list numbered. Before each finding of this list run `beat` (see "One session per
+   plan").
 2. **New work is not a fix.** A finding whose fix needs a function, task, endpoint, screen or behaviour that no task,
    row or `I-n` asks for is not fixed here: `not fixed — new work: <what> → /keystone:plan <plan path>`, and then that
    command is the `Next:` line.
@@ -160,10 +163,11 @@ plus the files changed since its commit. In this order:
 8. **Notes and the commit.** In `## Implementation notes`, one line per finding: `- <YYYY-MM-DD> fix verify — <finding
    id> — Class: <name> — sites: <file:line; …> — fixed at <shared point | each site> — Repro before: <line> → after:
    <line> — test: <file> (red on revert: <output line>)`; and one line `- <YYYY-MM-DD> fix verify — rules self-check:
-   <r> rules — pass <p>, n/a <n>; fixed before commit: <rule — file:line> | none`. Commit code, plan (and intent after
-   item 5) together.
+   <r> rules — pass <p>, n/a <n>; fixed before commit: <rule — file:line> | none`. Run `beat`, then commit code, plan
+   (and intent after item 5) together, then `release`.
 
-Report each finding as `fixed — <file:line>` or `not fixed — <why>`. Next: `/keystone:verify <plan>`.
+Report each finding as `fixed — <file:line>` or `not fixed — <why>`, and the line `Владелец: <remote>; <warning>`.
+Next: `/keystone:verify <plan>`.
 
 ### Step 1: Understand the problem and choose the mode
 
@@ -175,8 +179,8 @@ Then ask once (AskUserQuestion, recommended first): **Fix now** — investigate 
 **Plan first** — write a plan for review, fix later (level M). A bug that touches data/schema, security/auth/payments or
 a module owned by others is L: say so and use `/keystone:start` instead.
 
-- **Fix now (S)** → create `docs/keystone/<YYYY-MM-DD>-fix-<slug>/plan.md` (slug from the problem) in the short format below, with `Status: implementing`, then go to Step 2.
-- **Plan first (M)** → Step 1.1.
+- **Fix now (S)** → create `docs/keystone/<YYYY-MM-DD>-fix-<slug>/plan.md` (slug from the problem) in the short format below, with `Status: implementing`, `take` it right away (see "One session per plan"), then go to Step 2.
+- **Plan first (M)** → Step 1.1. It takes no plan: `/keystone:implement` takes it.
 
 ```markdown
 # Plan: fix — <short name>
@@ -267,6 +271,7 @@ manual) · `Skip`. On yes, write it as a new test file, run it, and include it i
 **Regression check:** [command/check and result, manual/runtime reproduction result, or "not available: <reason>"]
 **Files modified:** path/to/file.ts (line X)
 **Logging added:** [prefix `[FIX]` | none (minimal)]
+**Владелец:** <remote>; <warning>
 ```
 
 ### Step 6: Root cause and prevention — in plan.md
@@ -277,7 +282,8 @@ was it missing?), a wrong assumption (what was assumed?), a race (what sequence 
 practice prevents this class of problem, what to check in code review, what test would catch it. Level S: once the
 regression check is green **in this session**, set `Status: verified` yourself (an allowed transition for S-fix) BEFORE
 the single commit of code and plan (`git diff --cached --stat`; the plan must be staged). Level M: commit code and plan
-together and recommend `/keystone:verify <plan>` in a new session.
+together and recommend `/keystone:verify <plan>` in a new session. Run `beat` right before the commit (`taken` → STOP
+without it) and `release` right after it.
 **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
 `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
 if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`fix(<area>)`).
@@ -293,6 +299,25 @@ Changed: <files / commits / status set | none>
 Found: <defects, surprises, open questions | none>
 ```
 
+
+## One session per plan
+
+fix takes its plan so that a second session cannot run it at the same time; the record lives on the service branch
+`keystone/owners`, the work tree and the plan folder are not touched. Script:
+`node "${CLAUDE_SKILL_DIR}/../implement/scripts/owner.mjs" take|beat|release <plan> [--stage fix] [--force] [--any]` — one
+JSON line; exit 0 = go on, 3 = stop, 1 = error (say it in one line and go on). Run every call as a command of its own
+and read its exit code before the next step — never chained with the fix's work (`;`, `&&`).
+
+- `node "${CLAUDE_SKILL_DIR}/../implement/scripts/owner.mjs" take <plan> --stage fix` — as soon as the plan path is known (Step 0: an existing fix plan, Verify findings mode;
+  Step 1: Fix now, right after writing `plan.md`) and before any edit, the Status line included. Exit 3 → print
+  `План <folder> ведёт <place> · ветка <branch> · <stage> с <since>, последний признак жизни <beat>` and ask
+  (AskUserQuestion): a live owner → `Стоп (Recommended)` · `Забрать план`; a stale one (`stale: true`, no beat for
+  2 h) → `Забрать план (Recommended)` · `Стоп`. `Забрать план` → `take --force`; `Стоп` → STOP with the same command
+  as `Next:`. No AskUserQuestion → STOP for a live and a stale owner alike, no `--force`.
+- `node "${CLAUDE_SKILL_DIR}/../implement/scripts/owner.mjs" beat <plan> --stage fix` before each finding of Verify findings mode and before every commit; exit 3 (`taken`) →
+  STOP: `План забрала <place> в <since> — эта сессия останавливается`, no commit.
+- `release <plan>` right after the fix commit. `remote: "local"` + `warning` → say it once and go on.
+  `KEYSTONE_GATES=off` → nothing is guarded.
 
 ## Important rules
 

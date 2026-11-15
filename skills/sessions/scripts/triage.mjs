@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve, isAbsolute, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { show } from '../../implement/scripts/owner.mjs';
 
 const PLAN_PATH = /^docs\/keystone\/[A-Za-z0-9._-]+\/plan\.md$/;
 const text = (step) => `Keystone: осталось — ${step}. Сделай этот шаг и закончи ход.`;
@@ -67,11 +68,13 @@ function status(dir, ignored) {
   return { files, ignored: kept };
 }
 
+const ownTree = (s) => !!s.worktreePath && existsSync(s.worktreePath) && norm(s.worktreePath) !== norm(s.originCwd || s.worktreePath);
+const sessionDir = (s) => (ownTree(s) ? s.worktreePath : s.originCwd || s.worktreePath);
+
 // Facts about one session from git and its plan files.
 export function facts(s) {
-  const origin = s.originCwd || s.worktreePath;
-  const own = !!s.worktreePath && existsSync(s.worktreePath) && norm(s.worktreePath) !== norm(origin);
-  const dir = own ? s.worktreePath : origin;
+  const own = ownTree(s);
+  const dir = sessionDir(s);
   const base = s.sourceBranch || 'main';
   const branch = s.branch;
   const ref = branch || 'HEAD'; // a detached worktree is judged by its HEAD
@@ -113,7 +116,7 @@ const done = (p) => !p.intentOnly && p.status === 'verified' && p.release.length
 function planRow(p) {
   if (p.intentOnly) return null;
   if (p.fixedAfterFail) return { group: 'message', step: `/keystone:verify ${p.path}`, plan: p.path };
-  if (p.verdict === 'FAIL') return { group: 'message', step: '/keystone:fix verify' };
+  if (p.verdict === 'FAIL') return { group: 'message', step: '/keystone:fix verify', plan: p.path };
   if (p.verdict === 'PASS-UNPROVEN' && p.status !== 'verified') return { group: 'waiting', reason: 'ждёт accept' };
   if (p.status === 'implementing' && p.blocked) return { group: 'waiting', reason: `BLOCKED: ${p.blocked}` };
   if ((p.status === 'approved' || p.status === 'implementing') && p.open > 0) return { group: 'message', step: `/keystone:implement ${p.path}`, plan: p.path };
@@ -142,7 +145,7 @@ export function decide(s, f) {
   return { group: 'waiting', reason: `не распознано: ${f.plans.map((p) => p.status ?? 'intent').join(', ')}` };
 }
 
-export function classify(sessions, { self, sent = {}, factsOf = facts } = {}) {
+export function classify(sessions, { self, sent = {}, factsOf = facts, ownerOf = null } = {}) {
   if (!self) throw new Error('--self is required');
   const byId = new Map(sessions.map((s) => [s.sessionId, s]));
   const depth = (s) => {
@@ -192,6 +195,11 @@ export function classify(sessions, { self, sent = {}, factsOf = facts } = {}) {
     if (r.group === 'message') {
       if (r.plan && !PLAN_PATH.test(r.plan)) r = { group: 'waiting', reason: 'путь плана не прошёл проверку' };
       else if (sent[s.sessionId]?.step === r.step) r = { group: 'waiting', reason: `не продвинулась после «${r.step}»` };
+      else if (ownerOf && r.plan && /^\/keystone:(implement|fix) /.test(r.step)) {
+        let o = null;
+        try { o = ownerOf(sessionDir(s), r.plan); } catch { /* no answer → the step stays: better an extra step than a stuck session */ }
+        if (o?.live && !o.mine) r = { group: 'waiting', reason: `план ведёт ${o.owner.place} · ветка ${o.owner.branch} с ${o.owner.since}` };
+      }
     }
     put(s, r);
   }
@@ -235,10 +243,10 @@ function main(argv) {
     const self = i >= 0 ? rest[i + 1] : null;
     const file = rest.find((a, k) => !a.startsWith('--') && rest[k - 1] !== '--self');
     const sessions = JSON.parse(readFileSync(file, 'utf8'));
-    process.stdout.write(JSON.stringify(classify(sessions, { self, sent: readSent() }), null, 2) + '\n');
+    process.stdout.write(JSON.stringify(classify(sessions, { self, sent: readSent(), ownerOf: (dir, plan) => show(plan, { cwd: dir }) }), null, 2) + '\n');
   } else if (cmd === 'git') {
     const list = gitSessions(process.cwd());
-    const out = list.length ? classify(list, { self: '__main__', sent: readSent() }) : { archive: [], message: [], waiting: [] };
+    const out = list.length ? classify(list, { self: '__main__', sent: readSent(), ownerOf: (dir, plan) => show(plan, { cwd: dir, offline: true }) }) : { archive: [], message: [], waiting: [] };
     const rows = [
       ...out.archive.map((a) => `${a.title} · готово к архиву · —`),
       ...out.message.map((m) => `${m.title} · осталось · ${m.step}`),
