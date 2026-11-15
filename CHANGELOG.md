@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.36] — 2026-11-15
+
+### Fixed
+- **The push gate says what it closes.** Its deny text read "push/PR is closed" for every case, while in a cloud
+  session a push of the work branch passes — agents in two live cloud runs reported the message as wrong. It now
+  names the case: "this push carries commits of `<task folder>` and is closed while …" or "a PR carrying commits of
+  `<task folder>` is closed while …" (`gh pr create` and the GitHub MCP tools alike), and in a cloud session adds that a
+  push of the work branch itself stays open.
+
 ## [0.9.35] — 2026-11-15
 
 ### Fixed

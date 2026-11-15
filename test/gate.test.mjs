@@ -366,7 +366,33 @@ test('cloud session: after the work branch is pushed, a push to the default bran
   assert.ok(denied(local(`${P} origin HEAD:main`)), 'outside the cloud too, once the work branch reached the remote some other way');
 });
 
-test('0.9.34: GitHub MCP tools that ship work — a PR, a merge, a write to the default branch — are gated like push', () => {
+test('0.9.36: the deny text names what is closed — this push or a PR — and in the cloud that the work branch stays open', () => {
+  // Found live (0.9.33, 0.9.35): "push/PR is closed" read as "every push is closed" while the cloud work-branch push passed.
+  const root = project({ '2026-11-15-t': 'Status: draft' });
+  const remote = mkdtempSync(join(tmpdir(), 'ks-remote-'));
+  spawnSync('git', ['init', '-q', '--bare', remote]);
+  git(root, 'remote', 'add', 'origin', remote);
+  git(root, 'branch', '-M', 'main');
+  git(root, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
+  git(root, 'fetch', '-q', 'origin');
+  git(root, 'remote', 'set-head', 'origin', 'main');
+  git(root, 'checkout', '-q', '-b', 'claude/work');
+  writeFileSync(join(root, 'docs/keystone/2026-11-15-t/notes.md'), 'x');
+  git(root, 'add', '-A');
+  git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'plan work');
+  const run = (tool_name, tool_input, env = {}) => closedBy(decide({ hook_event_name: 'PreToolUse', cwd: root, tool_name, tool_input }, env));
+  const P = 'git' + ' push';
+  const push = run('Bash', { command: `${P} origin HEAD:main` });
+  assert.match(push, /^Keystone: this push carries commits of docs\/keystone\/2026-11-15-t and is closed while docs\/keystone\/2026-11-15-t\/plan\.md is draft/);
+  assert.doesNotMatch(push, /push\/PR|work branch itself/);
+  for (const pr of [run('Bash', { command: 'gh pr create --fill' }), run('mcp__github__create_pull_request', { head: 'claude/work', base: 'main' })])
+    assert.match(pr, /^Keystone: a PR carrying commits of docs\/keystone\/2026-11-15-t is closed while/);
+  const cloud = { CLAUDE_CODE_REMOTE: 'true' };
+  assert.match(run('Bash', { command: `${P} origin HEAD:main` }, cloud), /^Keystone: this push carries[^]*a push of the work branch itself stays open in a cloud session/);
+  assert.match(run('mcp__github__create_pull_request', { head: 'claude/work', base: 'main' }, cloud), /a push of the work branch itself stays open in a cloud session/);
+});
+
+test('0.9.35: GitHub MCP tools that ship work — a PR, a merge, a write to the default branch — are gated like push', () => {
   // Found live in the cloud (0.9.33): the gate saw only Bash/PowerShell, so a PR made through the GitHub MCP tools
   // skipped it while the plan was a draft.
   const root = project({ '2026-11-15-m': 'Status: draft' });

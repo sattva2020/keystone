@@ -270,7 +270,11 @@ export function decide(input, env = process.env) {
       if (isCloud(env) && workBranchPush(push)) return null;
       const check = pushCheck(push, plan.file);
       if (check.error) return deny(`Keystone: could not tell what this push ships, so it stays closed while ${plan.file} is ${plan.status} — \`git log\` in ${slash(push.dir)} failed: ${check.error}. The plan may have nothing to do with it: run the push with a literal \`git -C <repo> push <remote> <branch>\`. ${HOW}`);
-      if (check.carries) return deny(`Keystone: push/PR is closed while ${plan.file} is ${plan.status} — run /keystone:verify first (PASS, or /keystone:verify accept for PASS-UNPROVEN). ${HOW}`);
+      // name what is closed: "push/PR is closed" read as "every push" while the cloud work-branch push passed (0.9.33, 0.9.35)
+      const folder = slash(dirname(plan.file));
+      const what = push.pr ? `a PR carrying commits of ${folder} is closed` : `this push carries commits of ${folder} and is closed`;
+      const open = isCloud(env) ? ' (a push of the work branch itself stays open in a cloud session)' : '';
+      if (check.carries) return deny(`Keystone: ${what} while ${plan.file} is ${plan.status}${open} — run /keystone:verify first (PASS, or /keystone:verify accept for PASS-UNPROVEN). ${HOW}`);
     }
     return null;
   }
