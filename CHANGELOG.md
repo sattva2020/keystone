@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.33] — 2026-11-15
+
+### Fixed
+- **Push gate: a pushed work branch no longer hides the plan's commits.** The gate counted a push as carrying the plan
+  only when it shipped commits not yet on *any* remote branch. In a cloud session, where the work branch may be pushed
+  before verify (0.9.30), that made a later `git push origin HEAD:main` and `gh pr create` look empty, and both passed
+  while the plan was still a draft — found live on a sandbox repository with 0.9.31. What a push ships is now measured
+  against the branch it lands on (`origin/<dst>`; for a PR, the default branch); a new branch, `--all` or a repository
+  without `origin` keep the old "not on any remote" rule. Commits already on the default branch count as landed, and
+  merge commits are still skipped, so main merged into a work branch keeps its push open (0.9.32).
+
 ## [0.9.32] — 2026-11-15
 
 ### Fixed

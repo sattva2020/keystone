@@ -212,21 +212,22 @@ test('push gate: a merge from the remote that brings someone else\'s commit to t
   git(root, 'branch', '-M', 'main');
   git(root, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
   const commit = (file) => { mkdirSync(dirname(join(root, file)), { recursive: true }); writeFileSync(join(root, file), String(Math.random())); git(root, 'add', '-A'); git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', file); };
-  // other sessions pushed commits to the plan folder on two remote lines; this branch has its own unrelated commit.
-  // The second merge combines both folder changes, so it differs from every parent and a path-limited log shows it.
-  for (const [b, file, dst] of [['s1', 'a.md', 'main'], ['s2', 'b.md', 'refs/heads/other']]) {
-    git(root, 'checkout', '-q', '-b', b, 'main');
-    commit(`docs/keystone/2026-10-14-x/${file}`);
-    git(root, 'push', '-q', 'origin', `${b}:${dst}`);
-  }
-  git(root, 'checkout', '-q', 'main');
-  commit('src/own.ts');
+  // the work branch is on origin with a plan-folder commit; another session pushed a plan-folder commit to main.
+  // Merging main into the work branch combines both folder changes, so the merge differs from every parent and a
+  // path-limited log shows it — though it ships nothing new to the work branch or main.
+  git(root, 'checkout', '-q', '-b', 'work', 'main');
+  commit('docs/keystone/2026-10-14-x/a.md');
+  git(root, 'push', '-q', 'origin', 'work');
+  git(root, 'checkout', '-q', '-b', 's1', 'main');
+  commit('docs/keystone/2026-10-14-x/b.md');
+  git(root, 'push', '-q', 'origin', 's1:main');
+  git(root, 'checkout', '-q', 'work');
   git(root, 'fetch', '-q', 'origin');
-  for (const r of ['origin/other', 'origin/main']) git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'merge', '-q', '--no-ff', '--no-edit', r);
+  git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'merge', '-q', '--no-ff', '--no-edit', 'origin/main');
   const P = 'git' + ' push';
-  assert.equal(pre(root, 'Bash', { command: `${P} origin main` }), null, 'the merge only brought a commit already on the remote');
+  assert.equal(pre(root, 'Bash', { command: `${P} origin work` }), null, 'the merge only brought a commit already on main');
   commit('docs/keystone/2026-10-14-x/verify.md');
-  assert.ok(denied(pre(root, 'Bash', { command: `${P} origin main` })), 'an own commit in the plan folder closes it');
+  assert.ok(denied(pre(root, 'Bash', { command: `${P} origin work` })), 'an own commit in the plan folder closes it');
 });
 
 test('session binding: Stop and the draft gate stay silent in a session that never worked with the plan', () => {
@@ -338,4 +339,29 @@ test('cloud session: the work branch may be pushed before verify; the default br
   git(root, 'checkout', '-q', 'main');
   git(root, 'merge', '-q', '--ff-only', 'claude/work');
   assert.ok(denied(cloud(`${P} -u origin HEAD`)), 'HEAD on the default branch');
+});
+
+test('cloud session: after the work branch is pushed, a push to the default branch and a PR still carry the plan', () => {
+  // Found live (0.9.31): the gate measured "what ships" against every remote branch, so once the work branch was
+  // pushed, `git push origin HEAD:main` and `gh pr create` looked empty and passed while the plan was still a draft.
+  const root = project({ '2026-11-15-x': 'Status: draft' });
+  const remote = mkdtempSync(join(tmpdir(), 'ks-remote-'));
+  spawnSync('git', ['init', '-q', '--bare', remote]);
+  git(root, 'remote', 'add', 'origin', remote);
+  git(root, 'branch', '-M', 'main');
+  git(root, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
+  git(root, 'fetch', '-q', 'origin');
+  git(root, 'remote', 'set-head', 'origin', 'main');
+  git(root, 'checkout', '-q', '-b', 'claude/work');
+  writeFileSync(join(root, 'docs/keystone/2026-11-15-x/plan.md'), '# Plan: x\n\nStatus: draft\n\n## Tasks\n- [ ] 1. a\n');
+  git(root, 'add', '-A');
+  git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'plan work');
+  git(root, 'push', '-q', '-u', 'origin', 'HEAD'); // the work branch is on the remote now
+  const cloud = (command) => decide({ hook_event_name: 'PreToolUse', cwd: root, tool_name: 'Bash', tool_input: { command } }, { CLAUDE_CODE_REMOTE: 'true' });
+  const P = 'git' + ' push';
+  for (const c of [`${P} origin HEAD:main`, `${P} origin claude/work:main`, 'gh pr create --fill'])
+    assert.ok(denied(cloud(c)), c);
+  assert.equal(cloud(`${P} origin HEAD`), null, 'the work branch itself still passes');
+  const local = (command) => decide({ hook_event_name: 'PreToolUse', cwd: root, tool_name: 'Bash', tool_input: { command } }, {});
+  assert.ok(denied(local(`${P} origin HEAD:main`)), 'outside the cloud too, once the work branch reached the remote some other way');
 });

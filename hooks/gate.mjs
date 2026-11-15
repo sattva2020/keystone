@@ -158,7 +158,7 @@ function shellBefore(text, base) {
 function pushTarget(cmd, base) {
   const m = cmd.match(PUSH);
   const { dir: here, expand } = shellBefore(cmd.slice(0, m?.index ?? 0), base);
-  if (!m || !/push\b/.test(m[0])) return { dir: here, refs: ['HEAD'], dsts: null }; // gh pr create ships HEAD
+  if (!m || !/push\b/.test(m[0])) return { dir: here, refs: ['HEAD'], dsts: null, pr: true }; // gh pr create ships HEAD
   const dirs = [...m[0].matchAll(/-C\s+("[^"]+"|'[^']+'|\S+)/g)].map((x) => nativePath(expand(unquote(x[1]))));
   const dir = dirs.length ? resolve(here, dirs[dirs.length - 1]) : here;
   // redirections (2>&1, > log, < in) are not refs; cut them before splitting on | ; &
@@ -175,25 +175,40 @@ function pushTarget(cmd, base) {
 // Cloud session, push to the work branch: every destination is a named branch other than the default one (origin/HEAD,
 // main, master). HEAD resolves to the current branch; a detached HEAD, every-branch push or PR → not a work-branch push.
 // ponytail: only `origin` is asked for its default branch; another remote falls back to main/master.
+const gitOut = (dir, ...a) => spawnSync('git', ['-C', dir, ...a], { encoding: 'utf8' }).stdout?.trim() ?? '';
+const onOrigin = (dir, b) => spawnSync('git', ['-C', dir, 'rev-parse', '--verify', '-q', `refs/remotes/origin/${b}`], { stdio: 'ignore' }).status === 0;
+const defaultBranch = (dir) => gitOut(dir, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD').replace(/^[^/]+\//, '') || (onOrigin(dir, 'main') ? 'main' : 'master');
+const branchOf = (dir, d) => (d === 'HEAD' ? gitOut(dir, 'rev-parse', '--abbrev-ref', 'HEAD') : d).replace(/^refs\/heads\//, '');
 function workBranchPush(push) {
   if (!push.dsts) return false;
-  const git = (...a) => spawnSync('git', ['-C', push.dir, ...a], { encoding: 'utf8' }).stdout?.trim() ?? '';
-  const head = git('rev-parse', '--abbrev-ref', 'HEAD');
-  const shipped = new Set(['main', 'master', git('symbolic-ref', '--short', 'refs/remotes/origin/HEAD').replace(/^[^/]+\//, '')]);
+  const shipped = new Set(['main', 'master', defaultBranch(push.dir)]);
   return push.dsts.every((d) => {
-    const b = (d === 'HEAD' ? head : d).replace(/^refs\/heads\//, '');
+    const b = branchOf(push.dir, d);
     return b && b !== 'HEAD' && !shipped.has(b);
   });
 }
 
-// The push carries the active plan's work when a commit it ships, not yet on any remote, touches the plan's task folder.
+// What the push ships is measured against the branch it lands on: `origin/<dst>` when origin has it, and for a PR the
+// default branch. Measuring against every remote let a pushed work branch hide the same commits on their way to main
+// or into a PR (found live in the cloud, 0.9.31). A new branch, --all/--mirror or no origin → not on any remote.
+// Commits already on the default branch have landed: main merged into a work branch ships nothing new (0.9.32).
+function landsOn(push) {
+  const def = defaultBranch(push.dir);
+  const dsts = push.pr ? [def] : push.dsts;
+  if (!dsts) return ['--remotes'];
+  const bases = dsts.map((d) => branchOf(push.dir, d)).map((b) => (b && onOrigin(push.dir, b) ? `origin/${b}` : null));
+  if (!bases.every(Boolean)) return ['--remotes'];
+  return [...new Set(onOrigin(push.dir, def) ? [...bases, `origin/${def}`] : bases)];
+}
+
+// The push carries the active plan's work when a commit it ships touches the plan's task folder.
 // Implement commits the plan with every task (checkbox ticks, drift, notes), so an unrelated release passes.
 // Merges are skipped: a merge that combines folder changes already on remotes differs from every parent and would be
 // listed though it ships nothing of the plan; the plan's own commits under a merge are non-merge commits and still count.
 // ponytail: a conflict resolved inside the plan folder lives only in the merge and is not seen.
 // git fails → `error`: the gate stays closed rather than open by mistake, and says it could not tell.
-function pushCheck(dir, refs, planFile) {
-  const r = spawnSync('git', ['-C', dir, 'log', '--no-merges', '--format=%H', ...refs, '--not', '--remotes', '--', dirname(planFile)], { encoding: 'utf8' });
+function pushCheck(push, planFile) {
+  const r = spawnSync('git', ['-C', push.dir, 'log', '--no-merges', '--format=%H', ...push.refs, '--not', ...landsOn(push), '--', dirname(planFile)], { encoding: 'utf8' });
   if (r.status !== 0) return { carries: true, error: (r.stderr || '').trim().split('\n')[0] || `git exited ${r.status}` };
   return { carries: r.stdout.trim() !== '' };
 }
@@ -233,7 +248,7 @@ export function decide(input, env = process.env) {
   if (tool === 'Bash' || tool === 'PowerShell') {
     if (push) {
       if (isCloud(env) && workBranchPush(push)) return null;
-      const check = pushCheck(push.dir, push.refs, plan.file);
+      const check = pushCheck(push, plan.file);
       if (check.error) return deny(`Keystone: could not tell what this push ships, so it stays closed while ${plan.file} is ${plan.status} — \`git log\` in ${slash(push.dir)} failed: ${check.error}. The plan may have nothing to do with it: run the push with a literal \`git -C <repo> push <remote> <branch>\`. ${HOW}`);
       if (check.carries) return deny(`Keystone: push/PR is closed while ${plan.file} is ${plan.status} — run /keystone:verify first (PASS, or /keystone:verify accept for PASS-UNPROVEN). ${HOW}`);
     }
