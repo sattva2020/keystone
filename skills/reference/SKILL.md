@@ -1,6 +1,6 @@
 ---
 name: reference
-description: "Keystone: turn URLs, documents or files into a project reference in docs/references/<slug>.md. Library and SDK docs come from Context7 first; the reference keeps only project-specific conclusions, prices and limits, and live checks with date and source URL — no copies of docs Context7 already serves. Use for 'make a reference', 'document this API for the agent', 'save these pricing limits'."
+description: "Keystone: turn URLs, documents or files into a project reference in docs/references/[slug].md. Library and SDK docs come from Context7 first; the reference keeps only project-specific conclusions, prices and limits, and live checks with date and source URL — no copies of docs Context7 already serves. Use for 'make a reference', 'document this API for the agent', 'save these pricing limits'."
 argument-hint: "<url|path> [url2|path2] [--name <slug>] [--update] | list | show <slug> | delete <slug>"
 allowed-tools: Read Write Edit Glob Grep Bash(mkdir *) Bash(ls *) Bash(wc *) WebFetch WebSearch AskUserQuestion mcp__context7__resolve-library-id mcp__context7__query-docs
 model: sonnet

@@ -1,6 +1,6 @@
 ---
 name: docs
-description: "Keystone: generate and maintain project documentation — a lean README landing page plus topic pages in docs/, with navigation, consolidation of scattered *.md files (only with your yes, nothing deleted automatically) and a review against a checklist. `update <files|topics>` refreshes only the pages a change touched (called by /keystone:implement when Settings say docs — yes). Use for 'create docs', 'write documentation', 'update docs', 'generate readme', 'document project'."
+description: "Keystone: generate and maintain project documentation — a lean README landing page plus topic pages in docs/, with navigation, consolidation of scattered *.md files (only with your yes, nothing deleted automatically) and a review against a checklist. `update [files|topics]` refreshes only the pages a change touched (called by /keystone:implement when Settings say docs — yes). Use for 'create docs', 'write documentation', 'update docs', 'generate readme', 'document project'."
 argument-hint: "[update <files|topics>] [--web]"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) Bash(mkdir *) AskUserQuestion
 model: sonnet

@@ -1,6 +1,6 @@
 ---
 name: fix
-description: "Keystone: fix a bug regression-first — reproduce, failing test, smallest fix, same check green; root cause and prevention recorded in the plan. Fix now (S) or plan first (M). Use only via explicit /keystone:fix <bug description or error>, or /keystone:fix verify to fix every finding of the last FAIL verify.md in one pass."
+description: "Keystone: fix a bug regression-first — reproduce, failing test, smallest fix, same check green; root cause and prevention recorded in the plan. Fix now (S) or plan first (M). Use only via explicit /keystone:fix [bug description or error], or /keystone:fix verify to fix every finding of the last FAIL verify.md in one pass."
 argument-hint: "<bug description or error message> | verify (every finding of the last FAIL verify.md) | (empty: continue the active fix plan)"
 allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Task
 model: opus

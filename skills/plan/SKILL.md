@@ -1,6 +1,6 @@
 ---
 name: plan
-description: "Keystone: plan an M or L change into docs/keystone/<date>-<slug>/plan.md — reconnaissance, Requirements Reconciliation Gate against intent.md (I-n) and project rules, Rules check, Risks, tasks with files and checks, a pre-approval interrogation round, and on L an independent /keystone:check. Settings are inferred from the repo, never asked. Explicit /keystone:plan only."
+description: "Keystone: plan an M or L change into docs/keystone/[date]-[slug]/plan.md — reconnaissance, Requirements Reconciliation Gate against intent.md (I-n) and project rules, Rules check, Risks, tasks with files and checks, a pre-approval interrogation round, and on L an independent /keystone:check. Settings are inferred from the repo, never asked. Explicit /keystone:plan only."
 argument-hint: "<path to intent.md or its folder | task text> [S | M | L]"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion Task Skill
 model: opus

@@ -1,6 +1,6 @@
 ---
 name: qa-check
-description: "Keystone: executes the test cases written by /keystone:qa — human-guided (asks the user case by case) or agent mode (browser via the built-in browser tools or Playwright MCP, CLI, tests, API, file checks) — and records pass / fail / blocked per case with evidence in <task folder>/qa/qa-check.md. A case without evidence is not pass. Reusable browser replay = Playwright test scripts in <task folder>/qa/replay/. Use for 'run the QA', 'walk through the test cases', 'verify the cases', 'rerun QA'."
+description: "Keystone: executes the test cases written by /keystone:qa — human-guided (asks the user case by case) or agent mode (browser via the built-in browser tools or Playwright MCP, CLI, tests, API, file checks) — and records pass / fail / blocked per case with evidence in [task folder]/qa/qa-check.md. A case without evidence is not pass. Reusable browser replay = Playwright test scripts in [task folder]/qa/replay/. Use for 'run the QA', 'walk through the test cases', 'verify the cases', 'rerun QA'."
 argument-hint: "[human | agent] [<plan.md path | qa folder | branch>]"
 allowed-tools: Read Write Grep Glob Bash AskUserQuestion mcp__Claude_Browser__* mcp__playwright__*
 model: sonnet

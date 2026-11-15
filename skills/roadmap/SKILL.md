@@ -1,6 +1,6 @@
 ---
 name: roadmap
-description: "Keystone: create or update docs/roadmap.md — a strategic checklist of milestones with stable IDs (M-1, M-2, …) that intents can reference (Roadmap: M-<n>). Modes: create, update, check progress (reads task folders to propose ticks). Writes only after you see the diff and say yes. Use for 'roadmap', 'milestones', 'what to build next'."
+description: "Keystone: create or update docs/roadmap.md — a strategic checklist of milestones with stable IDs (M-1, M-2, …) that intents can reference (Roadmap: M-[n]). Modes: create, update, check progress (reads task folders to propose ticks). Writes only after you see the diff and say yes. Use for 'roadmap', 'milestones', 'what to build next'."
 argument-hint: "[check | project vision or requirements]"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion
 model: opus

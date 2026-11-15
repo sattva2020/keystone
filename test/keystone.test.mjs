@@ -17,10 +17,20 @@ const allSkillFiles = () => SKILLS.flatMap((s) => {
   return [`skills/${s}/SKILL.md`, ...refs];
 });
 
+test('0.9.31: no skill or agent description has <angle-bracket> text — claude.ai rejects it as XML tags', () => {
+  // claude.ai plugin validation: "SKILL.md description cannot contain XML tags"; one such skill blocks the whole plugin
+  // from the account marketplace, so cloud sessions keep the last version that passed.
+  for (const f of [...SKILLS.map((s) => `skills/${s}/SKILL.md`), ...AGENTS.map((a) => `agents/${a}`)]) {
+    const description = front(f).match(/^description:\s*(.*)$/m)?.[1] ?? '';
+    assert.ok(description, `${f}: description`);
+    assert.doesNotMatch(description, /<[^<>]+>/, `${f}: description has <…> text`);
+  }
+});
+
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.30');
+  assert.equal(p.version, '0.9.31');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));

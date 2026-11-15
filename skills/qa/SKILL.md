@@ -1,6 +1,6 @@
 ---
 name: qa
-description: "Keystone: QA workflow for testing a feature or task implementation — change summary, test plan and concrete manual test cases, written to <task folder>/qa/. Input is a Keystone plan path, a git ref, or nothing (staged/working diff). With a plan, cases cite intent IDs (I-n) and the plan's `Done means:`. Use for 'test this', 'write test plan', 'what should I test', 'QA this change'; run the cases with /keystone:qa-check."
+description: "Keystone: QA workflow for testing a feature or task implementation — change summary, test plan and concrete manual test cases, written to [task folder]/qa/. Input is a Keystone plan path, a git ref, or nothing (staged/working diff). With a plan, cases cite intent IDs (I-n) and the plan's `Done means:`. Use for 'test this', 'write test plan', 'what should I test', 'QA this change'; run the cases with /keystone:qa-check."
 argument-hint: "[--all] [change-summary | test-plan | test-cases] [<plan.md path | git ref>]"
 allowed-tools: Read Write Grep Glob Agent AskUserQuestion Bash(git *) Bash(mkdir *)
 model: opus

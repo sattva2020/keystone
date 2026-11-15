@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.31] — 2026-11-15
+
+### Fixed
+- **The plugin passes claude.ai validation again.** claude.ai now rejects a skill whose `description` holds
+  `<placeholder>` text ("SKILL.md description cannot contain XML tags"), and one such skill blocks the whole plugin: the
+  account marketplace kept serving 0.9.29 to cloud sessions, so 0.9.30's cloud push-gate fix never reached them. Nine
+  descriptions (docs, evolve, fix, plan, qa, qa-check, reference, roadmap, security) now write placeholders as
+  `[placeholder]`; a test keeps every skill and agent description free of `<…>`.
+
 ## [0.9.30] — 2026-11-12
 
 ### Fixed
