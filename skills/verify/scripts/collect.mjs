@@ -16,6 +16,9 @@ export function git(cwd, ...args) {
   return r.stdout.trimEnd(); // not trimStart: a porcelain line may begin with a space (` M a.js`)
 }
 const lines = (s) => (s ? s.split(/\r?\n/).filter(Boolean) : []);
+// A path written to verify.md goes in backticks: a formatter (Prettier via lint-staged) rewrites a bare `__tests__` as
+// bold and breaks `file:line`. Every parser below reads a path with or without them.
+const tick = (p) => `\`${p}\``;
 
 // Step 1 of verify: P = first commit that added the plan, C = first commit after P, base = C^.
 export function findBase(cwd, plan, given) {
@@ -27,7 +30,8 @@ export function findBase(cwd, plan, given) {
   const outside = lines(git(cwd, 'show', '--name-only', '--format=', p)).some((f) => !f.startsWith(folder));
   const root = !lines(git(cwd, 'rev-list', '--parents', '-n', '1', p)).join(' ').trim().includes(' ');
   if (outside && !root) return { base: git(cwd, 'rev-parse', `${p}^`), rule: 'P^ — the plan commit has files outside the task folder' };
-  const c = lines(git(cwd, 'rev-list', '--reverse', `${p}..HEAD`))[0];
+  // first parent: a merged-in commit older than the task's own first commit is not C (the base would move into main)
+  const c = lines(git(cwd, 'rev-list', '--reverse', '--first-parent', `${p}..HEAD`))[0];
   if (!c) return { base: p, rule: 'P — no commit after the plan' };
   return { base: git(cwd, 'rev-parse', `${c}^`), rule: 'parent of the first commit after the plan' };
 }
@@ -79,10 +83,14 @@ export function detect(cwd, changed) {
 const toolExists = (cwd, cmd) => /[\\/]/.test(cmd) ? ['', '.cmd', '.bat', '.exe'].some((e) => has(cwd, cmd + e)) // on Windows vendor/bin/x is x.bat or x.cmd
   : spawnSync(process.platform === 'win32' ? 'where' : 'sh', process.platform === 'win32' ? [cmd] : ['-c', `command -v ${cmd}`], { stdio: 'ignore' }).status === 0;
 
+// verify.md copies these lines; Prettier turns a bare `__tests__` into `**tests**`, so file arguments and tool output
+// go in backticks (a text with a backtick gets a double-backtick span).
+const code = (s) => (s.includes('`') ? '`` ' + s + ' ``' : '`' + s + '`');
+
 function run(cwd, kind, argv) {
   if (!argv) return `${kind}: not run (no ${kind} config)`;
   if (typeof argv === 'string') return `${kind}: not run (${argv})`;
-  const shown = argv.join(' ');
+  const shown = argv.map((a, i) => (i && /\.\w+$/.test(a) && has(cwd, a) ? code(a) : a)).join(' ');
   if (!toolExists(cwd, argv[0])) return `${kind}: ${shown} → not run (${argv[0]} not found)`;
   // Windows needs the shell for npm/npx (.cmd); pass one quoted string so arguments are not concatenated raw
   const q = (a) => (/[\s"&|<>^]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a);
@@ -91,13 +99,13 @@ function run(cwd, kind, argv) {
     ? spawnSync([argv[0].replace(/\//g, '\\'), ...argv.slice(1)].map(q).join(' '), { cwd, encoding: 'utf8', timeout: TIMEOUT_MS, shell: true })
     : spawnSync(argv[0], argv.slice(1), { cwd, encoding: 'utf8', timeout: TIMEOUT_MS });
   if (r.error?.code === 'ENOENT') return `${kind}: ${shown} → not run (${argv[0]} not found)`;
-  if (r.error?.code === 'ETIMEDOUT' || r.signal) return `${kind}: ${shown} → not run (timeout after ${TIMEOUT_MS / 1000} s)`;
+  if (r.error?.code === 'ETIMEDOUT' || r.signal) return `${kind}: ${shown} → not run (timeout after ${TIMEOUT_MS / 1000} s — raise KEYSTONE_CHECK_TIMEOUT_MS)`;
   const out = lines(`${r.stdout || ''}\n${r.stderr || ''}`);
   // a missing tool is caught by toolExists; only `npx --no-install` with a package that is not installed gets here
   if (r.status !== 0 && argv[0] === 'npx' && out.some((l) => /could not determine executable|npm error canceled/i.test(l)) && out.length < 8)
-    return `${kind}: ${shown} → not run (${out[out.length - 1]})`;
+    return `${kind}: ${shown} → not run (${code(out[out.length - 1])})`;
   // pass: the end of stdout (where runners print their counts); fail: the end of everything, ~20 lines (CHECKS.md)
-  const tail = (r.status === 0 ? lines(r.stdout || '').slice(-8) : out.slice(-20)).map((l) => `    ${l}`).join('\n');
+  const tail = (r.status === 0 ? lines(r.stdout || '').slice(-8) : out.slice(-20)).map((l) => `    ${code(l)}`).join('\n');
   return `${kind}: ${shown} → ${r.status === 0 ? 'pass' : 'fail'}${tail ? `\n${tail}` : ''}`;
 }
 
@@ -144,7 +152,10 @@ export function architecture(cwd, changed) {
     // one file per run, so every hit can carry its file name (grep omits it for a single file)
     for (const f of changed.filter((f) => has(cwd, f))) {
       const r = spawnSync(`${check} ${JSON.stringify(f)}`, { cwd, encoding: 'utf8', shell: true });
-      lines(r.stdout).forEach((hit) => fails.push(`${rule.replace(/\s*check:.*$/, '').trim()}, ${f}:${hit}`));
+      for (const hit of lines(r.stdout)) {
+        const n = hit.match(/^(\d+):(.*)$/); // `grep -n` → file:line, then the matched text
+        fails.push(`${rule.replace(/\s*check:.*$/, '').trim()}, ${n ? `${tick(`${f}:${n[1]}`)} ${n[2]}` : `${tick(f)} ${hit}`}`);
+      }
     }
   }
   return [fails.length ? `Architecture gate: fail — ${fails.join('; ')}` : 'Architecture gate: pass', ...out];
@@ -167,7 +178,7 @@ const section = (text, name) => {
 };
 // a row starts with a fixed id (verifier.md); any other line of the template (Unconfirmed, Settings, gates…) is not a row
 const ROW_ID = /^(Task \d+|Done means\b.*|Row\b.*|I-\d+)$/;
-const cleanId = (id) => id.replace(/\*\*/g, '').trim().replace(/^task (\d+)\b/i, 'Task $1');
+const cleanId = (id) => id.replace(/\*\*|`/g, '').trim().replace(/^task (\d+)\b/i, 'Task $1');
 
 // Rows of a report: `<id> — <status> — <evidence>` plus indented continuation lines up to the next row.
 export function parseRows(text) {
@@ -210,7 +221,7 @@ const owns = (entry, f) => {
 const places = (s) => s.replace(/ — (?:sites to cover|Class):[\s\S]*$/, '').replace(/`/g, '').replace(/:(\d+)-\d+/g, ':$1')
   .split(';').map((p) => (p.trim().match(/^\S+:\d+/) || [])[0]).filter(Boolean);
 const failingRules = (report) => lines(report).map((l) => l.replace(/^(?:[-*] )?/, '').match(/^rule (\S+) — fail — (.*)$/)).filter(Boolean)
-  .flatMap((m) => places(m[2]).map((fl) => ({ source: m[1], fl })));
+  .flatMap((m) => places(m[2]).map((fl) => ({ source: m[1].replace(/`/g, ''), fl })));
 
 function taskFilesOfPlan(text) {
   const out = {};
@@ -243,7 +254,7 @@ function fullReason(cwd, plan, base, prev, prevText, full) {
   if (shas.some((s) => gitTry(cwd, 'merge-base', '--is-ancestor', s, 'HEAD').status !== 0)) return 'history rewritten';
   const b = (prevText.match(/Base:\s*([0-9a-f]{7,40})/) || [])[1];
   if (!b || !base.startsWith(b)) return 'base moved';
-  if (lines(git(cwd, 'rev-list', '--first-parent', '--merges', `${prev}..HEAD`)).length) return 'merge since the last verify';
+  // a merge (main into the task branch) is no reason: rows naming a file it changed are judged, the rest are carried
   // the strictness (Level) and Settings change how every row is judged; a plan or intent text edit judges only what it touched
   const header = (s) => ['Level', 'Settings', 'Authority'].map((k) => (lines((s || '').replace(/\r\n/g, '\n')).find((l) => l.startsWith(`${k}:`)) || '')
     .replace(/(Status:\s*)[^·\n]*/, '$1').trimEnd()).join('\n');
@@ -366,13 +377,20 @@ export function delta(cwd, plan, base, { full = false, checks = [], files = [] }
   // an untracked file older than the last verify commit was already there when it ran: kept in `changed`, not counted
   const since = prev ? Number(git(cwd, 'log', '-1', '--format=%ct', prev)) * 1000 : 0;
   const old = new Set(untracked.filter((f) => { try { return statSync(join(cwd, f)).mtimeMs < since; } catch { return false; } }));
-  const counted = touched.filter((f) => f !== vpath && !old.has(f)).length;
+  // files only a merge brought since the last run (main into the task branch): not this task's change, not counted;
+  // rows naming them are still judged (they stay in `changed`)
+  const own = prev ? new Set([...lines(git(cwd, 'log', '--first-parent', '--no-merges', '--no-renames', '--name-only', '--format=', `${prev}..HEAD`)),
+    ...lines(git(cwd, 'diff', '--name-only', '--no-renames', 'HEAD')), ...untracked]) : new Set();
+  const merged = new Set(prev ? lines(git(cwd, 'rev-list', '--first-parent', '--merges', `${prev}..HEAD`))
+    .flatMap((m) => lines(git(cwd, 'diff', '--name-only', '--no-renames', `${m}^1`, m))).filter((f) => !own.has(f)) : []);
+  const counted = touched.filter((f) => f !== vpath && !old.has(f) && !merged.has(f)).length;
+  const byMerge = touched.filter((f) => merged.has(f)).length;
   const rulesChanged = changed.filter((f) => RULE_FILES.test(f));
   const reason = prev ? fullReason(cwd, plan, base, prev, prevText, full) : 'first verify';
-  const scope = rulesChanged.length ? `rules scope: all task files — rule files changed: ${rulesChanged.join(', ')}`
+  const scope = rulesChanged.length ? `rules scope: all task files — rule files changed: ${rulesChanged.map(tick).join(', ')}`
     : reason ? 'rules scope: all task files'
     : `rules scope: files changed since ${prev.slice(0, 7)} + files on the last run's failing rule lines: ${
-      [...new Set(failingRules(section(prevText, 'Report')).map((r) => r.fl.replace(/:\d+$/, '')))].join(', ') || 'none'}`;
+      [...new Set(failingRules(section(prevText, 'Report')).map((r) => r.fl.replace(/:\d+$/, '')))].map(tick).join(', ') || 'none'}`;
   const planText = read(cwd, plan);
   const refs = `release refs: ${releaseRefs(planText).join('; ') || 'none'}`;
   const ip = intentPath(cwd, plan);
@@ -429,7 +447,7 @@ export function delta(cwd, plan, base, { full = false, checks = [], files = [] }
     }
   }
   return [
-    `delta: since ${sha} — ${counted} files changed since the last verify`,
+    `delta: since ${sha} — ${counted} files changed since the last verify${byMerge ? `; ${byMerge} more came in by merge (not counted)` : ''}`,
     `judge: ${judge.join(', ') || 'none'}`,
     scope,
     refs,
@@ -454,7 +472,7 @@ export function parseAccepted(text) {
   const keys = new Set();
   for (const l of lines((text || '').replace(/\r\n/g, '\n'))) {
     const m = l.match(/^Accepted violation by .*?: rule (\S+) — (.*)$/);
-    if (m) places(m[2]).forEach((fl) => keys.add(`rule ${m[1]} ${fl}`));
+    if (m) places(m[2]).forEach((fl) => keys.add(`rule ${m[1].replace(/`/g, '')} ${fl}`));
   }
   return keys;
 }
@@ -491,7 +509,7 @@ export function findings(text, accepted = new Set()) {
     const un = l.match(/^Unrequested: (.*)$/);
     if (un && !/^none\b/i.test(un[1].trim())) un[1].split(';').map((s) => s.trim()).filter(Boolean).forEach((s) => keys.add(`Unrequested: ${s}`));
   }
-  return keys;
+  return new Set([...keys].map((k) => k.replace(/`/g, ''))); // a run with backticked paths and one without give one key
 }
 
 // A commit that only adds `Accepted unproven by …` / `Accepted violation by …` (verify accept) records a decision, not a run.
@@ -522,7 +540,7 @@ export function acceptedLine(cwd, plan) {
     const [, source, fl] = k.match(/^rule (\S+) (\S+)$/);
     by.set(source, [...(by.get(source) || []), fl]);
   }
-  return `accepted violations: ${[...by].map(([s, fls]) => `rule ${s} — ${fls.join('; ')}`).join('; ') || 'none'}`;
+  return `accepted violations: ${[...by].map(([s, fls]) => `rule ${tick(s)} — ${fls.map(tick).join('; ')}`).join('; ') || 'none'}`;
 }
 
 // A FAIL that rests only on unaccepted Rules gate lines: no wrong / missing / Decision / Unrequested / check finding,
@@ -566,7 +584,7 @@ export function collect(cwd, plan, given, { full = false } = {}) {
   const { commits, files, dirty } = taskFiles(cwd, base);
   const out = [`base: ${base.slice(0, 7)} — ${rule}`, `commits: ${commits.filter((c) => !c.merge).length}`];
   for (const c of commits) out.push(`  ${c.merge ? 'merge (files not counted): ' : ''}${c.sha.slice(0, 7)} ${c.subject}`);
-  out.push(`files: ${files.length}${dirty.length ? ` (${dirty.length} uncommitted)` : ''}`, ...files.map((f) => `  ${f}`));
+  out.push(`files: ${files.length}${dirty.length ? ` (${dirty.length} uncommitted)` : ''}`, ...files.map((f) => `  ${tick(f)}`));
   const settings = lines(read(cwd, plan)).find((l) => l.startsWith('Settings:')) || '';
   const d = detect(cwd, files);
   const c = checks(cwd, plan);

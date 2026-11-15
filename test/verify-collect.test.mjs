@@ -155,7 +155,7 @@ test('collect: the architecture gate runs each MUST NOT check on the changed fil
   commit(root, { [PLAN]: plan() }, 'docs(plan)');
   commit(root, { 'src/ui.js': "import x from 'db'\n" }, 'feat: ui');
   const out = collect(root, PLAN);
-  assert.match(out, /^Architecture gate: fail — - MUST NOT: ui imports db —, src\/ui\.js:1:/m);
+  assert.match(out, /^Architecture gate: fail — - MUST NOT: ui imports db —, `src\/ui\.js:1` /m);
   assert.match(out, /^review: - MUST NOT: layers leak/m);
 });
 
@@ -193,7 +193,7 @@ test('collect: a check over the time limit is "not run", not a failure', () => {
   commit(root, { 'src/a.js': '1', 'package.json': JSON.stringify({ scripts: { test: 'node -e "setTimeout(()=>{},4000)"' } }) }, 'start');
   commit(root, { [PLAN]: plan() }, 'docs(plan)');
   const r = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8', env: { ...process.env, KEYSTONE_CHECK_TIMEOUT_MS: '500' } });
-  assert.match(r.stdout, /^test: npm test → not run \(timeout after 0\.5 s\)/m);
+  assert.match(r.stdout, /^test: npm test → not run \(timeout after 0\.5 s — raise KEYSTONE_CHECK_TIMEOUT_MS\)$/m);
 });
 
 // --- Between runs (verify → fix convergence): carried rows, full runs, history ---
@@ -289,7 +289,7 @@ test('collect: the delta Rules gate names the files of the last run\'s failing r
   const { root, base } = looped();
   const v = commit(root, { [VERIFY]: vmd(base, '- Task 1 — ok — fine\nrule CLAUDE.md:3 — fail — src/a.js:4; src/b.js:7\n') }, 'docs: verify 2');
   commit(root, { 'src/c.js': '1' }, 'fix: c');
-  assert.match(collect(root, PLAN), new RegExp(`^rules scope: files changed since ${v.slice(0, 7)} \\+ files on the last run's failing rule lines: src/a\\.js, src/b\\.js$`, 'm'));
+  assert.match(collect(root, PLAN), new RegExp(`^rules scope: files changed since ${v.slice(0, 7)} \\+ files on the last run's failing rule lines: \`src/a\\.js\`, \`src/b\\.js\`$`, 'm'));
 });
 
 test('collect: --history with one committed run prints its trend line, never an error', () => {
@@ -323,7 +323,7 @@ test('collect: three runs — a re-carried row keeps the sha of the run that jud
   assert.doesNotMatch(fourth, /^carried: Task 1/m);
 });
 
-test('collect: full-run reasons — --full, another base, merge, plan text, intent', () => {
+test('collect: full-run reasons — --full, another base; a merge, plan text and intent judge only what they touch', () => {
   let r = looped();
   assert.match(collect(r.root, PLAN, undefined, { full: true }), /^delta: full — --full$/m);
   assert.match(collect(r.root, PLAN, git(r.root, 'rev-list', '--max-parents=0', 'HEAD')), /^delta: full — base moved$/m);
@@ -333,7 +333,7 @@ test('collect: full-run reasons — --full, another base, merge, plan text, inte
   commit(r.root, { 'other/x.js': 'o' }, 'other work');
   git(r.root, 'checkout', '-q', 'main');
   git(r.root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'merge', '-q', '--no-ff', '--no-edit', 'other');
-  assert.match(collect(r.root, PLAN), /^delta: full — merge since the last verify$/m);
+  assert.match(collect(r.root, PLAN), /^delta: since [0-9a-f]{7} — 0 files changed since the last verify; 1 more came in by merge \(not counted\)$/m, 'a merge alone is not a full run');
 
   r = looped();
   commit(r.root, { [PLAN]: taskPlan().replace('- [ ] 1. a', '- [x] 1. a').replace('Status: implementing', 'Status: verified') + '\n## Implementation notes\n- 2026-11-01 Task 1 — x\n' }, 'fix: notes');
@@ -349,6 +349,41 @@ test('collect: full-run reasons — --full, another base, merge, plan text, inte
   const ie = collect(r.root, PLAN);
   assert.match(ie, /^delta: since /m);
   assert.ok(ids(ie, /^judge: /).includes('I-1'), line(ie, /^judge: /));
+});
+
+test('collect: merging main without own changes is no full run; a merged commit older than the task does not move the base', () => {
+  const root = repo();
+  commit(root, { 'README.md': 'x', [INTENT]: 'I-1 a\n' }, 'start');
+  git(root, 'checkout', '-q', '-b', 'up');
+  process.env.GIT_COMMITTER_DATE = process.env.GIT_AUTHOR_DATE = '2001-01-01T00:00:00Z'; // older than every task commit
+  try { commit(root, { 'up/u.js': '1', 'src/__tests__/u.test.js': '1' }, 'upstream'); } finally { delete process.env.GIT_COMMITTER_DATE; delete process.env.GIT_AUTHOR_DATE; }
+  git(root, 'checkout', '-q', 'main');
+  const p = commit(root, { [PLAN]: taskPlan() }, 'docs(plan)');
+  commit(root, { 'src/a.js': '1', 'src/b.js': '1' }, 'feat: a b');
+  const v1 = commit(root, { [VERIFY]: vmd(p, REPORT) }, 'docs: verify 1');
+  git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'merge', '-q', '--no-ff', '--no-edit', 'up');
+  assert.equal(findBase(root, PLAN).base, p, 'the base stays on the task line');
+  const out = collect(root, PLAN);
+  assert.doesNotMatch(out, /^delta: full/m);
+  assert.match(out, new RegExp(`^delta: since ${v1.slice(0, 7)} — 0 files changed since the last verify; 2 more came in by merge \\(not counted\\)$`, 'm'));
+  assert.match(out, /^carried: Task 1 — ok/m);
+  assert.ok(!line(out, /^judge: /).includes('Task 1'), line(out, /^judge: /));
+});
+
+test('collect: paths verify writes are in backticks (Prettier keeps them); findings read the same with or without them', () => {
+  const root = repo();
+  commit(root, { 'README.md': 'x', [INTENT]: 'I-1 a\n' }, 'start');
+  commit(root, { [PLAN]: taskPlan() }, 'docs(plan)');
+  commit(root, { 'src/__tests__/a.test.js': '1' }, 'feat');
+  const base = findBase(root, PLAN).base;
+  assert.match(collect(root, PLAN), /^ {2}`src\/__tests__\/a\.test\.js`$/m);
+  const bare = '- Task 1 — wrong — Class: x — src/__tests__/a.test.js:1 — y Repro: z\nrule CLAUDE.md:3 — fail — src/__tests__/a.test.js:4\nUnrequested: src/__tests__/b.js — new file\n';
+  const ticked = bare.replace(/(src\/__tests__\/[\w.]+(?::\d+)?)/g, '`$1`').replace('CLAUDE.md:3', '`CLAUDE.md:3`');
+  assert.deepEqual([...findings(vmd(base, ticked))].sort(), [...findings(vmd(base, bare))].sort());
+  assert.deepEqual([...parseAccepted('Accepted violation by me 2026-11-12: rule `CLAUDE.md:3` — `src/__tests__/a.test.js:4`\n')], ['rule CLAUDE.md:3 src/__tests__/a.test.js:4']);
+  commit(root, { [VERIFY]: vmd(base, ticked) }, 'docs: verify');
+  commit(root, { 'src/c.js': '1' }, 'fix');
+  assert.match(collect(root, PLAN), /^rules scope: files changed since [0-9a-f]{7} \+ files on the last run's failing rule lines: `src\/__tests__\/a\.test\.js`$/m);
 });
 
 test('collect: a verify.md without Base is a full run, never an error', () => {
@@ -429,7 +464,7 @@ test('collect: a fix that only edits the plan is not "0 files changed"', () => {
 test('collect: a changed rule file widens the Rules gate to all task files', () => {
   const { root } = looped();
   commit(root, { '.claude/rules/x.md': '- MUST: y\n' }, 'rules');
-  assert.match(collect(root, PLAN), /^rules scope: all task files — rule files changed: \.claude\/rules\/x\.md$/m);
+  assert.match(collect(root, PLAN), /^rules scope: all task files — rule files changed: `\.claude\/rules\/x\.md`$/m);
 });
 
 test('collect: report rows as written by real verifiers parse into ids', () => {
@@ -836,7 +871,7 @@ test('0.9.28 history: an accept-violation commit is not a run; accepted places a
   commit(root, { [VERIFY]: run }, 'verify 2');
   commit(root, { [VERIFY]: `${run}Accepted violation by t 2026-11-06: rule .claude/rules/x.md:3 — src/a.js:1; src/b.js:2\n` }, 'docs(verify): accept violation x');
   assert.match(history(root, PLAN)[0], /^history: 2 runs/);
-  assert.match(collect(root, PLAN), /^accepted violations: rule \.claude\/rules\/x\.md:3 — src\/a\.js:1; src\/b\.js:2$/m);
+  assert.match(collect(root, PLAN), /^accepted violations: rule `\.claude\/rules\/x\.md:3` — `src\/a\.js:1`; `src\/b\.js:2`$/m);
   commit(root, { [VERIFY]: vmd(base, 'rule .claude/rules/x.md:3 — fail — src/a.js:1; src/c.js:5\n') }, 'verify 3');
   const h = history(root, PLAN);
   assert.match(h[2], /open 0 /, 'run 2 rests only on accepted places');

@@ -204,6 +204,31 @@ test('push gate: only a push that ships the active plan\'s commits is closed', (
   assert.match(pre(root, 'Bash', { command: P }).hookSpecificOutput.permissionDecisionReason, /start Claude Code with KEYSTONE_GATES=off/);
 });
 
+test('push gate: a merge from the remote that brings someone else\'s commit to the plan folder does not close push', () => {
+  const root = project({ '2026-10-14-x': 'Status: approved' });
+  const remote = mkdtempSync(join(tmpdir(), 'ks-remote-'));
+  spawnSync('git', ['init', '-q', '--bare', remote]);
+  git(root, 'remote', 'add', 'origin', remote);
+  git(root, 'branch', '-M', 'main');
+  git(root, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
+  const commit = (file) => { mkdirSync(dirname(join(root, file)), { recursive: true }); writeFileSync(join(root, file), String(Math.random())); git(root, 'add', '-A'); git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', file); };
+  // other sessions pushed commits to the plan folder on two remote lines; this branch has its own unrelated commit.
+  // The second merge combines both folder changes, so it differs from every parent and a path-limited log shows it.
+  for (const [b, file, dst] of [['s1', 'a.md', 'main'], ['s2', 'b.md', 'refs/heads/other']]) {
+    git(root, 'checkout', '-q', '-b', b, 'main');
+    commit(`docs/keystone/2026-10-14-x/${file}`);
+    git(root, 'push', '-q', 'origin', `${b}:${dst}`);
+  }
+  git(root, 'checkout', '-q', 'main');
+  commit('src/own.ts');
+  git(root, 'fetch', '-q', 'origin');
+  for (const r of ['origin/other', 'origin/main']) git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'merge', '-q', '--no-ff', '--no-edit', r);
+  const P = 'git' + ' push';
+  assert.equal(pre(root, 'Bash', { command: `${P} origin main` }), null, 'the merge only brought a commit already on the remote');
+  commit('docs/keystone/2026-10-14-x/verify.md');
+  assert.ok(denied(pre(root, 'Bash', { command: `${P} origin main` })), 'an own commit in the plan folder closes it');
+});
+
 test('session binding: Stop and the draft gate stay silent in a session that never worked with the plan', () => {
   const impl = project({ '2026-10-15-x': 'Level: M · Mode: feature · Status: implementing' });
   assert.equal(stop(impl, false, trail(impl, [{ text: 'what does this function do?' }, { cmd: 'start', args: 'rename a button' }])), null, 'unrelated session');

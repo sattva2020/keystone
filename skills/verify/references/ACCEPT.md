@@ -41,8 +41,8 @@ for each open line.
 
 Only from `Accept the violation consciously` in the rules menu of `LOOP.md`; the click is the confirmation (it names
 the rules), so no second question. Append to `verify.md` one line per failing `rule` line of this run:
-`Accepted violation by <git config user.name> <YYYY-MM-DD>: rule <source:line> — <file:line>; <file:line>` — the places
-before `sites to cover:`, as the report lists them. Then recompute the verdict by Step 4 without the accepted places
+``Accepted violation by <git config user.name> <YYYY-MM-DD>: rule `<source:line>` — `<file:line>`; `<file:line>` `` — the places
+before `sites to cover:`, as the report lists them, each in backticks (Prettier rewrites a bare `__x__`). Then recompute the verdict by Step 4 without the accepted places
 (each `rule` line whose every `file:line` is accepted counts as pass); the `Verdict:` line of `verify.md` is never
 rewritten:
 - PASS → set `Status: verified` and commit `verify.md` and the plan: `docs(verify): accept violation <slug>`;

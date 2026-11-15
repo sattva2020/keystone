@@ -157,7 +157,7 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
 
 ## Step 5 — record
 
-1. `<plan folder>/verify.md` was written in Step 3 (overwrite; git keeps the history) in this layout; add the
+1. `<plan folder>/verify.md` was written in Step 3 in this layout (paths in backticks: Prettier bolds a bare `__x__`); add the
    `## Verdict` line now with Edit:
 
    ```markdown
@@ -190,8 +190,7 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
 
 Re-verifying: each run overwrites `verify.md` and gets its own commit, so the history shows how the verdict moved.
 If the working tree has unrelated uncommitted changes, do not stage them — add the two files by path, never `-A`.
-When there is nothing to commit (verify.md identical to the committed one), say `verify.md unchanged` and skip the
-commit.
+Nothing to commit (verify.md identical to the committed one) → say `verify.md unchanged` and skip the commit.
 
 ## Step 6 — the choice (AskUserQuestion)
 

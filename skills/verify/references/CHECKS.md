@@ -60,9 +60,11 @@ Only lint the changed files to keep output focused.
 ## Output handed to the verifier
 
 One line per check: `build: <command> → pass | pass (reused: …) | fail (<first error file:line>) | not run (<reason>, a timeout too)`, likewise `test`
-(with passed/failed counts), `lint`, `imports`. Keep the last ~20 lines of any failing output.
+(with passed/failed counts), `lint`, `imports`. Keep the last ~20 lines of any failing output. Changed files in the
+command and each output line are in backticks (`verify.md` copies these lines; Prettier mangles a bare `__tests__`).
 
-A timeout is `not run`, not a failure (limit: `KEYSTONE_CHECK_TIMEOUT_MS`, default 10 min). `pass (reused: …)` is a pass
+A timeout is `not run`, not a failure (limit: `KEYSTONE_CHECK_TIMEOUT_MS`, default 10 min; the line names the variable:
+`not run (timeout after 600 s — raise KEYSTONE_CHECK_TIMEOUT_MS)`). `pass (reused: …)` is a pass
 measured earlier on the same code: only this task's folder or docs/**/*.md changed since.
 
 ## Between runs (lines after the checks)
@@ -74,11 +76,15 @@ build or test judged nothing and is skipped). Lines for the verifier:
   run stops here; no `delta:` / `judge:` lines, only the marker and `history:` follow. `not run` (a timeout too) and a
   failing lint do not stop it.
 - `delta: full — <reason>` — every row is judged. Reasons, in this order: `first verify`, `--full`, `history rewritten`
-  (a commit listed under `commits:` of the past run is no longer an ancestor of HEAD), `base moved`, `merge since the
-  last verify`, `plan header changed` (the `Level:`, `Settings:` or `Authority:` line differs; `Status:` does not count).
-- `delta: since <sha7> — <k> files changed since the last verify` — only rows in `judge:` and plan rows not carried.
-  `<k>` counts every file but `verify.md`, the plan and intent included, so `0` means nothing changed. A rename counts
-  as old path + new path; an untracked file older than the last verify commit is not counted (still carried as changed).
+  (a commit listed under `commits:` of the past run is no longer an ancestor of HEAD), `base moved`, `plan header
+  changed` (the `Level:`, `Settings:` or `Authority:` line differs; `Status:` does not count). The base is found on the
+  first-parent line, so merging main into the task branch neither moves it nor makes a full run.
+- `delta: since <sha7> — <k> files changed since the last verify[; <m> more came in by merge (not counted)]` — only
+  rows in `judge:` and plan rows not carried. `<k>` counts every file but `verify.md`, the plan and intent included, so
+  `0` means nothing changed. A rename counts as old path + new path; an untracked file older than the last verify commit
+  is not counted (still carried as changed). `<m>`: files that only a merge commit on the first-parent line brought
+  (main into the task branch) — not this task's change and not in the rules scope, but a row whose evidence names one
+  is judged again.
 - Plan and intent edits since the past run send to judge only what they touched: a rewritten or new task `N.` (with
   its indented sub-items) → `Task N`; a Reconciliation data row whose text differs at the same number → `Row n` (a row
   deleted in the middle shifts the rest, which are judged); a changed `Done means:` line → every past `Done means …`
@@ -107,7 +113,7 @@ Then `--- record only (not for the verifier) ---`, and under it, for the record 
 - `late watch: <ids> | none` — past `ok` rows (`## Report` or `## Carried`) whose files did not change, not sent by an
   edit, that are judged again all the same (full run, I-13, a `see Row n` chain). `none` on the first verify.
 - `carried: <id> — ok — carried from verify <sha7> — <evidence>` — the sha and evidence of the run that judged the row.
-- `accepted violations: rule <source> — <file:line>; …; rule … | none` — every `Accepted violation by …` line of every
+- ``accepted violations: rule `<source>` — `<file:line>`; …; rule … | none`` — every `Accepted violation by …` line of every
   commit of `verify.md`. Not printed on a stop run.
 - `history: <n> runs · FAIL <f>` and `run <i> · <date> · <verdict> · open <o> · new <n> · closed <c> · cycle cost
   <$x.xx | n/a>[ · late <l>]` — findings are `wrong` / `missing` ids, each `file:line` of a failing `rule` line (only

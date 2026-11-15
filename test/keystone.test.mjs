@@ -30,7 +30,7 @@ test('0.9.31: no skill or agent description has <angle-bracket> text — claude.
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.31');
+  assert.equal(p.version, '0.9.32');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -370,6 +370,11 @@ test('output is Markdown, not a code-block wall: grill summary table, rendering 
 test('setup proposes the Dokploy MCP by signal, with ${VAR} only', () => {
   has('skills/setup/references/STACK-SIGNALS.md', '@sattva/dokploy-mcp@latest', 'DOKPLOY_API_KEY');
   has('skills/dockerize/SKILL.md', 'github.com/sattva2020/dokploy-mcp');
+});
+
+test('setup proposes docs/keystone/** in .prettierignore under Prettier and reports it in the end table', () => {
+  has('skills/setup/SKILL.md', '### 3.6 `.prettierignore` — only when the project runs Prettier', '`docs/keystone/**` in `.prettierignore`',
+    '| .prettierignore | already there / added / skipped (no Prettier) |');
 });
 
 test('stand 12.10 K6: setup writes CLAUDE.md last with links to written files only; review reads a digit-only hash as a ref', () => {

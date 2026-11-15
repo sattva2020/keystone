@@ -54,6 +54,9 @@ For each requirement in the task description:
 - Read the relevant files to confirm the implementation is complete
 - Check that the implementation matches what was described, not just that "something was written"
 
+Every path and `file:line` you write goes in backticks (`` `src/__tests__/a.test.ts:12` ``): verify.md is a
+Markdown file a project formatter (Prettier via lint-staged) may rewrite, and a bare `__tests__` becomes bold.
+
 Statuses (one line each, with evidence `file:line`, test name or command + output line):
 - `ok` — the change is in the diff **and** there is evidence it works;
 - `missing` — not in the diff;

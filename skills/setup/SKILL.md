@@ -113,10 +113,10 @@ Create no source files — only the context files of step 3.
 
 ## 3. Propose the files (one change at a time)
 
-Order of the questions: `CLAUDE.md` → `.claude/rules/base.md` → `.mcp.json` → plugins → `AGENTS.md`. Each one is its own
+Order of the questions: `CLAUDE.md` → `.claude/rules/base.md` → `.mcp.json` → plugins → `AGENTS.md` → `.prettierignore`. Each one is its own
 show → Write / Skip / Change round; collect the answers first and write only after the last round, in the write order below. A file that is complete is reported "already there" and skipped without a question.
 
-**Write order and links.** Write in this order: `.claude/rules/base.md`, `.mcp.json`, then `CLAUDE.md` last, and let
+**Write order and links.** Write in this order: `.claude/rules/base.md`, `.mcp.json`, `.prettierignore`, then `CLAUDE.md` last, and let
 `CLAUDE.md` and `AGENTS.md` point only to files that now exist — a skipped or refused file loses its pointer line.
 Claude Code asks its own permission for anything under `.claude/` and for `.mcp.json`; say so once before the first
 write ("Claude Code will ask permission for these paths — that prompt, not this chat, is the yes it needs"). A write
@@ -198,6 +198,14 @@ existing JSON; keep every other key. This skill never installs a plugin and neve
 Only if it already exists: sync its pointers (stack line, commands, links to `CLAUDE.md`, `docs/architecture.md`,
 `.claude/rules/`) with what you wrote, as a diff, with confirmation. If it does not exist, do not create it.
 
+### 3.6 `.prettierignore` — only when the project runs Prettier
+
+Signals: `.prettierrc*`, `prettier.config.*`, a `prettier` key in `package.json`, or a lint-staged config that calls
+`prettier`. Then propose the line `docs/keystone/**` in `.prettierignore` (append; create the file if it is missing):
+Prettier rewrites Keystone's `plan.md` / `verify.md` on commit — a bare `__tests__` in a path becomes `**tests**` and
+`file:line` links break. Already ignored (that line or a wider one such as `docs/**`) → "already there". No Prettier → skip
+without a question.
+
 ## 4. Re-run report
 
 End every run with this table, even on the first run:
@@ -209,6 +217,7 @@ End every run with this table, even on the first run:
 | .mcp.json                | …                             |
 | .claude/settings.json    | …                             |
 | AGENTS.md                | … / not present               |
+| .prettierignore          | already there / added / skipped (no Prettier) |
 Env vars to set: GITHUB_TOKEN, DATABASE_URL, …  (or: none)
 ```
 

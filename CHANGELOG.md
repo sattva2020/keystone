@@ -5,6 +5,24 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.32] — 2026-11-15
+
+### Fixed
+- Push gate: a merge that only combines plan-folder commits already on a remote (main merged into a task branch) no
+  longer closes `git push`; the gate counts non-merge commits not on any remote (`git log --no-merges`). A plan's own
+  unpushed commit still closes it.
+- Verify: merging main into the task branch no longer forces `delta: full`. The base is found on the first-parent line
+  (an older merged-in commit no longer moves it), `merge since the last verify` is gone, and files only a merge brought
+  are not counted — `delta: since <sha> — <k> files changed …; <m> more came in by merge (not counted)`. Rows whose
+  evidence names such a file are still judged.
+- Verify: paths written to `verify.md` (the `files:` list, `rules scope:`, Architecture gate, `accepted violations:`
+  and the `Accepted violation by …` line, changed files in the build / lint command and the check output, the
+  verifier's `file:line`) are in backticks, so Prettier via lint-staged no longer turns `__tests__` into `**tests**`;
+  findings and accepted violations read the same with or without backticks. `/keystone:setup` proposes `docs/keystone/**` in
+  `.prettierignore` when the project runs Prettier.
+- Verify: a check over the time limit says how to raise it — `not run (timeout after 600 s — raise
+  KEYSTONE_CHECK_TIMEOUT_MS)`.
+
 ## [0.9.31] — 2026-11-15
 
 ### Fixed

@@ -188,9 +188,12 @@ function workBranchPush(push) {
 
 // The push carries the active plan's work when a commit it ships, not yet on any remote, touches the plan's task folder.
 // Implement commits the plan with every task (checkbox ticks, drift, notes), so an unrelated release passes.
+// Merges are skipped: a merge that combines folder changes already on remotes differs from every parent and would be
+// listed though it ships nothing of the plan; the plan's own commits under a merge are non-merge commits and still count.
+// ponytail: a conflict resolved inside the plan folder lives only in the merge and is not seen.
 // git fails → `error`: the gate stays closed rather than open by mistake, and says it could not tell.
 function pushCheck(dir, refs, planFile) {
-  const r = spawnSync('git', ['-C', dir, 'log', '--format=%H', ...refs, '--not', '--remotes', '--', dirname(planFile)], { encoding: 'utf8' });
+  const r = spawnSync('git', ['-C', dir, 'log', '--no-merges', '--format=%H', ...refs, '--not', '--remotes', '--', dirname(planFile)], { encoding: 'utf8' });
   if (r.status !== 0) return { carries: true, error: (r.stderr || '').trim().split('\n')[0] || `git exited ${r.status}` };
   return { carries: r.stdout.trim() !== '' };
 }
