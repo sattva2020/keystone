@@ -365,3 +365,46 @@ test('cloud session: after the work branch is pushed, a push to the default bran
   const local = (command) => decide({ hook_event_name: 'PreToolUse', cwd: root, tool_name: 'Bash', tool_input: { command } }, {});
   assert.ok(denied(local(`${P} origin HEAD:main`)), 'outside the cloud too, once the work branch reached the remote some other way');
 });
+
+test('0.9.34: GitHub MCP tools that ship work — a PR, a merge, a write to the default branch — are gated like push', () => {
+  // Found live in the cloud (0.9.33): the gate saw only Bash/PowerShell, so a PR made through the GitHub MCP tools
+  // skipped it while the plan was a draft.
+  const root = project({ '2026-11-15-m': 'Status: draft' });
+  const remote = mkdtempSync(join(tmpdir(), 'ks-remote-'));
+  spawnSync('git', ['init', '-q', '--bare', remote]);
+  git(root, 'remote', 'add', 'origin', remote);
+  git(root, 'branch', '-M', 'main');
+  git(root, 'push', '-q', 'origin', 'HEAD:refs/heads/main');
+  git(root, 'fetch', '-q', 'origin');
+  git(root, 'remote', 'set-head', 'origin', 'main');
+  git(root, 'checkout', '-q', '-b', 'claude/work');
+  writeFileSync(join(root, 'docs/keystone/2026-11-15-m/notes.md'), 'x');
+  git(root, 'add', '-A');
+  git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'plan work');
+  git(root, 'push', '-q', '-u', 'origin', 'HEAD');
+  const mcp = (tool_name, tool_input, env) => decide({ hook_event_name: 'PreToolUse', cwd: root, tool_name, tool_input }, env);
+  for (const env of [{}, { CLAUDE_CODE_REMOTE: 'true' }]) {
+    const where = env.CLAUDE_CODE_REMOTE ? 'cloud' : 'local';
+    for (const [name, input] of [
+      ['mcp__github__create_pull_request', { owner: 'o', repo: 'r', head: 'claude/work', base: 'main', title: 't' }],
+      ['mcp__ce6e2234-d4f6__create_pull_request', { owner: 'o', repo: 'r', head: 'o:claude/work', base: 'main', title: 't' }],
+      ['mcp__github__merge_pull_request', { owner: 'o', repo: 'r', pullNumber: 1 }],
+      ['mcp__github__push_files', { owner: 'o', repo: 'r', branch: 'main', files: [], message: 'm' }],
+      ['mcp__github__create_or_update_file', { owner: 'o', repo: 'r', branch: 'master', path: 'a', content: 'x', message: 'm' }],
+      ['mcp__github__delete_file', { owner: 'o', repo: 'r', branch: 'main', path: 'a', message: 'm' }],
+    ]) assert.ok(denied(mcp(name, input, env)), `${where}: ${name}`);
+    assert.equal(mcp('mcp__github__push_files', { owner: 'o', repo: 'r', branch: 'claude/work', files: [], message: 'm' }, env), null, `${where}: a write to the work branch`);
+    assert.equal(mcp('mcp__github__get_file_contents', { owner: 'o', repo: 'r', path: 'a' }, env), null, `${where}: a read`);
+  }
+  assert.match(closedBy(mcp('mcp__github__create_pull_request', { head: 'claude/work', base: 'main' }, {})), /run \/keystone:verify first/);
+  const none = project();
+  assert.equal(decide({ hook_event_name: 'PreToolUse', cwd: none, tool_name: 'mcp__github__create_pull_request', tool_input: { head: 'x', base: 'main' } }, {}), null, 'no active plan');
+  // the hook has to be called for these tools at all — matched as Claude Code does: letters, digits, _ - space , |
+  // only → a list of exact names; anything else → an unanchored RegExp test (code.claude.com/docs/en/hooks)
+  const groups = JSON.parse(readFileSync(join(dirname(GATE), 'hooks.json'), 'utf8')).hooks.PreToolUse.map((g) => g.matcher);
+  const fires = (name) => groups.some((m) => (/^[\w\- ,|]*$/.test(m) ? m.split(/[|,]/).map((s) => s.trim()).includes(name) : new RegExp(m).test(name)));
+  for (const name of ['mcp__github__create_pull_request', 'mcp__x__merge_pull_request', 'mcp__x__push_files', 'mcp__x__create_or_update_file', 'mcp__x__delete_file', 'Bash', 'Edit', 'Write'])
+    assert.ok(fires(name), `hooks.json reaches ${name}`);
+  for (const name of ['TodoWrite', 'mcp__github__get_file_contents', 'mcp__github__list_pull_requests', 'Read'])
+    assert.ok(!fires(name), `hooks.json leaves ${name} alone`);
+});

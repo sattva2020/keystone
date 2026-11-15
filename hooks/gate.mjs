@@ -172,6 +172,20 @@ function pushTarget(cmd, base) {
   return { dir, refs: refs.length ? refs : ['HEAD'], dsts: dsts.length ? dsts : ['HEAD'] };
 }
 
+// GitHub MCP tools that ship work without a shell (found live in the cloud, 0.9.33). A PR or a merge ships a branch
+// into the base one, like `gh pr create`; push_files / create_or_update_file / delete_file write commits straight onto
+// `branch` on GitHub, so nothing local says what they ship. Read tools are not matched.
+const MCP_SHIP = /^mcp__.+__(create_pull_request|merge_pull_request|push_files|create_or_update_file|delete_file)$/;
+function mcpTarget(tool, ti, dir) {
+  const op = MCP_SHIP.exec(tool || '')?.[1];
+  if (!op) return null;
+  if (op === 'push_files' || op === 'create_or_update_file' || op === 'delete_file') return { dir, direct: String(ti.branch ?? '') };
+  // head may be `owner:branch`; a head that is not a local branch (or a merge, which names only the PR) → HEAD
+  const head = String(ti.head ?? '').replace(/^[^:]+:/, '');
+  const local = head && spawnSync('git', ['-C', dir, 'rev-parse', '--verify', '-q', `refs/heads/${head}`], { stdio: 'ignore' }).status === 0;
+  return { dir, refs: [local ? head : 'HEAD'], dsts: null, pr: true, prBase: ti.base ? String(ti.base) : '' };
+}
+
 // Cloud session, push to the work branch: every destination is a named branch other than the default one (origin/HEAD,
 // main, master). HEAD resolves to the current branch; a detached HEAD, every-branch push or PR → not a work-branch push.
 // ponytail: only `origin` is asked for its default branch; another remote falls back to main/master.
@@ -194,7 +208,7 @@ function workBranchPush(push) {
 // Commits already on the default branch have landed: main merged into a work branch ships nothing new (0.9.32).
 function landsOn(push) {
   const def = defaultBranch(push.dir);
-  const dsts = push.pr ? [def] : push.dsts;
+  const dsts = push.pr ? [push.prBase || def] : push.dsts;
   if (!dsts) return ['--remotes'];
   const bases = dsts.map((d) => branchOf(push.dir, d)).map((b) => (b && onOrigin(push.dir, b) ? `origin/${b}` : null));
   if (!bases.every(Boolean)) return ['--remotes'];
@@ -226,7 +240,7 @@ export function decide(input, env = process.env) {
   // the project is the one the edited file (or the shell) lives in — a worktree has its own plans
   const base = input.cwd || env.CLAUDE_PROJECT_DIR || process.cwd();
   const abs = target ? resolve(base, target) : null;
-  const push = (input.tool_name === 'Bash' || input.tool_name === 'PowerShell') && PUSH.test(ti.command || '') ? pushTarget(ti.command, base) : null;
+  const push = (input.tool_name === 'Bash' || input.tool_name === 'PowerShell') && PUSH.test(ti.command || '') ? pushTarget(ti.command, base) : mcpTarget(input.tool_name, ti, base);
   const root = projectRoot(abs ? dirname(abs) : push ? push.dir : base);
   // push stays repo-wide (it checks what the commits touch); Stop and the edit gates only bind the session that works with the plan
   const trail = push ? null : sessionTrail(input.transcript_path);
@@ -245,7 +259,13 @@ export function decide(input, env = process.env) {
   if (event !== 'PreToolUse') return null;
   const tool = input.tool_name;
 
-  if (tool === 'Bash' || tool === 'PowerShell') {
+  if (push?.direct !== undefined) {
+    const b = push.direct.replace(/^refs\/heads\//, ''); // no branch = the repository's default branch on GitHub
+    if (b && b !== defaultBranch(push.dir) && b !== 'main' && b !== 'master') return null;
+    return deny(`Keystone: ${tool} writes straight to the default branch on GitHub, and that is closed while ${plan.file} is ${plan.status} — run /keystone:verify first (PASS, or /keystone:verify accept for PASS-UNPROVEN). ${HOW}`);
+  }
+
+  if (tool === 'Bash' || tool === 'PowerShell' || push) {
     if (push) {
       if (isCloud(env) && workBranchPush(push)) return null;
       const check = pushCheck(push, plan.file);

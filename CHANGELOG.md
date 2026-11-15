@@ -5,6 +5,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.35] — 2026-11-15
+
+### Fixed
+- **Push gate covers the GitHub MCP tools.** The gate watched only Bash and PowerShell, so in a cloud session a PR made
+  through the GitHub MCP tools skipped it while the plan was a draft (found live, 0.9.33). A second `PreToolUse` group
+  now sends `create_pull_request`, `merge_pull_request`, `push_files`, `create_or_update_file` and `delete_file` from any
+  MCP server to the gate: a PR or a merge is judged like `gh pr create` (its head against its base), a write straight to
+  the default branch is closed while a plan is active, a write to another branch and every read tool pass. The first
+  group's matcher stays a list of exact names, so `TodoWrite` and other tools do not wake the gate.
+
 ## [0.9.34] — 2026-11-15
 
 ### Added
