@@ -2,7 +2,7 @@
 name: start
 description: "Keystone: size a change as S, M or L and route it — S (diff in one sentence) → code + check, no intent, no plan; M (one clear approach) → short plan with 3-line Risks; L (several decisions, data, security, other teams' modules) → intent → plan → implement → verify. Picks the model per stage, caps exploration, and asks for the cost line in the report. Use at the start of any task: 'start', 'what level is this', 'how should we do this'."
 argument-hint: "<task in your own words>"
-allowed-tools: Read Glob Grep Bash(git *) AskUserQuestion Task
+allowed-tools: Read Glob Grep Bash(git *) AskUserQuestion Task Bash(node *feedback.mjs*)
 ---
 
 # Keystone · start — balance quality, tokens and time
@@ -21,6 +21,8 @@ adds a Run button that would fail. When nothing runs now, write `Next: nothing n
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
+
+**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `start`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,

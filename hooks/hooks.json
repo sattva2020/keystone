@@ -1,6 +1,21 @@
 {
-  "description": "Keystone gates: no code edits while the active plan is draft; no edits to existing tests during a fix; Stop reminder while plan tasks are open; no push/PR before /keystone:verify, also through GitHub MCP tools (a cloud session may push its work branch). Off: KEYSTONE_GATES=off. On a side-sessions event, asks the model for /keystone:sessions (not a gate). Off: KEYSTONE_SESSIONS=off.",
+  "description": "Keystone gates: no code edits while the active plan is draft; no edits to existing tests during a fix; Stop reminder while plan tasks are open; no push/PR before /keystone:verify, also through GitHub MCP tools (a cloud session may push its work branch). Off: KEYSTONE_GATES=off. On a side-sessions event, asks the model for /keystone:sessions (not a gate). Off: KEYSTONE_SESSIONS=off. Agent feedback (off by default, plugin option `feedback`; `KEYSTONE_FEEDBACK=off`): SessionStart adds the self-report instruction.",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/skills/feedback/scripts/feedback.mjs",
+              "hook"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell",

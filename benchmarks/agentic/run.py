@@ -25,7 +25,7 @@ RUNS_DIR = HERE / "runs"
 MODELS = {"haiku": "claude-haiku-5-5", "sonnet": "claude-sonnet-5-5", "opus": "claude-opus-5-5"}
 CELL_TIMEOUT = 900                          # seconds; keystone runs a verifier subagent
 BUDGET_USD = "5"                            # per-cell ceiling, passed to --max-budget-usd
-ENV = {"CLAUDE_CODE_DISABLE_CLAUDE_MDS": "1", "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"}
+ENV = {"CLAUDE_CODE_DISABLE_CLAUDE_MDS": "1", "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "KEYSTONE_FEEDBACK": "off"}
 
 # Identical for every arm.
 VERDICT_ASK = ("Change no code. End your final reply with exactly one line: `VERDICT: PASS`, "

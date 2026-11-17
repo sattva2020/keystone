@@ -5,6 +5,23 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.37] — 2026-11-16
+
+### Added
+- **Agent feedback (off by default).** The plugin option `feedback` (or `KEYSTONE_FEEDBACK=on`; `KEYSTONE_FEEDBACK=off`
+  switches it off for good, the benchmarks set it) makes a `SessionStart` hook put a short instruction into the context.
+  The chain skills — start, intent, plan, check, implement, verify, fix, review — then end with a self-report of at most
+  10 lines about the skill text (unclear / deviated / guessed / extra, each `skill § section`), in the language of the
+  conversation; the chat gets one line. Records are appended to `~/.claude/keystone-feedback/<project>/feedback.jsonl`
+  (all worktrees of a repo share one folder; `KEYSTONE_FEEDBACK_DIR` moves it) — only on this machine, never sent
+  anywhere, by rule no project code, file contents or secrets (known secret patterns are masked — best effort), no automatic cleanup.
+- **`/keystone:feedback`.** `summary [--since X.Y.Z]` folds the records of all projects into repeated problems with a
+  count; `judge <plan path>` / `judge` runs the new read-only `keystone:feedback-judge` agent on the signals of the work
+  (tool errors, repeats, interrupts, verify rounds, user corrections — counted by `feedback.mjs`, no model): it confirms
+  or doubts each claim of the reports and adds what was left unsaid, with cause and class; `auto <plan path>` is called by
+  verify on M/L — once per task, only when the signals call for it. Feedback never blocks work, is not a gate and does
+  not touch the verdict.
+
 ## [0.9.36] — 2026-11-15
 
 ### Fixed

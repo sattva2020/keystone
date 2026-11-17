@@ -21,7 +21,7 @@ const EXEC_SYS = `Это автоматический тест скиллов. �
 Не выдумывай ответы за пользователя. Не делай git push, не трогай сеть, кроме чтения файлов репозитория.`;
 
 const SECRET = /^(SUPABASE|DOKPLOY|RAILWAY|PG|DATABASE|ANTHROPIC_API|OPENAI|OPENROUTER|STRIPE|RESEND|GITHUB_TOKEN|GH_TOKEN|AWS|B2_|SENTRY_AUTH)/i;
-function cleanEnv(extra) { const e = { ...process.env }; if (sc.isolate) for (const k of Object.keys(e)) if (SECRET.test(k)) delete e[k]; return { ...e, ...extra }; }
+function cleanEnv(extra) { const e = { ...process.env }; if (sc.isolate) for (const k of Object.keys(e)) if (SECRET.test(k)) delete e[k]; return { ...e, KEYSTONE_FEEDBACK: 'off', ...extra }; }
 function claude(args, input, env = {}, cwd = sc.cwd) {
   const r = spawnSync('claude', args, { cwd, input, encoding: 'utf8', maxBuffer: 64 << 20,
     env: cleanEnv(env), timeout: 40 * 60 * 1000, shell: true });

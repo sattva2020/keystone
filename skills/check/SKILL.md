@@ -2,7 +2,7 @@
 name: check
 description: "Keystone: independent check of a plan before Approve — deep codebase analysis, a fresh validator, and a line for every intent line (I-1…) with Coverage % and PASS/FAIL. Finds missing or vague tasks, wrong dependencies, duplicates, unrequested work and project-rule violations; edits the plan only after the human confirms. Never edits code. Use before Approve on an L change, after a retrospective intent, or when intent.md changed after the plan."
 argument-hint: "[<intent path>] [<plan path>] [<request — what to change in the plan>]"
-allowed-tools: Read Edit Glob Grep Agent AskUserQuestion Bash(git *)
+allowed-tools: Read Edit Glob Grep Agent AskUserQuestion Bash(git *) Bash(node *feedback.mjs*)
 model: opus
 effort: high
 ---
@@ -24,6 +24,8 @@ adds a Run button that would fail. When nothing runs now, write `Next: nothing n
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
+
+**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `check`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,

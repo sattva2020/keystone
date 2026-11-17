@@ -2,7 +2,7 @@
 name: plan
 description: "Keystone: plan an M or L change into docs/keystone/[date]-[slug]/plan.md — reconnaissance, Requirements Reconciliation Gate against intent.md (I-n) and project rules, Rules check, Risks, tasks with files and checks, a pre-approval interrogation round, and on L an independent /keystone:check. Settings are inferred from the repo, never asked. Explicit /keystone:plan only."
 argument-hint: "<path to intent.md or its folder | task text> [S | M | L]"
-allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion Task Skill
+allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion Task Skill Bash(node *feedback.mjs*)
 model: opus
 effort: high
 disable-model-invocation: true
@@ -27,6 +27,8 @@ adds a Run button that would fail. When nothing runs now, write `Next: nothing n
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
+
+**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `plan`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,

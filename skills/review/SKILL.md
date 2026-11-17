@@ -2,7 +2,7 @@
 name: review
 description: "Keystone: read-only code review of staged changes, a pull request (gh pr diff) or everything since a git ref — correctness, security, performance, project rules and architecture. Every finding carries severity, file:line, a Repro and a fix; an independent validator in a clean context ALWAYS re-checks them (keep / modify / drop, severity changes), unproven ones go to Unconfirmed. `rules [ref]` checks only the project's MUST / MUST NOT rules over the diff, without a plan (S changes), one line per rule with every violating file:line, plus suggested rule updates for /keystone:evolve. Use for 'review code', 'check my code', 'review PR', 'is this code okay', 'check the rules', and on L changes after /keystone:verify."
 argument-hint: "[PR number | PR url | branch/commit/tag | rules [ref] | empty = staged]"
-allowed-tools: Read Glob Grep Agent AskUserQuestion Bash(git *) Bash(gh *)
+allowed-tools: Read Glob Grep Agent AskUserQuestion Bash(git *) Bash(gh *) Bash(node *feedback.mjs*)
 model: opus
 effort: high
 disable-model-invocation: true
@@ -25,6 +25,8 @@ adds a Run button that would fail. When nothing runs now, write `Next: nothing n
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
+
+**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `review`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,

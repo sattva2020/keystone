@@ -2,7 +2,7 @@
 name: verify
 description: "Keystone: verify finished work against its plan and intent — runs build/test/lint, then an independent verifier agent in a clean context gives every plan task, Reconciliation row and intent line ok / missing / wrong / not proven / BLOCKED, flags unrequested work, and returns PASS, PASS-UNPROVEN or FAIL. A checked box is not evidence. Writes verify.md; on PASS sets Status verified. Use after implementation on M and L changes, or for 'verify', 'did we miss anything', 'is it really done'. `/keystone:verify accept` records a human decision on unproven rows."
 argument-hint: "[<plan path> [base git ref]] [--strict] [--full] | accept | accept [<plan path>] D<k> <proof text>"
-allowed-tools: Read Glob Grep Bash Agent AskUserQuestion Write Edit Skill
+allowed-tools: Read Glob Grep Bash Agent AskUserQuestion Write Edit Skill Bash(node *feedback.mjs*)
 model: sonnet
 effort: high
 ---
@@ -18,7 +18,7 @@ skill runs the commands, collects the verdict, and writes the record. **Write/Ed
 
 **Roles.** The `keystone:verifier` agent is the judge (the strongest model); this skill is the orchestrator (a mid
 model); the fixed mechanical steps — the diff base, this task's files, build / test / lint — run as a script
-(`scripts/collect.mjs`), so no model spends tokens on them.
+(`scripts/collect.mjs`), with no model.
 
 **Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
 headings, tables, **bold** labels, bullet lists — never wrapped in a code block (it shows as a monospace wall); keep paths
@@ -31,6 +31,8 @@ adds a Run button that would fail. When nothing runs now, write `Next: nothing n
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
+
+**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `verify`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
@@ -63,7 +65,7 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only wit
 ## Step 0 — find the plan, intent, rules
 
 - `accept …` → read `${CLAUDE_SKILL_DIR}/references/ACCEPT.md` first and follow it; it finds the plan itself.
-- Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument. If none: ask for the path, or stop with `no plan to verify`. Plan outside docs/keystone/ → say once: the gates never saw it.
+- Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere is used only when its path is given as the argument. If none: ask for the path, or stop with `no plan to verify`. Plan outside docs/keystone/ → say once: the gates never saw it.
 - A plan with `Status: draft` was never approved: stop and say so — verify measures an implementation, not a draft.
 - Read the plan header (`Level`, `Mode`, `Status`, `Authority`, `Settings`), the intent named in `Authority:` (or
   `intent.md` next to the plan), and the project rules (those that exist): `CLAUDE.md`, `.claude/CLAUDE.md`,

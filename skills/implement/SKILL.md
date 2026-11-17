@@ -2,7 +2,7 @@
 name: implement
 description: "Keystone: execute an approved plan task by task — requirement consistency gate, checkbox after every task, resume after /clear, plan drift edited in the same commit, literal BLOCKED:, line-by-line evidence report. Use only via explicit /keystone:implement [plan path]."
 argument-hint: "[path to plan.md]"
-allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Skill TaskCreate TaskUpdate
+allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Skill TaskCreate TaskUpdate Bash(node *feedback.mjs*)
 disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-implement/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
@@ -23,6 +23,8 @@ adds a Run button that would fail. When nothing runs now, write `Next: nothing n
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
+
+**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `implement`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,

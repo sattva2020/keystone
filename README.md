@@ -177,7 +177,7 @@ see **[What to run next — scenarios](docs/scenarios.md)**.
 
 ## Commands
 
-All 26 commands in five groups; each one with its parameters, model and "when to use" is in the
+All 27 commands in five groups; each one with its parameters, model and "when to use" is in the
 [skills reference](docs/skills.md).
 
 | Group | Commands |
@@ -186,7 +186,7 @@ All 26 commands in five groups; each one with its parameters, model and "when to
 | **Project context** | `setup` · `architecture` · `docs` |
 | **Checks and quality** | `security` · `review` · `qa` · `qa-check` · `ask` · `pentest` · `optimize` |
 | **Build and ship** | `dockerize` · `ci` |
-| **Lessons and knowledge** | `roadmap` · `evolve` · `transfer` · `reference` · `distill` |
+| **Lessons and knowledge** | `roadmap` · `evolve` · `transfer` · `reference` · `distill` · `feedback` |
 
 Every command is `/keystone:<name>`, for example `/keystone:plan <intent or task>`.
 
@@ -207,6 +207,10 @@ the record is stale and taking over becomes the recommended answer. Offline or w
 with one warning. `KEYSTONE_GATES=off` turns it off too.
 
 Every gate, release mode and the plan status flow: [`docs/gates.md`](docs/gates.md).
+
+## Agent feedback
+
+Off by default. Turn it on with the plugin option `feedback` (`/config` → plugin keystone → `feedback`) or `KEYSTONE_FEEDBACK=on`; `KEYSTONE_FEEDBACK=off` switches it off for good. When on, the chain skills (start, intent, plan, check, implement, verify, fix, review) end with a short self-report about the skill text itself — what was unclear, what they deviated from, what they guessed — and the chat gets one line. `/keystone:feedback` shows a summary of repeated problems across projects, and a read-only judge agent checks a task's reports against the traces of its work. Records stay on your machine in `~/.claude/keystone-feedback/` and are never sent anywhere; the agents are told to write no project code or secrets, and known secret patterns are masked on a best-effort basis, not as a guarantee.
 
 ## Benchmarks
 

@@ -10,8 +10,8 @@ const read = (p) => readFileSync(join(root, p), 'utf8').replace(/\r/g, '');
 const json = (p) => JSON.parse(read(p));
 const front = (p) => read(p).split('---')[1];
 const body = (p) => read(p).split('\n').filter((l) => !l.includes('derived from ai-factory@')).join('\n');
-const SKILLS = ['architecture', 'ask', 'check', 'ci', 'distill', 'dockerize', 'docs', 'evolve', 'fix', 'grill', 'implement', 'intent', 'optimize', 'pentest', 'plan', 'qa', 'qa-check', 'reference', 'review', 'roadmap', 'security', 'sessions', 'setup', 'start', 'transfer', 'verify'];
-const AGENTS = ['analyzer.md', 'review-validator.md', 'validator.md', 'verifier.md'];
+const SKILLS = ['architecture', 'ask', 'check', 'ci', 'distill', 'dockerize', 'docs', 'evolve', 'feedback', 'fix', 'grill', 'implement', 'intent', 'optimize', 'pentest', 'plan', 'qa', 'qa-check', 'reference', 'review', 'roadmap', 'security', 'sessions', 'setup', 'start', 'transfer', 'verify'];
+const AGENTS = ['analyzer.md', 'feedback-judge.md', 'review-validator.md', 'validator.md', 'verifier.md'];
 const allSkillFiles = () => SKILLS.flatMap((s) => {
   const refs = existsSync(join(root, 'skills', s, 'references')) ? readdirSync(join(root, 'skills', s, 'references')).map((f) => `skills/${s}/references/${f}`) : [];
   return [`skills/${s}/SKILL.md`, ...refs];
@@ -30,7 +30,7 @@ test('0.9.31: no skill or agent description has <angle-bracket> text — claude.
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.36');
+  assert.equal(p.version, '0.9.37');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -48,7 +48,7 @@ test('sessions: family only, three groups, text never changed, read-only without
   assert.doesNotMatch(fm, /disable-model-invocation/);
 });
 
-test('I-2: exactly the 26 skills and four agents; name = file', () => {
+test('I-2: exactly the 27 skills and five agents; name = file', () => {
   assert.deepEqual(readdirSync(join(root, 'skills')).sort(), SKILLS);
   assert.deepEqual(readdirSync(join(root, 'agents')).sort(), AGENTS);
   for (const s of SKILLS) assert.equal(front(`skills/${s}/SKILL.md`).match(/^name:\s*(\S+)/m)?.[1], s);
@@ -736,7 +736,8 @@ test('0.9.19: verify — orchestrator on the mid model, judge on Opus, report wr
   assert.ok(!v.includes('Then print its output'), 'the line-by-line report is not printed in the chat');
   has('skills/verify/SKILL.md', 'scripts/collect.mjs', '**Write `verify.md` once**', 'Do not print the line-by-line report in the chat',
     'references/ACCEPT.md', 'references/AFTER-CHOICE.md', '**Roles.**');
-  assert.ok(readFileSync(join(root, 'skills/verify/SKILL.md')).length <= 22000, 'verify SKILL.md ≤ 22000 bytes');
+  // bytes as committed (LF): a CRLF checkout (core.autocrlf=true on Windows) must not change the budget
+  assert.ok(Buffer.byteLength(read('skills/verify/SKILL.md')) <= 22000, 'verify SKILL.md ≤ 22000 bytes');
   for (const f of ['skills/verify/scripts/collect.mjs', 'skills/verify/references/ACCEPT.md', 'skills/verify/references/AFTER-CHOICE.md'])
     assert.ok(existsSync(join(root, f)), f);
 });
@@ -846,4 +847,66 @@ test('0.9.27 I-7/I-8: qa makes a case per open debt line, qa-check closes it whe
   for (const f of ['skills/qa/SKILL.md', 'skills/qa-check/SKILL.md']) has(f, '`verified` with an open `## Debt` line', 'Covers: D<k>');
   has('skills/qa/SKILL.md', 'Debt: <n of m open lines covered');
   has('skills/qa-check/SKILL.md', 'by qa-check TC-NNN', 'Debt: closed', '## Debt', 'and the plan file', '(closing only)');
+});
+
+// agent feedback (docs/keystone/2026-11-12-agent-feedback-judge/plan.md)
+test('feedback judge: read-only opus agent that confirms or doubts claims and adds what was left unsaid', () => {
+  has('agents/feedback-judge.md', 'confirmed', 'added', 'unconfirmed', 'skill-text', 'agent', 'environment', '§');
+  assert.match(front('agents/feedback-judge.md'), /^tools: Read, Grep, Glob$/m);
+  assert.match(front('agents/feedback-judge.md'), /^effort: medium$/m);
+});
+
+test('feedback skill: modes, judge call, storage, off line, silent when called by another skill', () => {
+  has('skills/feedback/SKILL.md', 'summary', 'judge <plan path>', 'auto <plan path>', '--auto', 'session:', 'keystone:feedback-judge', '--kind judge',
+    'Level: M', 'feedback is off', 'Keystone feedback judge: error', 'no `Next:` and no menu', 'Keystone feedback judge: not needed');
+  assert.doesNotMatch(front('skills/feedback/SKILL.md'), /disable-model-invocation/);
+  assert.match(front('skills/feedback/SKILL.md'), /^model: sonnet$/m);
+  assert.match(front('skills/feedback/SKILL.md'), /^allowed-tools:.*Bash\(node \*feedback\.mjs\*\)/m);
+});
+
+test('feedback wiring: the 8 chain skills carry the Feedback line and the Bash rule, no other skill does', () => {
+  const chain = ['start', 'intent', 'plan', 'check', 'implement', 'verify', 'fix', 'review'];
+  const line = '**Feedback.** If the context has a `Keystone feedback: on` line';
+  for (const s of SKILLS) {
+    const t = read(`skills/${s}/SKILL.md`), f = front(`skills/${s}/SKILL.md`);
+    if (chain.includes(s)) {
+      assert.ok(t.includes(line), `${s}: Feedback line`);
+      assert.ok(t.includes(`(skill: \`${s}\`)`), `${s}: own name`);
+      assert.match(f, /^allowed-tools:.*Bash\(node \*feedback\.mjs\*\)/m, s);
+      assert.ok(t.indexOf('**Next step (mandatory).**') < t.indexOf(line), `${s}: after the Next step paragraph`);
+    } else {
+      assert.ok(!t.includes('**Feedback.**'), `${s}: no Feedback line`);
+      if (s !== 'feedback') assert.doesNotMatch(f, /feedback\.mjs/, s);
+    }
+  }
+});
+
+test('feedback option: SessionStart hook in exec form, other hooks untouched, userConfig boolean off by default, benchmarks switch it off', () => {
+  const h = json('hooks/hooks.json').hooks;
+  assert.deepEqual(Object.keys(h).sort(), ['PreToolUse', 'SessionStart', 'Stop', 'UserPromptSubmit']);
+  const ss = h.SessionStart[0].hooks[0];
+  assert.deepEqual([ss.type, ss.command, ss.args, ss.timeout], ['command', 'node', ['${CLAUDE_PLUGIN_ROOT}/skills/feedback/scripts/feedback.mjs', 'hook'], 5]);
+  assert.equal(h.PreToolUse[0].matcher, 'Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell');
+  for (const e of ['PreToolUse', 'Stop']) assert.deepEqual(h[e][0].hooks[0].args, ['${CLAUDE_PLUGIN_ROOT}/hooks/gate.mjs'], e);
+  assert.deepEqual(h.UserPromptSubmit[0].hooks[0].args, ['${CLAUDE_PLUGIN_ROOT}/hooks/sessions-event.mjs']);
+  const fb = json('.claude-plugin/plugin.json').userConfig.feedback;
+  assert.equal(fb.type, 'boolean');
+  assert.equal(fb.default, false);
+  assert.equal(fb.title, 'Agent feedback');
+  has('benchmarks/agentic/run.py', '"KEYSTONE_FEEDBACK": "off"');
+  has('test/harness/drive.mjs', "KEYSTONE_FEEDBACK: 'off'");
+});
+
+test('feedback judge: a contradicted claim is unconfirmed, the reply language comes from the caller', () => {
+  has('agents/feedback-judge.md', 'a claim that the traces', 'contradict is `unconfirmed`, never `confirmed`', '`Language:` line', 'never `unconfirmed`');
+  has('skills/feedback/SKILL.md', 'Language: <the language of this conversation>');
+});
+
+test('feedback judge: source says where a finding comes from (never "cause uncertain"); the address is never a placeholder', () => {
+  has('agents/feedback-judge.md', 'is never used for «the cause is uncertain»', 'a signal the reports are silent about → `added`, always', 'Never a\n   placeholder'.replace('\n   ', ' '), 'leave the finding out');
+});
+
+test('feedback judge: findings of one class at several places stay one line, the script stores one item per address', () => {
+  has('agents/feedback-judge.md', 'Findings of one class at several', 'all addresses joined by `, `');
+  has('skills/feedback/scripts/feedback.mjs', 'one item per address');
 });

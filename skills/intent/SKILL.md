@@ -2,7 +2,7 @@
 name: intent
 description: "Capture a change as intent.md — what and why, in the originator's words, decisions confirmed via /keystone:grill, every line with an ID (I-1…) — and have the human sign it off. The first file of the Keystone chain intent → plan → code → verify (Anthropic's AI-native SDLC playbook, adapted: the plan is the spec). Use for 'intent', 'capture the idea', 'what exactly do we want', or before planning an L-level change."
 argument-hint: "[idea text] | accept <path to intent.md or its folder>"
-allowed-tools: Read Write Edit Glob Grep Bash(git *) Bash(mkdir *) AskUserQuestion Task
+allowed-tools: Read Write Edit Glob Grep Bash(git *) Bash(mkdir *) AskUserQuestion Task Bash(node *feedback.mjs*)
 model: opus
 effort: high
 ---
@@ -23,6 +23,8 @@ adds a Run button that would fail. When nothing runs now, write `Next: nothing n
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
+
+**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `intent`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
