@@ -11,6 +11,6 @@ export type Progress = { level: string; status: string; done: number; total: num
 
 declare module 'claude-code' {
   interface PluginState {
-    keystone: { buttons: string[]; base: string; plan: string; bound: string[]; progress: Progress | null; handoff: Handoff; lang: 'en' | 'ru' | 'de' | 'fr' | 'es' }
+    keystone: { buttons: string[]; base: string; plan: string; bound: string[]; unbound: string; progress: Progress | null; handoff: Handoff; lang: 'en' | 'ru' | 'de' | 'fr' | 'es' }
   }
 }

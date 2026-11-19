@@ -15,6 +15,8 @@ Keystone ships a small TypeScript [mod](https://code.claude.com/docs/en/plugins/
 - **Next buttons** — above the prompt, from the plan status, without a model call: the plan's next command and
   `/keystone-status`, plus `/keystone:check` for an L draft with an intent or `/keystone:review` before verify on L.
   A click puts the command into the prompt box; you press Enter.
+  They stay after every turn while the session works with a plan, and come back after an app restart. A new session
+  in a repo with a plan it has not worked with gets one dim row naming that plan, until the first prompt.
 - **File links** — file paths in answers are clickable relative to the session folder (`` `hooks/keystone.ts:86` ``
   becomes a link); only the rendering changes, the message stays as it is.
 - **Handoff** — when the context grows, `/keystone-handoff` or the Hand off button (at 350k / 600k / 800k tokens;

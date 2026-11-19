@@ -24,6 +24,13 @@ const T = rows({
     fr: 'Repartir à neuf — sans relecture ; ce qui n’est pas dans le plan est perdu',
     es: 'Empezar limpio: sin releer; lo que no esté en el plan se pierde',
   },
+  unbound: {
+    en: (name: string) => `Keystone: plan ${name} is not this session's yet`,
+    ru: (name: string) => `Keystone: план ${name} ещё не привязан к этой сессии`,
+    de: (name: string) => `Keystone: Plan ${name} gehört noch nicht zu dieser Sitzung`,
+    fr: (name: string) => `Keystone : le plan ${name} n’est pas encore lié à cette session`,
+    es: (name: string) => `Keystone: el plan ${name} aún no está vinculado a esta sesión`,
+  },
   h: { en: 'h', ru: 'ч' },
   min: { en: 'min', ru: 'мин' },
   cold: {

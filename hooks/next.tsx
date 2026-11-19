@@ -106,10 +106,28 @@ export const register: Register = (on) => {
     const cold = plan !== '' && ho.pending === null && ho.cold !== null && !!pr?.next
     // «Записать и начать» is the same handoff: one offer at a time
     const offer = plan !== '' && ho.pending === null && ho.level > ho.shown && !cold
-    if (buttons.length === 0 && !offer && !cold) return next(e)
     const { Box, Button, Text, Svg } = $.ui.resolve(e)
     const lang = await langOf($)
     const t = strings(lang)
+    if (buttons.length === 0 && !offer && !cold) {
+      // a fresh session in a repo with a plan it has not worked with: one dim row, gone with the first prompt
+      const { value: unbound = '' } = await $.state.get({ plugin: 'keystone', key: 'unbound' })
+      if (!unbound) return next(e)
+      const drop = () => $.state.set({ plugin: 'keystone', key: 'unbound' }, '')
+      const name = unbound.match(/([^/\s]+)\/plan\.md$/)?.[1] ?? unbound
+      const rest = await next(e)
+      return (
+        <Box flexDirection="column">
+          <Box key="unbound" flexDirection="row" alignItems="center" columnGap={1}>
+            <Text dimColor wrap="truncate-end">{t.unbound(name)}</Text>
+            <Button key="unbound-go" label={chip(unbound, t.status)} variant="secondary" onPress={async () => { await pick($, unbound); await drop() }} />
+            <Box flexGrow={1} />
+            <Button key="unbound-dismiss" label="×" role="dismiss" dimColor onPress={drop} />
+          </Box>
+          {rest ?? null}
+        </Box>
+      )
+    }
     const w = Math.max(t.plan.length, t.context.length)
     const desktop = e.surface === 'desktop'
     const cols = e.props.bodyColumns

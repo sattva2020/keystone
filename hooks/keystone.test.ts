@@ -109,7 +109,7 @@ let dirs = ['2026-10-12-reminders']
 let usd: number | undefined
 let ctx: number | undefined // context tokens $.session.usage reports
 const BIND = { text: '/keystone:implement docs/keystone/2026-10-12-reminders/plan.md' } as any
-const stubSession = (on: any, store?: Record<string, unknown>) => {
+const stubSession = (on: any, store?: Record<string, unknown> | null) => { // null: the test answers the store itself
   on('fs.exists', ($: any, e: any) => { const p = rel(e.path); return { value: hasPlan && (p in files || Object.keys(files).some((f) => f.startsWith(p + '/'))) } })
   on('fs.list', () => ({ value: dirs.map((name) => ({ name, kind: 'dir', size: 0 })) }))
   on('fs.stat', () => ({ value: { kind: 'file', size: 1, mtimeMs: mtime, isLink: false } }))
@@ -125,7 +125,7 @@ const stubSession = (on: any, store?: Record<string, unknown>) => {
   on('session.id', () => ({ value: 'sess-1' }))
   on('classic.SessionStart', () => ({}))
   on('ui.render', ($: any, e: any) => h($.ui.resolve(e).Box, { key: 'engine' })) // the engine's own (empty) band beneath
-  mock.store(on, store)
+  if (store !== null) mock.store(on, store)
 }
 
 const TURN = { answer: 'done', durationMs: 1, isAborted: false, turnId: 't', reason: 'answer' } as any
@@ -238,7 +238,44 @@ test('band pieces: short chips, bars clamp, context tone follows the handoff lev
   expect(barSvg(0.5, 'success', 100)).toContain('width="50"')
 })
 
-test('a plain prompt after a Keystone one is not a stage: no buttons after its turn', async ($, on) => {
+test('session binding: survives a restart that drops the session state (kept in the store by session id)', async ($, on) => {
+  stubSession(on, { 'bound:sess-1': ['2026-10-12-reminders'] }) // bound before the app restarted; the state is gone
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  expect(JSON.stringify(await $.command.run({ command: 'keystone-status', args: '' }))).toContain('tasks 2/4')
+  const ui = await $.ui.mount({ plugin: 'keystone', surface: 'desktop', ...BAND })
+  expect(await label(ui, 'next1')).toBe('implement')
+  expect(await ui.find({ key: 'unbound' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('session binding: a bound plan is written to the store under the session id', async ($, on) => {
+  stubSession(on, null)
+  const kept: Record<string, unknown> = {}
+  on('store.get', ($: any, e: any) => ({ value: kept[e.key] }))
+  on('store.set', ($: any, e: any) => { kept[e.key] = e.value; return { value: undefined } })
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  await $.prompt.submit(BIND)
+  expect(kept['bound:sess-1']).toEqual(['2026-10-12-reminders'])
+})
+
+test('a session without a plan of its own is told once about the plan in view; the first prompt takes the row away', async ($, on) => {
+  stubSession(on)
+  on('prompt.submit', ($: any, e: any) => ({ drop: 'test' }))
+  await $.session.start({ cwd: 'E:/proj' } as any)
+  let ui = await $.ui.mount({ plugin: 'keystone', surface: 'desktop', ...BAND })
+  expect(JSON.stringify(await ui.find({ key: 'unbound' }))).toContain("plan 2026-10-12-reminders is not this session's yet")
+  expect(await label(ui, 'unbound-go')).toBe('implement')
+  expect(await ui.find({ key: 'next1' })).toBeUndefined()
+  await ui.unmount()
+  await $.prompt.submit({ text: 'what does this function do?' } as any)
+  ui = await $.ui.mount({ plugin: 'keystone', surface: 'desktop', ...BAND })
+  expect(await ui.find({ key: 'unbound' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('the band stays after a plain prompt in a session that works with the plan', async ($, on) => {
   stubSession(on)
   on('prompt.submit', ($: any, e: any) => e)
   await $.session.start({ cwd: 'E:/proj' } as any)
@@ -248,9 +285,13 @@ test('a plain prompt after a Keystone one is not a stage: no buttons after its t
   expect(await label(ui, 'next1')).toBe('implement')
   await ui.unmount()
   await $.prompt.submit({ text: 'what does this function do?' } as any)
+  ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
+  expect(await ui.find({ key: 'next1' })).toBeUndefined() // nothing while the turn runs
+  await ui.unmount()
   await $.turn.complete(TURN)
   ui = await $.ui.mount({ plugin: 'keystone', surface: 'terminal', ...BAND })
-  expect(await ui.find({ key: 'next1' })).toBeUndefined()
+  expect(await label(ui, 'next1')).toBe('implement')
+  expect(await ui.find({ key: 'plan-bar' })).toBeDefined()
   await ui.unmount()
 })
 

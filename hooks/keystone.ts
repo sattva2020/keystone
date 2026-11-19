@@ -59,10 +59,24 @@ const folder = (file: string) => file.replace(/\/[^/]*$/, '').replace(/^.*\//, '
 const BOUND = { plugin: 'keystone', key: 'bound' } as const
 const NO_ARG = new Set(['implement', 'verify'])
 
+// $.state does not outlive the app's restart; the store does, so the binding is kept there too, by session id.
+// ponytail: one store key per session id, never pruned (as turn:last)
+const boundKey = async ($: EngineInterface) => `bound:${await $.session.id()}`
+
 async function bind($: EngineInterface, names: string[]) {
   const { value: bound = [] } = await $.state.get(BOUND)
   const add = names.filter((n) => !bound.includes(n))
-  if (add.length) await $.state.set(BOUND, [...bound, ...add])
+  if (!add.length) return
+  await $.state.set(BOUND, [...bound, ...add])
+  await $.store.set(await boundKey($), [...bound, ...add]).catch(() => undefined)
+}
+
+// a resumed session whose state is gone gets its binding back from the store
+async function restoreBound($: EngineInterface) {
+  const { value: bound = [] } = await $.state.get(BOUND)
+  if (bound.length) return
+  const kept = await $.store.get(await boundKey($))
+  if (Array.isArray(kept) && kept.length) await $.state.set(BOUND, kept as string[])
 }
 
 export async function bindCommand($: EngineInterface, stage: string, args: string) {
@@ -152,6 +166,7 @@ export async function publishButtons($: EngineInterface, show: boolean) {
       list = nextButtons(p, !!p && p.status === 'draft' && p.level === 'L' && (await $.fs.exists(intent)))
     }
     await $.state.set({ plugin: 'keystone', key: 'buttons' }, list)
+    if (!show) await $.state.set({ plugin: 'keystone', key: 'unbound' }, '') // the start-of-session hint leaves with the first prompt
   } catch {
     // the band is optional
   }
@@ -267,8 +282,12 @@ export const register: Register = (on, options) => {
     await $.command.register({ name: 'keystone-status', description: 'Keystone: active plan, gates and cost by stage (no model call)' })
     await $.command.register({ name: 'keystone-handoff', description: 'Keystone: update the plan, clear the session, put the next command in the box' })
     lastUsd = (await $.session.usage()).cost?.usd
+    await restoreBound($).catch(() => undefined)
     await refresh($)
     await publishButtons($, true) // back to an unfinished task: its next step is one click away
+    // no plan of its own, but the repo has one in view: say so once, with its next command (silence looks like a broken mod)
+    const other = (await sessionPlan($)) ? null : await activePlan($)
+    await $.state.set({ plugin: 'keystone', key: 'unbound' }, (other && nextCommand(other)) ?? '').catch(() => undefined)
     // links resolve from the folder the session started in; a hot reload fires session.start again with a moved cwd
     const base = await $.state.get({ plugin: 'keystone', key: 'base' }).catch(() => ({ value: undefined }))
     if (!base.value) await $.state.set({ plugin: 'keystone', key: 'base' }, normalize(e.cwd)).catch(() => undefined)
@@ -301,7 +320,7 @@ export const register: Register = (on, options) => {
     await publishButtons($, false)
     await warm($).catch(() => undefined) // whatever is sent, the cache warms up again
     const m = e.text.match(STAGE)
-    stage = m ? m[1] : 'other' // a plain prompt is not a Keystone stage: no buttons after it, its cost is `other`
+    stage = m ? m[1] : 'other' // a plain prompt is not a Keystone stage: no suggestion in the box after it, its cost is `other`
     if (m) await bindCommand($, m[1], e.text.slice(m[0].length)).then(() => refresh($)).catch(() => undefined)
     costStage = m ? m[1] : (await sessionPlan($).catch(() => null)) ? costStage : 'other'
     if (m && (m[1] === 'implement' || m[1] === 'verify')) {
@@ -337,7 +356,7 @@ export const register: Register = (on, options) => {
     } catch {
       // the cold-cache offer is optional
     }
-    await publishButtons($, stage !== 'other')
+    await publishButtons($, true) // the band stays while the session has a plan, also after a plain prompt or an answer
     const now = (await $.session.usage()).cost?.usd
     if (now === undefined) return out
     const delta = lastUsd === undefined ? 0 : Math.max(0, now - lastUsd)

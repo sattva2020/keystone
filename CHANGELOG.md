@@ -5,6 +5,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.38] — 2026-11-19
+
+### Fixed
+- **The band no longer disappears mid-task (mod).** A session's binding to its plan is also kept in the mod's store by
+  session id, so an app restart or update no longer leaves the session without status, buttons and cost. The band
+  (plan and context bars, the next-command button) now stays after every turn while the session has a plan — also
+  after a plain prompt or an answer to the agent's question; the dim suggestion in the prompt box still follows only a
+  `/keystone:<stage>` turn. A session that starts in a repo with a plan in view it has not worked with gets one dim
+  row naming that plan, with its next command as a button; the row leaves with the first prompt.
+
 ## [0.9.37] — 2026-11-16
 
 ### Added
