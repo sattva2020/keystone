@@ -69,7 +69,9 @@ prints that line anyway.
 
 Run `node '${CLAUDE_SKILL_DIR}/scripts/feedback.mjs' summary [--since X.Y.Z]` and show its Markdown as it is — no rewording,
 no suggested fixes (the author reads the table and decides). Rows under `Candidates — skill text (judge)` are the ones worth
-a look first; `Self-reports of unjudged tasks` are the agents' own words, not yet checked. An error line → show it, stop.
+a look first; `Self-reports of unjudged tasks` are the agents' own words, not yet checked. `Coverage` says whether the reports
+were written at all: per chain skill, in how many sessions that started with feedback on it ran, and in how many of those its
+self-report exists — `missing` means the agent skipped the report, not that it had nothing to say. An error line → show it, stop.
 
 ## Judge by task / by session / auto
 

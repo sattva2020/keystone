@@ -13,9 +13,10 @@ const FIX = join(root, 'test/fixtures/feedback');
 const tmp = () => mkdtempSync(join(tmpdir(), 'ks-fb-'));
 const PLAN = 'docs/keystone/2026-01-01-fixture/plan.md';
 
-// the environment of a test: no feedback switches from the outside, storage in a temp folder
+// the environment of a test: no feedback switches from the outside, storage in a temp folder, and no transcripts of this machine
+// (the summary counts coverage over <config>/projects)
 const envOf = (store, extra = {}) => {
-  const e = { ...process.env, KEYSTONE_FEEDBACK_DIR: store, ...extra };
+  const e = { ...process.env, KEYSTONE_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store, ...extra };
   for (const k of Object.keys(e)) if (/^(KEYSTONE_FEEDBACK$|CLAUDE_PLUGIN_OPTION_)/.test(k) && !(k in extra)) delete e[k];
   return e;
 };
@@ -151,6 +152,7 @@ test('hook: silent without a switch; on → instruction with path in quotes, ses
   assert.ok(c.startsWith('Keystone feedback: on'));
   assert.match(c, /node '[^'\\]+\/skills\/feedback\/scripts\/feedback\.mjs' add --skill <skill> --task "<task folder name or ->" --session s1 /);
   assert.match(c, /^session: s1$/m);
+  assert.match(c, /^plugin: \d+\.\d+\.\d+$/m);
   for (const w of ['unclear', 'deviated', 'guessed', 'extra', '§', 'language of the conversation', '`auto <plan path>`', 'and the Final report is printed, and before the Step 6 menu', 'REQUIRED last step', 'MUST contain that line verbatim',
     'first the self-report of verify', 'not an action outside the repository', 'literal commands that push to git or create a PR', '`none`']) assert.ok(c.includes(w), w);
   assert.ok(!/PowerShell/i.test(c));
@@ -353,6 +355,45 @@ test('summary --since hides records of older plugin versions', () => {
   assert.ok(out.includes('New') && out.includes('Ten'));
   assert.ok(fb.summary({}, envOf(store)).includes('Old'));
   assert.match(cli(['summary', '--since', '0.9.30'], { env: envOf(store) }).stdout, /plugin ≥ 0\.9\.30/);
+});
+
+test('summary: coverage — per chain skill, sessions with feedback on where it ran vs where its self-report was written', () => {
+  const store = tmp(), cfg = tmp();
+  const dir = join(cfg, 'projects/x');
+  mkdirSync(dir, { recursive: true });
+  const row = (o) => JSON.stringify(o);
+  const ran = (skill) => row({ type: 'user', message: { role: 'user', content: `<command-name>/keystone:${skill}</command-name>` } });
+  const hook = (attachment) => row({ type: 'attachment', attachment: { hookEvent: 'SessionStart', ...attachment } });
+  const session = (id, ...rows) => writeFileSync(join(dir, `${id}.jsonl`), rows.join('\n') + '\n');
+  // A: the hook's own output (stdout is still JSON); plan has a report, verify has none
+  session('A', hook({ type: 'hook_success', content: '', stdout: JSON.stringify({ hookSpecificOutput: { additionalContext: fb.context('/p', 'A') } }) }), ran('plan'), ran('verify'));
+  // B: feedback was off — not a session the coverage is about
+  session('B', ran('plan'));
+  // C: the context row; start left no command in the transcript (followed from a menu), only its report
+  session('C', hook({ type: 'hook_additional_context', content: [fb.context('/p', 'C')] }));
+  // D: the instruction only quoted in a tool result — the session did not start with it
+  session('D', row({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'Keystone feedback: on' }] } }), ran('fix'));
+  // E: a session of a plugin version that did not print its version yet
+  session('E', hook({ type: 'hook_additional_context', content: ['Keystone feedback: on\nsession: E'] }), ran('implement'));
+  put(store, 'p1-aaaaaa', [
+    rec({ id: 'a1', project: 'p1-aaaaaa', skill: 'plan', session: 'A' }),
+    rec({ id: 'a2', project: 'p1-aaaaaa', skill: 'plan', session: 'A' }), // a second round of the same skill is the same run
+    rec({ id: 'c1', project: 'p1-aaaaaa', skill: 'start', session: 'C' }),
+    rec({ id: 'x1', project: 'p1-aaaaaa', skill: 'verify', session: '-' }), // no session: cannot cover anything
+  ]);
+  const env = envOf(store, { CLAUDE_CONFIG_DIR: cfg });
+  const cov = (out) => out.split('### Coverage')[1].split('###')[0];
+  const all = cov(fb.summary({}, env));
+  assert.match(all, /^ — 3 session\(s\) with feedback on$/m);
+  assert.match(all, /^- start: report written in 1 of 1 session\(s\)$/m);
+  assert.match(all, /^- plan: report written in 1 of 1 session\(s\)$/m);
+  assert.match(all, /^- verify: report written in 0 of 1 session\(s\) — 1 missing$/m);
+  assert.match(all, /^- implement: report written in 0 of 1 session\(s\) — 1 missing$/m);
+  assert.ok(!all.includes('- fix:'), 'D did not start with feedback on');
+  const since = cov(fb.summary({ since: '0.9.30' }, env));
+  assert.match(since, /^ — 2 session\(s\) with feedback on$/m);
+  assert.ok(!since.includes('- implement:'), 'E has no plugin version: older than any --since');
+  assert.match(cov(fb.summary({}, envOf(tmp()))), /^ — 0 session\(s\) with feedback on\nnone$/m);
 });
 
 // ---- boundary input and "never judged twice" (found by the first verify) --------------------------------------------

@@ -7,7 +7,7 @@
 // One rule runs through the file: every string that comes from outside (the model's text and command line, a transcript, a record
 // on disk) goes through redact() BEFORE it is tested, stored or printed, and a value that is no valid key is never folded into
 // the sentinel `-` ("no task", "no session"): it gets its own derived key or the line is malformed.
-import { readFileSync, appendFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, appendFileSync, mkdirSync, existsSync, readdirSync, statSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve, dirname, basename, posix } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash, randomBytes } from 'node:crypto';
@@ -24,6 +24,9 @@ const MAX_ITEMS = 10; // lines of one report
 const MAX_ADDR = 5; // addresses of one line
 const MAX_TOTAL = 30; // items of one record
 const MAX_FIELD = 300;
+const CHAIN = ['start', 'intent', 'plan', 'check', 'implement', 'verify', 'fix', 'review']; // the skills that write a self-report
+const ON = 'Keystone feedback: on'; // the first line of the instruction: a session that has it started with feedback on
+const HEAD = 128 * 1024; // bytes at the top of a transcript where the SessionStart rows sit
 // The left boundary matters: «task-runner-improvements», «disk-usage-monitor-service» must stay readable names. A token right after an
 // escape — a JSON \n, \t, \uXXXX or a URL %XX — is no part of a longer word, so those count as a boundary too.
 const B = '(?:(?<![A-Za-z0-9])|(?<=\\\\[nrt])|(?<=\\\\u[0-9a-fA-F]{4})|(?<=%[0-9a-fA-F]{2}))';
@@ -73,8 +76,8 @@ export function context(pluginRoot, sessionId = '-') {
   const script = `${slash(pluginRoot).replace(/\/+$/, '')}/skills/feedback/scripts/feedback.mjs`;
   const quoted = `'${script.replace(/'/g, `'\\''`)}'`; // single quotes: a `$` or a backtick in the path is never expanded
   return [
-    'Keystone feedback: on',
-    'Agent feedback is on. Every Keystone chain skill (start, intent, plan, check, implement, verify, fix, review) has a REQUIRED last step — also for an S change and a one-line edit: a short self-report about the TEXT OF THAT SKILL (what it told you, not the project), saved with the command below BEFORE your final answer. Do not skip it and do not replace it with a note in the chat.',
+    ON,
+    `Agent feedback is on. Every Keystone chain skill (${CHAIN.join(', ')}) has a REQUIRED last step — also for an S change and a one-line edit: a short self-report about the TEXT OF THAT SKILL (what it told you, not the project), saved with the command below BEFORE your final answer. Do not skip it and do not replace it with a note in the chat.`,
     'One note per line, at most 10 lines. Kinds:',
     '- unclear — what in the skill text was unclear',
     '- deviated — where you departed from the skill, and why',
@@ -89,6 +92,7 @@ export function context(pluginRoot, sessionId = '-') {
     'The command prints one line: your final answer MUST contain that line verbatim, on its own line — the only feedback output, no report text. If it prints an error, show that one line and carry on with the work.',
     'This write goes to the local feedback store: it is not an action outside the repository in the sense of the stop rule of implement and fix — do not stop and do not ask.',
     'Judge: in /keystone:verify on M or L, run it after verify.md is written and the Final report is printed, and before the Step 6 menu — first the self-report of verify, then the Skill `keystone:feedback` with the args `auto <plan path>`. Its single line goes into the output, so the `Next:` line and the menu of verify stay last.',
+    `plugin: ${pluginVersion()}`, // read back by coverage(): `summary --since` counts only the sessions of that version and later
     `session: ${session}`,
   ].join('\n');
 }
@@ -317,7 +321,7 @@ const isFeedbackCall = (b) => (b.name === 'Skill' && /^(keystone:)?feedback$/.te
 
 // What one session did, from its transcript: Keystone skills, tool errors, repeated calls, interrupts, free user messages.
 export function readTrail(file) {
-  const t = { skills: new Set(), errors: [], repeats: [], interrupts: 0, userMsgs: [], bad: 0 };
+  const t = { skills: new Set(), errors: [], repeats: [], interrupts: 0, userMsgs: [], bad: 0, on: false, version: '0' };
   let raw = '';
   try { raw = readFileSync(file, 'utf8'); } catch { return t; }
   const names = new Map(); // tool_use id → name
@@ -325,13 +329,17 @@ export function readTrail(file) {
   const calls = new Map(); // name + input → count
   const free = (text) => !FREE_SKIP.some((s) => text.includes(s));
   for (const line of raw.split('\n')) {
-    if (!(line.includes('tool_use') || line.includes('tool_result') || line.includes('"type":"user"') || line.includes('keystone') || line.includes('queued_command'))) continue;
+    if (!(line.includes('tool_use') || line.includes('tool_result') || line.includes('"type":"user"') || line.includes('keystone') || line.includes('queued_command') || line.includes(ON))) continue;
     let row;
     try { row = JSON.parse(line); } catch { t.bad++; continue; }
     if (!row || typeof row !== 'object') continue; // a line that is JSON but not a row (null, a string)
     if (row.isCompactSummary || row.isVisibleInTranscriptOnly) continue; // a summary the app wrote, not something the user typed
     // a message typed while the agent was working is recorded as a queued command
     if (row.type === 'attachment') {
+      // the SessionStart hook of this script: its output (stdout, still JSON) and the context made of it (content)
+      const a = row.attachment;
+      const hook = a?.hookEvent === 'SessionStart' ? `${textOf(a.content)} ${typeof a.stdout === 'string' ? a.stdout : ''}` : '';
+      if (hook.includes(ON)) { t.on = true; t.version = hook.match(/(?:\n|\\n)plugin: (\d+(?:\.\d+){0,2})/)?.[1] ?? t.version; }
       if (row.attachment?.type === 'queued_command') {
         const q = textOf(row.attachment.prompt).trim();
         if (q && free(q)) t.userMsgs.push(cut(q, 150));
@@ -504,6 +512,37 @@ const cell = (s) => String(s).replace(/\|/g, '\\|');
 const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
 const addr = (i) => `${i.skill} § ${String(i.section ?? '').replace(/\s+/g, ' ').trim()}`;
 
+const headOf = (p) => {
+  let fd;
+  try { fd = openSync(p, 'r'); const b = Buffer.alloc(HEAD); return b.toString('utf8', 0, readSync(fd, b, 0, HEAD, 0)); } catch { return ''; } finally { if (fd !== undefined) closeSync(fd); }
+};
+
+// Was the self-report written at all? Per chain skill: in how many sessions that started with feedback on it ran (its command or a
+// Skill call in <config>/projects/*/*.jsonl, or a record of it), and in how many of those a self-report names that session.
+// ponytail: only the top HEAD bytes of a transcript decide whether it is read — a session resumed after feedback was switched on is
+// not counted; a skill followed by reading its SKILL.md (a menu pick) leaves no trace and counts only when its report was written.
+export function coverage(selfs, since, env = process.env) {
+  const by = new Map(CHAIN.map((s) => [s, { ran: 0, written: 0 }]));
+  const wrote = new Map(); // session → skills with a self-report
+  for (const r of selfs) if (r.session !== '-') wrote.set(r.session, (wrote.get(r.session) ?? new Set()).add(r.skill));
+  let sessions = 0;
+  const projects = join(configDir(env), 'projects');
+  for (const d of existsSync(projects) ? readdirSync(projects) : []) {
+    let files = [];
+    try { files = readdirSync(join(projects, d)).filter((f) => f.endsWith('.jsonl')); } catch { continue; }
+    for (const f of files) {
+      const p = join(projects, d, f);
+      if (!headOf(p).includes(ON)) continue;
+      const t = readTrail(p);
+      if (!t.on || (since && cmpVer(t.version, since) < 0)) continue;
+      sessions++;
+      const w = wrote.get(f.slice(0, -'.jsonl'.length)) ?? new Set();
+      for (const [s, c] of by) if (t.skills.has(s) || w.has(s)) { c.ran++; if (w.has(s)) c.written++; }
+    }
+  }
+  return { sessions, by };
+}
+
 export function summary(opts, env = process.env) {
   let recs = readRecords(env);
   if (opts.since) recs = recs.filter((r) => cmpVer(r.plugin_version, opts.since) >= 0);
@@ -537,6 +576,8 @@ export function summary(opts, env = process.env) {
     else if (i.cause in other) other[i.cause]++;
   }
   for (const r of selfs) if (r.task === '-' || !judgedTasks.has(key(r))) for (const i of r.items) group(unjudged, addr(i), i.kind, r);
+  const cov = coverage(selfs, opts.since, env);
+  const covRows = [...cov.by].filter(([, c]) => c.ran);
 
   return [
     `## Keystone feedback${opts.since ? ` (plugin ≥ ${opts.since})` : ''}`,
@@ -544,6 +585,9 @@ export function summary(opts, env = process.env) {
     '',
     '### Runs by skill',
     ...(runs.size ? [...runs].sort((a, b) => a[0].localeCompare(b[0])).map(([s, v]) => `- ${s}: ${v.runs} runs, ${v.notes} with notes`) : ['none']),
+    '',
+    `### Coverage — ${cov.sessions} session(s) with feedback on`,
+    ...(covRows.length ? covRows.map(([s, c]) => `- ${s}: report written in ${c.written} of ${c.ran} session(s)${c.written < c.ran ? ` — ${c.ran - c.written} missing` : ''}`) : ['none']),
     '',
     '### Candidates — skill text (judge)',
     ...table(cand),

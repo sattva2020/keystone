@@ -5,6 +5,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.39] — 2026-11-19
+
+### Added
+- **Feedback summary: coverage.** `/keystone:feedback` now has a `Coverage` section: per chain skill, in how many sessions
+  that started with feedback on the skill ran, and in how many of those its self-report was written — a skipped report no
+  longer looks like "the skill did not run". Read from the transcripts on this machine (`<config>/projects`), nothing is
+  stored. The instruction of the `SessionStart` hook carries a `plugin: <version>` line, so `--since X.Y.Z` counts only the
+  sessions of that version and later; sessions of 0.9.37 and 0.9.38 have no such line and drop out under any `--since`.
+
 ## [0.9.38] — 2026-11-19
 
 ### Fixed
