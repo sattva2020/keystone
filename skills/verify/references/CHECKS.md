@@ -73,8 +73,18 @@ The last committed `verify.md` of the task folder that judged its rows is the pa
 build or test judged nothing and is skipped). Lines for the verifier:
 
 - `verifier: not called — <build | test | build, test> failed` — the first `build:` or `test:` line is `→ fail`: the
-  run stops here; no `delta:` / `judge:` lines, only the marker and `history:` follow. `not run` (a timeout too) and a
-  failing lint do not stop it.
+  run stops here; no `delta:` / `judge:` lines, only the marker, `sweep:` and `history:` follow. `not
+  run` (a timeout too) and a failing lint do not stop it.
+- `verifier: not called — ceiling: <f> judged FAIL runs, last <sha7>; open: <k>` (I-7) — 3 or more judged FAIL runs
+  (a stop run and an accept / decide commit are not runs), the last judged run is a FAIL with `<k>` open findings (not
+  accepted; a `Settings: violated` / `Architecture gate: fail` / `Security gate: fail` counts one each), no `--full`, and
+  since that run no task, Reconciliation row, `Done means:`, `I-n` or plan header line changed. Then the marker,
+  `edited: none`, `late watch: none` and the record lines follow. A plan edit lifts it for one run.
+- `verifier: not called — nothing to judge since <sha7>; waiting for you: <ids | none>` (I-5) — `judge:` is empty and
+  `0 files changed`: the usual delta lines follow, so the `carried:` lines are still there.
+- `open findings: <keys> | none` — only with the `nothing to judge` stop: the last judged run's findings that are not plan rows
+  (`Unrequested: …`, `Decision: …`, `rule …`, its own `review …`) and its `Settings: violated` /
+  `Architecture gate: fail` / `Security gate: fail` anywhere in its text, `## Sweep` included — each once.
 - `delta: full — <reason>` — every row is judged. Reasons, in this order: `first verify`, `--full`, `history rewritten`
   (a commit listed under `commits:` of the past run is no longer an ancestor of HEAD), `base moved`, `plan header
   changed` (the `Level:`, `Settings:` or `Authority:` line differs; `Status:` does not count). The base is found on the
@@ -104,7 +114,7 @@ build or test judged nothing and is skipped). Lines for the verifier:
 - `release refs: <Row n (I-n) → R<k> open | done | no step | no check; …> | none` — every `proved by R<k>` in a
   Reconciliation evidence cell (`Row <n>` counts the table's data rows from 1) against step `R<k>` of `## Release`:
   `open` = unticked with a `check:`, `done` = ticked, `no step` = no such step, `no check` = the step has no `check:`.
-- `carried ids: <ids> | none`.
+- `carried ids: <ids> | none` — carried `ok` rows and carried `BLOCKED` rows.
 
 Then `--- record only (not for the verifier) ---`, and under it, for the record only:
 
@@ -113,17 +123,36 @@ Then `--- record only (not for the verifier) ---`, and under it, for the record 
 - `late watch: <ids> | none` — past `ok` rows (`## Report` or `## Carried`) whose files did not change, not sent by an
   edit, that are judged again all the same (full run, I-13, a `see Row n` chain). `none` on the first verify.
 - `carried: <id> — ok — carried from verify <sha7> — <evidence>` — the sha and evidence of the run that judged the row.
+- `carried: <id> — BLOCKED — waiting for you since verify <sha7> — <evidence>` (I-5) — a past `BLOCKED` row (from
+  `## Report` or `## Carried`) whose evidence cell (a row edit), the ` BLOCKED: …` tail of its task line and its files are
+  unchanged, under the same rules as an `ok` row; it counts as `BLOCKED` in the verdict. `not proven` is never carried.
+- `carried: <id> — advisory | accepted — carried from verify <sha7> — <evidence>` (Design §10) — a past `wrong` /
+  `missing` row parked by `Late: <id> (advisory)` or by an `Accepted finding by …: <id>` after that run: carried while
+  its files, its plan text and the rows it cites are unchanged (the wrong-neighbour and not-run rules do not apply);
+  not a finding. `accepted findings:` lists an accepted row id only while it is carried so.
 - ``accepted violations: rule `<source>` — `<file:line>`; …; rule … | none`` — every `Accepted violation by …` line of every
   commit of `verify.md`. Not printed on a stop run.
+- `accepted findings: <key>; <key> | none` (I-7) — the keys of every `Accepted finding by <name> <date>: <key>` line
+  (Decide at the ceiling, `ACCEPT.md`): a row id, `rule <source> <file:line>`, `Unrequested: …`, `Decision: …`,
+  `review <file:line>`. They are not findings.
+- `late rule: on — first PASS in <sha7> | off — <no PASS yet | --full>` (I-3) — `on` once a judged run was PASS or
+  PASS-UNPROVEN: a late row the verifier gives `Impact: non-critical` then goes to `Late: <id> (advisory)` (`LOOP.md`).
+- `waiting: <ids> | none` — the carried `BLOCKED` rows.
+- `sweep: due — <first verify | --full | not done yet (<first line of the last ## Sweep | no record>) | tasks added
+  since <sha7>: Task 7 — files: <a, b>> | done in <sha7> | n/a — <level M | runs before the sweep>` (I-1, I-6, I-12) — not
+  `Level: L` → `n/a`; a plan whose earliest run has neither `## Sweep` nor a `sweep:` line → `n/a — runs before the sweep`;
+  done = a run whose `## Sweep` starts with `Sweep: done`; tasks added = task numbers missing from the plan of that run.
 - `history: <n> runs · FAIL <f>` and `run <i> · <date> · <verdict> · open <o> · new <n> · closed <c> · cycle cost
   <$x.xx | n/a>[ · late <l>]` — findings are `wrong` / `missing` ids, each `file:line` of a failing `rule` line (only
   the places before ` — sites to cover:` / ` — Class:`; an accepted place is not one), `Decision:` and `Unrequested:`
-  lines; `Advisory:` and `Minor:` are not findings. A stop run (`## Report` = `not judged — …`) has a `check: <kind>
+  lines, open `review <n> — critical` lines of `## Sweep` (key `review <file:line>`); `Advisory:` and `Minor:`, ids on
+  `Late: … (advisory)` and accepted keys are not findings. A stop run (`## Report` = `not judged — …`) has a `check: <kind>
   failed` key per failed `build:` / `test:` line plus every finding of the run before it. `late <l>` = ids of the run's
-  `late watch:` it gave `wrong` / `missing`, shown only when `l > 0`. `Accepted unproven by` / `Accepted violation by`
-  lines are not a run.
-- `trend menu: on this FAIL` — the third FAIL: Step 1 prints it after two past FAIL runs, `--history` (this run
-  committed) after three FAIL runs, and not with `rules menu:`; a FAIL now gets the menu of `LOOP.md`.
+  `late watch:` it gave `wrong` / `missing`, shown only when `l > 0`. `Accepted unproven by` / `Accepted finding by` /
+  `Accepted violation by` lines are not a run.
+- `ceiling: reached — <f> judged FAIL runs` — `--history` only (this run committed), from the third judged FAIL run
+  under the rule of the `ceiling` stop line above; checked first and replaces `rules menu:`; a FAIL now gets the ceiling
+  menu of `LOOP.md`. Step 1 `history:` prints no menu line.
 - `rules menu: on this FAIL` — `--history` only: the last two runs are FAIL with only unaccepted `rule` findings (no
   `wrong` / `missing` / `Decision:` / `Unrequested:` / `check:`, no `Settings: violated`, `Architecture gate: fail`,
   `Security gate: fail`); printed before `trend:`.

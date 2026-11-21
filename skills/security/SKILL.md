@@ -1,7 +1,7 @@
 ---
 name: security
 description: "Keystone: security audit on OWASP Top 10:2025, LLM Top 10 2026 / prompt injection, agent and MCP configuration, supply chain, IaC (Dockerfile, Kubernetes, Terraform) and race conditions — whole project, a path, a category or the diff of a task. Every finding has severity, file:line, how to exploit it and a fix; ignored items live in docs/keystone/security-ignores.md with reason, date and author; ends with a machine-readable line `Security gate: pass | warn | fail` (fail only on an unignored critical/high finding). Read-only for code. Use for 'security check', 'is this secure', 'before deploy', auth/payments/user-input changes, or `ignore [id] [reason]`."
-argument-hint: "[auth|injection|xss|csrf|secrets|crypto|logging|api|infra|iac|prompt-injection|race-condition|agent|supply-chain | <path> | <plan path>] | ignore <id> <reason>"
+argument-hint: "[auth|injection|xss|csrf|secrets|crypto|logging|api|infra|iac|prompt-injection|race-condition|agent|supply-chain | <path> | <plan path> | <plan path> sweep [files: <a, b>]] | ignore <id> <reason>"
 allowed-tools: Read Glob Grep Write Edit Bash(npm audit*) Bash(pip-audit*) Bash(cargo audit*) Bash(grep *) Bash(git diff*) Bash(git log*) Bash(git rev-list*) Bash(git config user.name) Bash(bash ${CLAUDE_SKILL_DIR}/scripts/audit.sh) AskUserQuestion
 model: opus
 effort: high
@@ -68,6 +68,7 @@ Then **always read** `docs/keystone/security-ignores.md` before any audit. If it
 | `auth`, `injection`, `xss`, `csrf`, `secrets`, `crypto` (A04), `logging` (A09), `api`, `infra`, `iac` (`references/IAC.md`), `prompt-injection`, `race-condition`, `agent` (`references/AGENT-MCP.md`, incl. the project's own MCP server), `supply-chain` (`references/SUPPLY-CHAIN.md`, incl. model weights) | that category only |
 | a path (file or directory) | all categories, only code under the path |
 | a plan path (`…/plan.md`) or an active plan with no other argument | **diff of the task** — see below |
+| `<plan path> sweep [files: <a, b>]` | the diff of the task (only those files when `files:` is given) — Called from /keystone:verify, see below |
 | `ignore <id> <reason>` | add an ignore entry, then stop — no audit, no gate line |
 
 **Diff of the task:** base = the same base `/keystone:verify` uses (`P` = first commit that added the plan:
@@ -75,6 +76,11 @@ Then **always read** `docs/keystone/security-ignores.md` before any audit. If it
 `C`). Audit `git diff <base>` (committed + uncommitted), reading each changed file in full, and its direct callers when the change
 touches an entry point, a query, a permission check or an LLM call. For a diff scope also recommend the built-in
 `/security-review` as a second, independent pass — it is not a substitute for the ignore-list or the gate.
+
+**Called from /keystone:verify (`sweep` marker).** `<plan path> sweep [files: <a, b>]` is the sweep of an L plan (verify's
+`references/SWEEP.md`): audit the diff of the task as above, only the listed files when `files:` is given. Same audit,
+ignore-list and gate rules; but show no menu, no `Next:` and no `/security-review` recommendation — the answer ends with
+the `Security gate: …` line, which verify writes into its `## Sweep`.
 
 ## Audit procedure
 

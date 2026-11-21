@@ -12,8 +12,8 @@ effort: high
 
 Judgment is delegated to the `keystone:verifier` agent, which did not write the code and sees no conversation. This
 skill runs the commands, collects the verdict, and writes the record. **Write/Edit are allowed for exactly two things:**
-`<plan folder>/verify.md` and the `Status:` value in the plan header (plus `Accepted unproven by …` / `Accepted violation by …` in verify.md for
-`accept`, and for `accept` the plan's `## Debt` lines — `references/ACCEPT.md`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/keystone:fix` or
+`<plan folder>/verify.md` and the `Status:` value in the plan header (plus `Accepted unproven by …` / `Accepted violation by …` /
+`Accepted finding by …` in verify.md, and the plan's `## Debt` lines, for `accept` and Decide at the ceiling — `references/ACCEPT.md`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/keystone:fix` or
 `/keystone:implement`, not this skill — `Fix directly here` in Step 6 hands the turn to the fix skill's rules.
 
 **Roles.** The `keystone:verifier` agent is the judge (the strongest model); this skill is the orchestrator (a mid
@@ -77,9 +77,8 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only wit
 
 Run from the repository root: `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> [base ref] [--full]` — the diff base,
 this task's commits and files (uncommitted ones included), build / test / lint by `references/CHECKS.md`, then `delta:`,
-`judge:`, `rules scope:`, `release refs:`, `left the plan:`, `carried ids:`, the record-only marker, and under it `edited:` / `late watch:` / `accepted violations:` / `carried:` / `history:` / `trend menu:`. `verifier: not called` → no verifier (`references/LOOP.md`). **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
-`not run` line is never a pass, (a timeout included); `pass (reused: …)` is a pass (CHECKS.md). Merged-in commits from other branches or sessions never make a file `unrequested`;
-task-folder files (plan.md, intent.md, verify.md) never are. `Mode: fix` plans: note whether existing test files were
+`judge:`, `rules scope:`, `release refs:`, `left the plan:`, `carried ids:`, the record-only marker, and under it `edited:` / `late watch:` / `accepted violations:` / `accepted findings:` / `late rule:` / `waiting:` / `sweep:` / `carried:` / `history:`. `verifier: not called` (failed build / test, `ceiling: …`, `nothing to judge …`) → no verifier (`references/LOOP.md`). **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
+`not run` line is never a pass, (a timeout included); `pass (reused: …)` is a pass (CHECKS.md). `Mode: fix` plans: note whether existing test files were
 edited (a violation of the fix contract). A check the plan names (a task's `check:`, a read-only `curl` GET against a
 local/staging URL in the plan) may run as a second command.
 Two gates join the same lines:
@@ -96,7 +95,9 @@ lint warning, an unfinished-work marker (TODO / FIXME / HACK) or an undocumented
 
 ## Step 3 — the verifier
 
-Call the agent (Agent tool, `subagent_type: "keystone:verifier"`). Its prompt contains **only** facts, no opinion:
+`sweep: due — …` (L only) → read `references/SWEEP.md` and launch by it: the verifier and
+the review finder in one message, security beside them. Otherwise:
+call the agent (Agent tool, `subagent_type: "keystone:verifier"`). Its prompt contains **only** facts, no opinion:
 plan path, intent path, base ref, the Step-1 lines above the record-only marker (incl. the gate lines; never the
 evidence of carried rows), and the project-rules file list. It returns one line per task, Reconciliation row and `I-n`
 not carried, then `Unrequested`, `Settings`, `Rules gate` with one `rule …` line per project rule
@@ -120,7 +121,7 @@ Rules you enforce when reading the output (the verifier knows them, you check th
   open work, and they never block PASS. A `pending R<n>` row (`release refs … open`) is planned proof, not open work.
 - `[x]`, "done", "pass" is not evidence. A grep or a code read is presence, not behaviour → `not proven`.
 - A row whose evidence starts with `BLOCKED:` is open work, never `ok`.
-- Formatting noise is not `unrequested`; new logic, files or dependencies without a task / row / `I-n` are.
+- Merged-in files, formatting noise and task-folder files are never `unrequested`.
 - A green test run proves nothing about a test the diff loosened: each `Weakened test` line without a task / row that
   asks for it keeps the verdict at PASS-UNPROVEN until the human accepts it. A `Decision:` line (the change contradicts
   an accepted decision of an earlier intent or note that this plan does not supersede) is a FAIL.
@@ -150,7 +151,9 @@ unexplained deviation is not a FAIL by itself; list it under `Found:` so the hum
 Strict mode (L by default, or `--strict`) additionally requires: every task `ok` (no partial), build and tests pass
 (tests are required there unless `tests — no`), lint clean, no unfinished-work markers and no undocumented env
 variables in the changed files, Rules gate `pass`. Anything short of that is `wrong` or `not proven` as in Step 1.
-`Advisory:` and `Minor:` lines never change the verdict.
+`Advisory:` and `Minor:` lines never change the verdict. Not findings: keys under `accepted findings:` (a row id there only while carried as `accepted`), ids on
+`Late: … (advisory)` (LOOP.md); a carried BLOCKED row counts as `BLOCKED`. An open `review <n> — critical` line of
+`## Sweep` is a FAIL; a `suggestion` is `Advisory` (SWEEP.md).
 
 - **PASS** — no `missing`, `wrong`, `unrequested`, `not proven`; `BLOCKED` = 0; `Weakened tests: none` (or each tied to a task); `Decisions: none`; `Settings: ok`; `Rules gate` not `fail`; `Architecture gate` not `fail`; `Security gate` not an unignored `fail`. `pending R<n>` rows never block PASS.
 - **PASS-UNPROVEN** — no `missing` / `wrong` / `unrequested`, `Settings: ok`, Rules gate not `fail`, but at least one
@@ -171,35 +174,32 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
    <the carried: lines | none>
    ## Report
    <the verifier output, unchanged>
+   ## Sweep
+   <SWEEP.md layout | Sweep: none — <the sweep: line>>
    ## Verdict
    <verdict> — <one line: what is open>
-   Late: <ids, LOOP.md> | none
+   Late: <id> (advisory | critical), … | none
    <ok + … = n and Keystone Chain, recomputed with carried rows>
    ```
 2. **PASS** → set `Status: verified` in the plan header (nothing else in the plan), then commit **only** `verify.md`
    and the plan: `git add <plan folder>/verify.md <plan>` and `git commit -m "docs(verify): <slug>"`;
    `git diff --cached --stat` lists exactly those two. Then the owner `release --any` (`ACCEPT.md`). Push opens now.
-3. **PASS-UNPROVEN** → status unchanged, `git push` stays closed. Commit `verify.md` alone (`docs(verify): <slug>`).
-   The human chooses in **Step 6**: prove the open rows now and verify again, or accept them consciously.
+3. **PASS-UNPROVEN** → status unchanged, `git push` stays closed. Commit `verify.md` alone (`docs(verify): <slug>`);
+   Step 6: prove now or accept.
    **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
    `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
    if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(verify)`).
-4. **FAIL** → status unchanged; commit `verify.md` alone. Recommend `/keystone:fix verify` — it takes every finding
-   from this `verify.md` (each failing `rule` line with all its `file:line`, every `wrong` line, `Settings: violated`,
-   an Architecture gate `fail`) and fixes them in one pass, so verify runs once more, not once per finding — or
-   `/keystone:implement` (a task never finished). The push gate stays closed. To lift a stuck gate deliberately: set
-   `Status: abandoned` in the plan header, or run with `KEYSTONE_GATES=off` — never as a way around a FAIL.
+4. **FAIL** → status unchanged; commit `verify.md` alone. Recommend `/keystone:fix verify` — every finding of this
+   `verify.md` in one pass, so verify runs once more, not once per finding — or `/keystone:implement` (a task never finished). The push gate stays closed (lifting it: ACCEPT.md — never as a way around a FAIL).
 
-Re-verifying: each run overwrites `verify.md` and gets its own commit, so the history shows how the verdict moved.
-If the working tree has unrelated uncommitted changes, do not stage them — add the two files by path, never `-A`.
-Nothing to commit (verify.md identical to the committed one) → say `verify.md unchanged` and skip the commit.
+Each run overwrites `verify.md` in its own commit; add files by path, never `-A`; nothing to commit → `verify.md unchanged`.
 
 ## Step 6 — the choice (AskUserQuestion)
 
 A verdict that leaves a decision ends with a menu, not with one command. Print the Final report and the summary first,
 then call AskUserQuestion once with the options of `references/AFTER-CHOICE.md` — read it before asking. FAIL (not after a
 `verifier: not called` run) → after the Step 5 commit run `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> --history`, show
-it; `rules menu: on this FAIL` → ask the rules menu of `references/LOOP.md`, else `trend menu: on this FAIL` → its trend menu.
+it; `ceiling: reached` → the ceiling menu of `references/LOOP.md`, else `rules menu: on this FAIL` → its rules menu.
 
 **Context drift.** If the diff makes `docs/architecture.md`, `CLAUDE.md` or `.claude/rules` clearly stale, add a
 second question to the same AskUserQuestion call as `references/AFTER-CHOICE.md` says; the final report carries
@@ -207,8 +207,7 @@ second question to the same AskUserQuestion call as `references/AFTER-CHOICE.md`
 
 After the pick, carry the choice out as `AFTER-CHOICE.md` says.
 
-**Gates.** The hooks close `git push` / `gh pr create` for this plan's commits until `Status: verified`; `accept` and
-the ways to lift a gate are in `references/ACCEPT.md`.
+**Gates.** Push stays closed until `Status: verified`; `accept` and lifting a gate: `references/ACCEPT.md`.
 
 ## Final report (always)
 
@@ -216,6 +215,9 @@ the ways to lift a gate are in `references/ACCEPT.md`.
 <verdict>: <plan path> · base <ref> · <n> rows — ok a, missing b, wrong c, not proven d, BLOCKED e, pending f; unrequested u
 Decisions: <list> | none
 Carried: <k> rows from verify <sha7> | none (full run — <reason>)
+Sweep: <done — review …, security … | not run — <what> | n/a — <why> | done in <sha7>>
+Waiting for you: <BLOCKED ids carried, waiting for a human> | none
+Late advisory: <k>
 Pending: <Row n → R<k>, I-n → R<k>> | none
 Debt: <k> open — <D<k> row id, …> (the plan's `## Debt`, after Step 5) | none
 Advisory: <a> · Minor: <m>
@@ -232,10 +234,10 @@ Run the correctness review below **before** printing the final report.
 The `Keystone Chain` line is mandatory, recomputed with carried rows, even when everything passes. `rework signals`: the intent
 changed after the plan's first commit → name it; intent and plan first committed together → `not measurable`.
 
-**Correctness review:** run the built-in `/code-review` — verify checks the plan against the diff, not whether the code
-is well written. On L, also recommend `/keystone:review` (its validator always runs) before `git push`, in `Blocked on me:`; when the
-Security gate is `warn` or the security report has `Needs verification` items, also recommend `/keystone:pentest <your
-staging or local URL>` to confirm them against the running app.
+**Correctness review — only when the plan had no sweep** (M, a plan before the sweep, `Sweep: not run`): run the built-in
+`/code-review`; on L also recommend `/keystone:review` (its validator always runs) before `git push`. After a sweep
+neither runs (a manual `/keystone:review` / `/keystone:security` stays possible — one line). Security gate `warn` or
+`Needs verification` items → recommend `/keystone:pentest <your staging or local URL>`.
 
 **Roadmap and lessons (one line each, in `Found:` / `Blocked on me:`).** If the intent has `Roadmap: M-<n>` and the verdict is
 PASS (or `accept` was just recorded), offer: `Milestone M-<n> done? Tick it with /keystone:roadmap` — verify never edits
@@ -244,7 +246,7 @@ into a project rule.
 
 End the report with a fixed three-heading summary, short, after the Final report (the line-by-line report stays in `verify.md`, not in the chat). It is
 followed only by the `Next:` line: PASS with open `## Release` steps → `Next: /keystone:implement <plan path>` (release
-mode; on L `/keystone:review` first); PASS without them → `Next: push and open the PR` (L: `/keystone:review` first); PASS-UNPROVEN → the option chosen in Step 6 (a
+mode; on L without a sweep `/keystone:review` first); PASS without them → `Next: push and open the PR` (same); PASS-UNPROVEN → the option chosen in Step 6 (a
 `Prove now` check before `/keystone:verify accept <plan path>`); FAIL and PASS → the option chosen in Step 6 (FAIL default
 `/keystone:fix verify`, all findings in one pass); after a fix plan or a fixed FAIL, `/keystone:evolve` may follow later.
 

@@ -1,6 +1,6 @@
-// Class: the trend menu read from the post-commit `--history` output, where the FAIL just committed is already counted.
-// I-8 (and 0.9.26 I-10): the trend menu comes from the third FAIL. Step 1 `history()` runs before the commit (past runs
-// only, `>= 2` past FAILs); Step 6 `trend()` runs after it (this run included, so `>= 3` FAILs).
+// Class: the ceiling (0.9.31, was the trend menu) read from the post-commit `--history` output, where the FAIL just committed is already counted.
+// 0.9.31 I-7 (replaces 0.9.26 I-10 / 0.9.29 I-8): `ceiling: reached` from the third judged FAIL, read by Step 6
+// `trend()` after the commit (this run included, so `>= 3`); Step 1 `history()` prints no menu line.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
@@ -34,20 +34,21 @@ function fails(n) {
   for (let i = 1; i <= n; i++) commit(root, { [VERIFY]: vmd(base, `- Task 1 — wrong — a${i}. Repro: x\n`) }, `verify ${i}`);
   return root;
 }
-const hasMenu = (lines) => lines.includes('trend menu: on this FAIL');
+const hasCeiling = (lines) => lines.some((l) => /^ceiling: reached — \d+ judged FAIL runs$/.test(l));
 
-test('class: the trend menu comes on the third FAIL, read before the commit (Step 1) or after it (Step 6)', () => {
-  // After the Step 5 commit of FAIL k, trend() sees k FAIL runs; Step 1 of FAIL k (before its commit) saw k - 1.
-  assert.ok(!hasMenu(trend(fails(1), PLAN)), 'FAIL 1, Step 6: no menu');
-  assert.ok(!hasMenu(trend(fails(2), PLAN)), 'FAIL 2, Step 6: no menu');
-  assert.ok(hasMenu(trend(fails(3), PLAN)), 'FAIL 3, Step 6: the menu');
-  assert.ok(!hasMenu(history(fails(1), PLAN)), 'FAIL 2, Step 1: no menu');
-  assert.ok(hasMenu(history(fails(2), PLAN)), 'FAIL 3, Step 1: the menu');
+test('class: ceiling: reached comes on the third judged FAIL', () => {
+  // 0.9.31 (I-7, intent D9): the ceiling replaces the trend menu. After the Step 5 commit of FAIL k, trend() sees k
+  // judged FAIL runs; history() (Step 1) prints no menu line at all — the stop there is collect's `verifier: not called`.
+  assert.ok(!hasCeiling(trend(fails(1), PLAN)), 'FAIL 1: no ceiling');
+  assert.ok(!hasCeiling(trend(fails(2), PLAN)), 'FAIL 2: no ceiling');
+  assert.ok(trend(fails(3), PLAN).includes('ceiling: reached — 3 judged FAIL runs'), 'FAIL 3: the ceiling');
+  for (const n of [1, 2, 3]) assert.ok(!history(fails(n), PLAN).some((l) => /menu|ceiling/.test(l)), `history after ${n}: no menu line`);
 });
 
-test('class: every text that reads trend menu: on this FAIL says the third FAIL', () => {
-  const read = (f) => readFileSync(join(ROOT, f), 'utf8');
-  assert.match(read('skills/verify/references/LOOP.md'), /menu from the third FAIL/);
-  assert.match(read('skills/verify/references/CHECKS.md'), /`trend menu: on this FAIL` — [^\n]*(\n[^\n-][^\n]*)*third FAIL/);
-  assert.doesNotMatch(read('skills/verify/references/LOOP.md') + read('skills/verify/SKILL.md'), /second FAIL/);
+test('class: every text that reads the ceiling says the third judged FAIL', () => {
+  const read = (f) => readFileSync(join(ROOT, f), 'utf8').replace(/\r\n/g, '\n');
+  assert.match(read('skills/verify/references/LOOP.md'), /## The ceiling — `ceiling: reached`\n\nFrom the third judged FAIL run/);
+  assert.match(read('skills/verify/references/CHECKS.md'), /`ceiling: reached — <f> judged FAIL runs` — [^\n]*(\n[^\n-][^\n]*)*third judged FAIL/);
+  const all = read('skills/verify/references/LOOP.md') + read('skills/verify/SKILL.md') + read('skills/verify/references/CHECKS.md');
+  assert.doesNotMatch(all, /second FAIL|trend menu: on this FAIL/);
 });

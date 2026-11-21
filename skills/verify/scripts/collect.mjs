@@ -197,11 +197,17 @@ export function parseRows(text) {
   return rows.map((r) => ({ ...r, evidence: r.evidence.filter(Boolean).join(' ') }));
 }
 
-// Carried rows keep the sha of the run that really judged them, and that run's evidence.
+// Carried rows keep the sha of the run that really judged them, and that run's evidence; a BLOCKED row waits for the human.
 function parseCarried(text) {
   return lines(section(text, 'Carried')).map((l) => l.replace(/^(?:[-*] )?(?:carried: )?/, ''))
-    .map((l) => l.match(/^(.+?) — ok — carried from verify ([0-9a-f]{7,40}) — (.*)$/))
-    .filter(Boolean).map((m) => ({ id: cleanId(m[1]), status: 'ok', sha: m[2].slice(0, 7), evidence: m[3] }));
+    .map((l) => l.match(/^(.+?) — (ok|advisory|accepted) — carried from verify ([0-9a-f]{7,40}) — (.*)$/)
+      || l.match(/^(.+?) — (BLOCKED) — waiting for you since verify ([0-9a-f]{7,40}) — (.*)$/))
+    .filter(Boolean).map((m) => ({ id: cleanId(m[1]), status: m[2], sha: m[3].slice(0, 7), evidence: m[4] }));
+}
+// The ` BLOCKED: …` tail of task N's `- [ ] N.` line in ## Tasks ('' when none).
+function blockedTail(text, n) {
+  const l = section(text, 'Tasks').split('\n').find((x) => new RegExp(`^- \\[[ xX]\\] ${n}\\.`).test(x)) || '';
+  return (l.match(/ BLOCKED: .*$/) || [''])[0].trimEnd();
 }
 
 // A path-like token names a file when it equals its path or is its suffix at a `/` or `.` boundary.
@@ -255,12 +261,12 @@ function fullReason(cwd, plan, base, prev, prevText, full) {
   const b = (prevText.match(/Base:\s*([0-9a-f]{7,40})/) || [])[1];
   if (!b || !base.startsWith(b)) return 'base moved';
   // a merge (main into the task branch) is no reason: rows naming a file it changed are judged, the rest are carried
-  // the strictness (Level) and Settings change how every row is judged; a plan or intent text edit judges only what it touched
-  const header = (s) => ['Level', 'Settings', 'Authority'].map((k) => (lines((s || '').replace(/\r\n/g, '\n')).find((l) => l.startsWith(`${k}:`)) || '')
-    .replace(/(Status:\s*)[^·\n]*/, '$1').trimEnd()).join('\n');
   if (header(showAt(cwd, prev, plan)) !== header(read(cwd, plan))) return 'plan header changed';
   return null;
 }
+// the strictness (Level) and Settings change how every row is judged; a plan or intent text edit judges only what it touched
+const header = (s) => ['Level', 'Settings', 'Authority'].map((k) => (lines((s || '').replace(/\r\n/g, '\n')).find((l) => l.startsWith(`${k}:`)) || '')
+  .replace(/(Status:\s*)[^·\n]*/, '$1').trimEnd()).join('\n');
 
 // --- Plan and intent edits between runs: which rows a text edit sends to judge, which rows left the plan ---
 
@@ -365,9 +371,16 @@ export function releaseRefs(text) {
 export function delta(cwd, plan, base, { full = false, checks = [], files = [] } = {}) {
   plan = plan.replace(/^(\.\/)+/, '');
   const vpath = `${folderOf(plan)}/verify.md`;
+  const rs = runs(cwd, plan);
+  const record = (parked) => [...acceptedLine(cwd, plan, rs, parked), lateRule(rs, full)];
+  const sweepLine = () => sweep(cwd, plan, { full }, rs);
+  // I-7: the third judged FAIL with open findings and no plan edit since — the verifier is not called
+  const ceil = ceiling(cwd, plan, { full }, rs);
+  if (ceil.reached) return [`verifier: not called — ceiling: ${ceil.f} judged FAIL runs, last ${ceil.last}; open: ${ceil.open}`,
+    MARKER, 'edited: none', 'late watch: none', ...record(), sweepLine()];
   // the last judged run, not the last commit: an accept commit is not a run (runs()), a run that stopped on a failed
   // build or test judged nothing
-  const last = runs(cwd, plan).filter((r) => r.judged).at(-1);
+  const last = rs.filter((r) => r.judged).at(-1);
   const prev = last?.sha;
   const prevText = last ? last.text : '';
   const untracked = prev ? lines(git(cwd, 'ls-files', '-o', '--exclude-standard')) : [];
@@ -397,7 +410,7 @@ export function delta(cwd, plan, base, { full = false, checks = [], files = [] }
   const intentText = read(cwd, ip);
   const left = prev ? [] : leftThePlan(planText, intentText);
   if (!prev) return [`delta: full — ${reason}`, 'judge: all rows (full run)', scope, refs, `left the plan: ${left.join(', ') || 'none'}`,
-    'carried ids: none', MARKER, 'edited: none', 'late watch: none', acceptedLine(cwd, plan)];
+    'carried ids: none', MARKER, 'edited: none', 'late watch: none', ...record(), 'waiting: none', sweepLine()];
 
   const sha = prev.slice(0, 7);
   const [prevPlan, prevIntent] = [showAt(cwd, prev, plan), showAt(cwd, prev, ip)];
@@ -405,7 +418,14 @@ export function delta(cwd, plan, base, { full = false, checks = [], files = [] }
   left.push(...edits.left);
   const rows = new Map();
   parseCarried(prevText).forEach((r) => rows.set(r.id, r));
-  parseRows(section(prevText, 'Report')).forEach((r) => rows.set(r.id, { ...r, sha }));
+  // Design §10 — parked rows: a past wrong / missing row the run routed to `Late: … (advisory)`, or a row id accepted
+  // after that run, is carried like `ok` while nothing touches it
+  const advisory = new Set((prevText.match(/^(?:[-*] )?Late: (.*)$/m)?.[1] || '').split(',').map((s) => s.trim())
+    .filter((s) => / \(advisory\)$/.test(s)).map((s) => cleanId(s.replace(/ \(advisory\)$/, ''))));
+  const acceptedNow = new Set(rs.rowAccepts.filter((a) => a.idx > last.idx).map((a) => a.id));
+  const park = (r) => (r.status === 'wrong' || r.status === 'missing')
+    ? (acceptedNow.has(r.id) ? { ...r, status: 'accepted' } : advisory.has(r.id) ? { ...r, status: 'advisory' } : r) : r;
+  parseRows(section(prevText, 'Report')).forEach((r) => rows.set(r.id, park({ ...r, sha })));
   // a changed Done means line sends every past `Done means …` row to judge
   if (edits.judge.has('Done means')) {
     const why = edits.judge.get('Done means');
@@ -425,11 +445,18 @@ export function delta(cwd, plan, base, { full = false, checks = [], files = [] }
   const [was, now] = [ids(prevPlan, prevIntent), ids(planText, intentText)];
   const gone = (id) => was.has(id) && !now.has(id);
   const carried = [], judge = [], quiet = new Set(); // quiet: past `ok`, files unchanged, not edited
+  // I-5: a BLOCKED row waits for the human — carried while its evidence cell (a row edit), the BLOCKED tail of its task
+  // line and its files are unchanged; the same rules as for `ok` send it back to judge
+  const sameTail = (id) => { const t = id.match(/^Task (\d+)$/); return !t || blockedTail(prevPlan, t[1]) === blockedTail(planText, t[1]); };
   for (const r of rows.values()) {
     if (left.includes(r.id) || gone(r.id)) continue;
     const touched = mentions(r.evidence, changed) || ownsAny(r.id, changed);
-    if (r.status === 'ok' && !touched && !edits.judge.has(r.id)) quiet.add(r.id);
-    if (reason || r.status !== 'ok' || touched || edits.judge.has(r.id) || (notRun && TESTY.test(r.evidence))
+    const parked = r.status === 'advisory' || r.status === 'accepted';
+    if ((r.status === 'ok' || parked) && !touched && !edits.judge.has(r.id)) quiet.add(r.id);
+    const waits = r.status === 'BLOCKED' && sameTail(r.id);
+    // a parked row's code did not change: the wrong-neighbour and not-run routes do not apply to it
+    if (parked) { if (reason || touched || edits.judge.has(r.id)) judge.push(r.id); else carried.push(r); continue; }
+    if (reason || (r.status !== 'ok' && !waits) || touched || edits.judge.has(r.id) || (notRun && TESTY.test(r.evidence))
       || mentions(r.evidence, wrongFiles) || ownsAny(r.id, wrongFiles)) judge.push(r.id);
     else carried.push(r);
   }
@@ -437,7 +464,7 @@ export function delta(cwd, plan, base, { full = false, checks = [], files = [] }
   const edited = `edited: ${[...edits.judge].map(([id, why]) => `${id} (${why})`).join(', ') || 'none'}`;
   const late = () => `late watch: ${judge.filter((id) => quiet.has(id)).join(', ') || 'none'}`;
   if (reason) return [`delta: full — ${reason}`, 'judge: all rows (full run)', scope, refs, `left the plan: ${left.join(', ') || 'none'}`,
-    'carried ids: none', MARKER, edited, late(), acceptedLine(cwd, plan)];
+    'carried ids: none', MARKER, edited, late(), ...record(), 'waiting: none', sweepLine()];
   // a row whose evidence cites a judged row ("see Row 13") is judged with it, along the chain
   const cites = (ev, id) => new RegExp(`(?<!\\w)${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\w)`).test(ev);
   for (let moved = true; moved;) {
@@ -446,7 +473,13 @@ export function delta(cwd, plan, base, { full = false, checks = [], files = [] }
       if (judge.some((id) => cites(carried[i].evidence, id))) { judge.push(carried[i].id); carried.splice(i, 1); moved = true; }
     }
   }
+  const waiting = carried.filter((r) => r.status === 'BLOCKED').map((r) => r.id).join(', ') || 'none';
+  // I-5, I-11 (Design §11): no row to judge and nothing changed — the verifier is not called, and the sweep does not
+  // run alone: it goes with the next judged run (after a code fix, or on --full); the carried lines still follow, and
+  // `open findings:` lists what the last judged run left open (its own ## Sweep included).
+  const stop = !judge.length && counted === 0;
   return [
+    ...(stop ? [`verifier: not called — nothing to judge since ${sha}; waiting for you: ${waiting}`] : []),
     `delta: since ${sha} — ${counted} files changed since the last verify${byMerge ? `; ${byMerge} more came in by merge (not counted)` : ''}`,
     `judge: ${judge.join(', ') || 'none'}`,
     scope,
@@ -456,10 +489,21 @@ export function delta(cwd, plan, base, { full = false, checks = [], files = [] }
     MARKER,
     edited,
     late(),
-    acceptedLine(cwd, plan),
-    ...carried.map((r) => `carried: ${r.id} — ok — carried from verify ${r.sha} — ${r.evidence}`),
+    ...record(new Set(carried.filter((r) => r.status === 'accepted').map((r) => r.id))),
+    `waiting: ${waiting}`,
+    ...(stop ? [`open findings: ${openFindings(last).join('; ') || 'none'}`] : []),
+    sweepLine(),
+    ...carried.map((r) => r.status === 'BLOCKED' ? `carried: ${r.id} — BLOCKED — waiting for you since verify ${r.sha} — ${r.evidence}`
+      : `carried: ${r.id} — ${r.status} — carried from verify ${r.sha} — ${r.evidence}`),
   ];
 }
+
+// Findings of a judged run that are not plan rows (I-5 stop, Design §11): its keys (its own `review …` included)
+// without row ids, plus the failed gates anywhere in the run's text, ## Sweep included (they have no key) — each once.
+// A gate line starts its line: a row's evidence that only quotes `Security gate: fail` is not a failed gate.
+export const gateFails = (text) => ['Settings: violated', 'Architecture gate: fail', 'Security gate: fail']
+  .filter((g) => new RegExp(`^(?:[-*] )?${g}`, 'm').test(text || ''));
+const openFindings = (r) => [...[...r.keys].filter((k) => !ROW_ID.test(k)), ...gateFails(r.text)];
 
 // --- Run history: findings per committed verify.md, what is new and closed, the cost of each cycle ---
 
@@ -467,12 +511,16 @@ export function delta(cwd, plan, base, { full = false, checks = [], files = [] }
 // hand-written report are skipped first).
 const judged = (text) => !/^not judged\b/.test(lines(section(text, 'Report')).filter((l) => l.trim() && !/^\s*```/.test(l))[0] || '');
 
-// `Accepted violation by <name> <date>: rule <source> — <file:line>; …` (verify, rules menu) → keys `rule <source> <file:line>`.
-export function parseAccepted(text) {
+// `Accepted violation by <name> <date>: rule <source> — <file:line>; …` (verify, rules menu) → keys `rule <source> <file:line>`;
+// `Accepted finding by <name> <date>: <key>` (Decide at the ceiling, ACCEPT.md) → `<key>` as is.
+const ACC_FINDING = /^Accepted finding by .*? \d{4}-\d\d-\d\d: (.+?)\s*$/;
+export function parseAccepted(text, { findingsOnly = false } = {}) {
   const keys = new Set();
   for (const l of lines((text || '').replace(/\r\n/g, '\n'))) {
-    const m = l.match(/^Accepted violation by .*?: rule (\S+) — (.*)$/);
+    const m = !findingsOnly && l.match(/^Accepted violation by .*?: rule (\S+) — (.*)$/);
     if (m) places(m[2]).forEach((fl) => keys.add(`rule ${m[1].replace(/`/g, '')} ${fl}`));
+    const f = l.match(ACC_FINDING);
+    if (f) keys.add(f[1]);
   }
   return keys;
 }
@@ -509,11 +557,25 @@ export function findings(text, accepted = new Set()) {
     const un = l.match(/^Unrequested: (.*)$/);
     if (un && !/^none\b/i.test(un[1].trim())) un[1].split(';').map((s) => s.trim()).filter(Boolean).forEach((s) => keys.add(`Unrequested: ${s}`));
   }
-  return new Set([...keys].map((k) => k.replace(/`/g, ''))); // a run with backticked paths and one without give one key
+  // I-1, I-2: an open critical review item of the run's ## Sweep is a finding; suggestions are not
+  for (const l of lines(section(text, 'Sweep'))) {
+    const m = l.replace(/^(?:[-*] )?/, '').match(SWEEP_CRITICAL);
+    if (m) keys.add(`review ${m[2]}`);
+  }
+  // I-3: a late row the run routed to Advisory (`Late: Task 3 (advisory), Row 5 (critical)`) is not a finding
+  for (const l of lines(text)) {
+    const m = l.replace(/^(?:[-*] )?/, '').match(/^Late: (.*)$/);
+    if (m) for (const a of m[1].matchAll(/(?:^|,)\s*([^,]+?) \(advisory\)/g)) keys.delete(cleanId(a[1]));
+  }
+  // a run with backticked paths and one without give one key
+  const out = new Set([...keys].map((k) => k.replace(/`/g, '')));
+  for (const k of accepted) out.delete(k.replace(/`/g, ''));
+  return out;
 }
 
-// A commit that only adds `Accepted unproven by …` / `Accepted violation by …` (verify accept) records a decision, not a run.
-const unaccepted = (t) => t.replace(/^Accepted (?:unproven|violation) by .*\r?\n?/gm, '').trimEnd();
+// A commit that only adds `Accepted unproven / violation / finding by …` (verify accept, Decide at the ceiling) records a
+// decision, not a run.
+const unaccepted = (t) => t.replace(/^Accepted (?:unproven|violation|finding) by .*\r?\n?/gm, '').trimEnd();
 
 // Runs of the task's verify.md, oldest first; `.accepted` = accepted violations from every commit (accept commits too).
 function runs(cwd, plan) {
@@ -522,31 +584,92 @@ function runs(cwd, plan) {
     const [sha, date] = l.split(' ');
     return { sha, date, text: showAt(cwd, sha, vpath) || '' };
   });
-  const accepted = new Set(all.flatMap((c) => [...parseAccepted(c.text)]));
+  // Design §10: an accepted row id covers only the runs up to its accept commit; a later run that judges the row
+  // again makes it a finding again. Other keys (rule places, review, Unrequested, Decision) hold for every run.
+  const accepted = new Set(all.flatMap((c) => [...parseAccepted(c.text)]).filter((k) => !ROW_ID.test(k)));
+  const rowAccepts = all.flatMap((c, idx) => [...parseAccepted(c.text, { findingsOnly: true })].filter((k) => ROW_ID.test(k)).map((id) => ({ id, idx })));
   const out = [];
-  for (const { sha, date, text } of all) {
-    if (out.length && unaccepted(out.at(-1).text) === unaccepted(text)) continue;
+  all.forEach(({ sha, date, text }, idx) => {
+    if (out.length && unaccepted(out.at(-1).text) === unaccepted(text)) return;
     const cost = section(text, 'Checks').match(/cost: verify\+fix \$(\d+(?:\.\d+)?)/);
-    out.push({ sha, date, text, verdict: (text.match(/Verdict:\s*(PASS-UNPROVEN|PASS|FAIL)/) || [])[1] || 'n/a',
-      keys: findings(text, accepted), cost: cost ? Number(cost[1]) : null, judged: judged(text) });
-  }
+    const acc = new Set([...accepted, ...rowAccepts.filter((a) => a.idx >= idx).map((a) => a.id)]);
+    out.push({ sha, date, text, idx, verdict: (text.match(/Verdict:\s*(PASS-UNPROVEN|PASS|FAIL)/) || [])[1] || 'n/a',
+      keys: findings(text, acc), cost: cost ? Number(cost[1]) : null, judged: judged(text) });
+  });
+  out.rowAccepts = rowAccepts;
   out.accepted = accepted;
+  out.acceptedFindings = new Set(all.flatMap((c) => [...parseAccepted(c.text, { findingsOnly: true })]));
   return out;
 }
 
-export function acceptedLine(cwd, plan) {
+// `accepted findings:` lists an accepted row id only while that row is carried as `accepted` in this run (`parked`),
+// so Step 4 and fix, which skip the keys listed there, never skip a row the verifier judged again.
+export function acceptedLine(cwd, plan, rs = runs(cwd, plan), parked = new Set()) {
   const by = new Map();
-  for (const k of runs(cwd, plan).accepted) {
-    const [, source, fl] = k.match(/^rule (\S+) (\S+)$/);
-    by.set(source, [...(by.get(source) || []), fl]);
+  for (const k of rs.accepted) {
+    const m = !rs.acceptedFindings.has(k) && k.match(/^rule (\S+) (\S+)$/);
+    if (m) by.set(m[1], [...(by.get(m[1]) || []), m[2]]);
   }
-  return `accepted violations: ${[...by].map(([s, fls]) => `rule ${tick(s)} — ${fls.map(tick).join('; ')}`).join('; ') || 'none'}`;
+  return [`accepted violations: ${[...by].map(([s, fls]) => `rule ${tick(s)} — ${fls.map(tick).join('; ')}`).join('; ') || 'none'}`,
+    `accepted findings: ${[...rs.acceptedFindings].filter((k) => !ROW_ID.test(k) || parked.has(k)).join('; ') || 'none'}`];
+}
+
+// --- The sweep (review + project rules + security once, L only): is it due ---
+
+const SWEEP_CRITICAL = /^review (\d+) — critical — (\S+?)(?: — |\s*$)/;
+const hasSweep = (text) => /^## Sweep\b/m.test(text || '') || /^(?:[-*] )?sweep: /m.test(section(text, 'Checks'));
+const sweepHead = (text) => (lines(section(text, 'Sweep'))[0] || '').trim();
+
+// I-1, I-6, I-8, I-10, I-11, I-12, I-14 — the rule of Design §1, step by step.
+export function sweep(cwd, plan, { full = false } = {}, rs = runs(cwd, plan)) {
+  plan = plan.replace(/^(\.\/)+/, '');
+  const planText = read(cwd, plan);
+  const level = (planText.match(/^Level:\s*(\w+)/m) || [])[1] || 'n/a';
+  if (level !== 'L') return `sweep: n/a — level ${level}`;
+  if (full) return 'sweep: due — --full';
+  if (!rs.length) return 'sweep: due — first verify';
+  // a plan verified before the sweep existed: its earliest run has neither ## Sweep nor a `sweep:` line in ## Checks
+  if (!hasSweep(rs[0].text)) return 'sweep: n/a — runs before the sweep';
+  const done = rs.filter((r) => /^Sweep: done\b/.test(sweepHead(r.text))).at(-1);
+  if (!done) return `sweep: due — not done yet (${sweepHead(rs.at(-1).text) || 'no record'})`;
+  const sha = done.sha.slice(0, 7);
+  const before = taskBlocks(showAt(cwd, done.sha, plan) || '');
+  const added = [...taskBlocks(planText).keys()].filter((n) => !before.has(n));
+  if (!added.length) return `sweep: done in ${sha}`;
+  const fm = taskFilesOfPlan(planText);
+  const fs = [...new Set(added.flatMap((n) => fm[n] || []))];
+  return `sweep: due — tasks added since ${sha}: ${added.map((n) => `Task ${n}`).join(', ')} — files: ${fs.join(', ') || 'none'}`;
+}
+
+// I-3: after the first judged PASS / PASS-UNPROVEN a late non-critical row goes to Advisory; --full turns it off.
+function lateRule(rs, full) {
+  if (full) return 'late rule: off — --full';
+  const p = rs.find((r) => r.judged && /^PASS/.test(r.verdict));
+  return p ? `late rule: on — first PASS in ${p.sha.slice(0, 7)}` : 'late rule: off — no PASS yet';
+}
+
+// I-7: the ceiling — 3+ judged FAIL runs, the last judged run is a FAIL with open findings, and neither the plan (tasks,
+// rows, Done means, I-n, header) nor --full changed anything since. Build-failed runs and accept commits are not runs.
+export function ceiling(cwd, plan, { full = false } = {}, rs = runs(cwd, plan)) {
+  plan = plan.replace(/^(\.\/)+/, '');
+  const judgedRuns = rs.filter((r) => r.judged);
+  const f = judgedRuns.filter((r) => r.verdict === 'FAIL').length;
+  const last = judgedRuns.at(-1);
+  // failed gates anywhere in the run's text (## Sweep included) count once each
+  const open = last ? last.keys.size + gateFails(last.text).length : 0;
+  let reached = !full && f >= 3 && last?.verdict === 'FAIL' && open > 0;
+  if (reached) {
+    const [planText, ip] = [read(cwd, plan), intentPath(cwd, plan)];
+    const prevPlan = showAt(cwd, last.sha, plan);
+    if (planEdits(prevPlan, planText, showAt(cwd, last.sha, ip), read(cwd, ip)).judge.size || header(prevPlan) !== header(planText)) reached = false;
+  }
+  return { reached, f, last: last?.sha.slice(0, 7), open };
 }
 
 // A FAIL that rests only on unaccepted Rules gate lines: no wrong / missing / Decision / Unrequested / check finding,
 // no Settings, Architecture or Security gate failure.
 const rulesOnly = (r) => r.verdict === 'FAIL' && r.keys.size > 0 && [...r.keys].every((k) => k.startsWith('rule '))
-  && !/Settings: violated|Architecture gate: fail|Security gate: fail/.test(r.text);
+  && !gateFails(r.text).length;
 
 function story(cwd, plan) {
   const rs = runs(cwd, plan);
@@ -563,7 +686,6 @@ function story(cwd, plan) {
     const late = parseRows(section(r.text, 'Report')).filter((x) => (x.status === 'wrong' || x.status === 'missing') && watch.includes(x.id)).length;
     out.push(`run ${i + 1} · ${r.date} · ${r.verdict} · open ${r.open} · new ${r.new} · closed ${r.closed} · cycle cost ${cost}${late ? ` · late ${late}` : ''}`);
   });
-  if (rs.filter((r) => r.verdict === 'FAIL').length >= 2) out.push('trend menu: on this FAIL');
   return { rs, out };
 }
 
@@ -573,10 +695,10 @@ export const history = (cwd, plan) => story(cwd, plan).out;
 export function trend(cwd, plan) {
   const { rs, out } = story(cwd, plan);
   const [p, c] = rs.slice(-2);
-  // story() counts past FAILs for Step 1 (before the commit); here this run is committed too, so the third FAIL is >= 3.
-  const fails = rs.filter((r) => r.verdict === 'FAIL').length;
-  const menu = p && c && rulesOnly(p) && rulesOnly(c) ? ['rules menu: on this FAIL'] : fails >= 3 ? ['trend menu: on this FAIL'] : [];
-  return [...out.filter((l) => l !== 'trend menu: on this FAIL'), ...menu, `trend: ${p && c && c.open < p.open && c.new === 0 ? 'converging' : 'not converging'}`];
+  // this run is committed: the ceiling (third judged FAIL) is checked first and replaces the rules menu
+  const ceil = ceiling(cwd, plan, {}, rs);
+  const menu = ceil.reached ? [`ceiling: reached — ${ceil.f} judged FAIL runs`] : p && c && rulesOnly(p) && rulesOnly(c) ? ['rules menu: on this FAIL'] : [];
+  return [...out, ...menu,`trend: ${p && c && c.open < p.open && c.new === 0 ? 'converging' : 'not converging'}`];
 }
 
 export function collect(cwd, plan, given, { full = false } = {}) {
@@ -596,7 +718,8 @@ export function collect(cwd, plan, given, { full = false } = {}) {
   out.push(...architecture(cwd, files));
   // a failed build or test stops the run: nothing is judged on code that does not build or pass its tests
   const failed = checkLines.filter((l) => /^(build|test): .* → fail/.test(l.split('\n')[0])).map((l) => l.split(':')[0]);
-  if (failed.length) out.push(`verifier: not called — ${failed.join(', ')} failed`, MARKER);
+  // I-10: the sweep is not run on a failed build or test, and stays due
+  if (failed.length) out.push(`verifier: not called — ${failed.join(', ')} failed`, MARKER, sweep(cwd, plan, { full }));
   else out.push(...delta(cwd, plan, base, { full, checks: checkLines, files }));
   out.push(...history(cwd, plan));
   return out.join('\n');

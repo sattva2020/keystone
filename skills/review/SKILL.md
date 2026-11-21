@@ -87,6 +87,16 @@ A branch literally named like a PR number is read as a PR — an accepted compro
 characters that `git rev-parse --verify <arg>^{commit}` resolves locally are an abbreviated commit hash → ref (say so
 in one line); `#N` and URLs stay PRs. Empty diff → `Nothing to review.`
 
+## Called from /keystone:verify (sweep)
+
+On an L plan, `/keystone:verify` runs this review once, as a finder agent, beside its verifier (its
+`references/SWEEP.md`). The prompt names a base (and maybe `-- <files>`). Then: do Step 0, then Step 2 and Step 3 over
+`git diff <base>` (committed + uncommitted) — with `-- <files>` only over those files. Return only the
+`### Item N (section: critical|suggestion)` blocks of Step 4 (behavioural impact, `file:line`, Repro, fix, severity,
+the confidence marker) and the Context gates lines. Do not run the validator (verify runs Step 4 from its main context),
+write no Step 5 report, show no menu and no `Next:`, start no agents, write no files. The verifier's output is never
+passed to you, and yours never reaches it. The rest of this skill is unchanged.
+
 ## Step R — Rules check without a plan (`/keystone:review rules [ref]`)
 
 For an S change, which has no plan and so no verify: only the project rules, nothing else. Read-only like the rest.

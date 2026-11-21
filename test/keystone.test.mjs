@@ -30,7 +30,7 @@ test('0.9.31: no skill or agent description has <angle-bracket> text — claude.
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.39');
+  assert.equal(p.version, '0.9.40');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -752,18 +752,19 @@ test('0.9.26: verifier judges only judge/uncarried rows, fixed ids, Advisory and
   assert.ok(at('Decisions:') > 0 && at('Decisions:') < at('Original goal:') && at('Original goal:') < at('<Task n'), 'Decisions → Original goal → rows');
 });
 
-test('0.9.26: verify carries rows into ## Carried, records the cost, keeps Advisory/Minor out of the verdict, trend menu', () => {
+test('0.9.26: verify carries rows into ## Carried, records the cost, keeps Advisory/Minor out of the verdict, ceiling (0.9.31)', () => {
   has('skills/verify/SKILL.md', 'above the record-only marker', '0 files changed', 'recomputed with carried rows', 'before asking',
     'Keystone cost meter', 'cost: verify+fix', 'counts as 0.00', '--history', '--full', '## Carried', 'Advisory', 'Minor',
-    'Carried:', 'trend menu: on this FAIL', 'Strictness: **L is strict by default**');
-  has('skills/verify/references/LOOP.md', 'Stop and decide', 'cycle cost', '(this run not included)', 'Keystone cost meter', 'cost: verify+fix n/a');
+    'Carried:', 'ceiling: reached', 'Strictness: **L is strict by default**');
+  has('skills/verify/references/LOOP.md', 'Decide each open finding', 'cycle cost', '(this run not included)', 'Keystone cost meter', 'cost: verify+fix n/a');
   has('skills/verify/references/AFTER-CHOICE.md', 'Prove now: <check>', '**Accept is never first**', 'read before the Step 6 menu');
-  has('skills/verify/references/CHECKS.md', 'delta:', 'carried:', 'judge:', 'rules scope:', 'release refs:', '## Debt', 'history:', 'trend menu:', 'cost:');
+  has('skills/verify/references/CHECKS.md', 'delta:', 'carried:', 'judge:', 'rules scope:', 'release refs:', '## Debt', 'history:', 'ceiling: reached', 'cost:');
   assert.match(front('skills/verify/SKILL.md'), /argument-hint:.*--full/);
 });
 
-test('0.9.26: the trend menu routes — fix every finding in a clean session, stop and decide asks twice before abandoned', () => {
-  has('skills/verify/references/AFTER-CHOICE.md', 'Stop and decide', '/keystone:intent', 'Mark the plan abandoned?', 'Next: /keystone:fix verify');
+test('0.9.31: the ceiling menu routes — decide each open finding or back to the plan (replaces the 0.9.26 trend menu, intent D9)', () => {
+  has('skills/verify/references/AFTER-CHOICE.md', 'Decide each open finding', 'Decide at the ceiling', 'Back to the plan',
+    'Next: /keystone:plan <plan>', 'Next: /keystone:fix verify');
 });
 
 test('0.9.26: fix verify leaves Advisory, Minor and carried rows alone', () => {
@@ -793,7 +794,8 @@ test('0.9.28 I-5/I-6/I-17/I-20: verify stops without a judge, marks late finding
     assert.ok(v.includes(s), s);
   assert.ok(!v.includes('every row it covers is at best'));
   const step6 = v.split('## Step 6')[1];
-  assert.ok(step6.indexOf('rules menu: on this FAIL') < step6.indexOf('trend menu: on this FAIL'), 'rules menu is checked first');
+  assert.ok(step6.includes('ceiling: reached') && step6.indexOf('ceiling: reached') < step6.indexOf('rules menu: on this FAIL'),
+    'the ceiling is checked before the rules menu (0.9.31)');
   const loop = flat('skills/verify/references/LOOP.md');
   for (const s of ['not judged', 'verifier not called', 'Rules-only FAIL twice', 'Fix the whole class, then one last verify',
     'Accept the violation consciously', 'Late', '/keystone:fix verify']) assert.ok(loop.includes(s), s);

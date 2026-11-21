@@ -54,7 +54,9 @@ test('review 3: the unchanged-code rule reads the verdict of the run delta names
   const loop = readFileSync(join(ROOT, 'skills/verify/references/LOOP.md'), 'utf8');
   assert.doesNotMatch(skill, /last verdict FAIL and `delta: since/);
   assert.match(skill, /0 files changed`, run <sha7> FAIL/);
-  const sec = loop.slice(loop.indexOf('## Code unchanged since the last FAIL'), loop.indexOf('## Trend'));
+  const start = loop.indexOf('## Code unchanged since the last FAIL'), end = loop.indexOf('## The ceiling');
+  assert.ok(start >= 0 && end > start, 'LOOP.md has the section and the heading after it');
+  const sec = loop.slice(start, end);
   assert.match(sec, /run `<sha7>`/);
   assert.match(sec, /`not judged` stop\s+run/);
 });

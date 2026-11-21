@@ -115,19 +115,26 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
 
 ### Verify findings mode — `/keystone:fix verify`
 
-`verify critical` narrows the list to the critical findings: every `wrong` line and an Architecture or Security gate
-`fail`. The rest (rule-only findings, `Settings: violated`) are listed as `left open` in the report — they keep the
+**At the ceiling — first.** Run `node ${CLAUDE_SKILL_DIR}/../verify/scripts/collect.mjs <plan> --history`. A
+`ceiling: reached` line → fix nothing: say that the verifier will not run for this plan again until every open finding
+is decided (accept / debt / back to the plan), and make the Next `/keystone:verify <plan>` (it shows the ceiling menu).
+
+`verify critical` narrows the list to the critical findings: every `wrong` line, every open `review <n> — critical`
+line of `## Sweep`, and an Architecture or Security gate `fail`. The rest (rule-only findings, `Settings: violated`) are listed as `left open` in the report — they keep the
 verdict FAIL until fixed or until their rule changes.
 
 Read `verify.md` next to the active plan. Its verdict is not FAIL → say so and STOP. `not proven`, `BLOCKED` and
-`Unconfirmed` items, `Advisory:` and `Minor:` lines and the `## Carried` rows are not defects — leave them out of the
-list and do not fix them. Otherwise fix all of them in one pass inside the active plan — every finding and every place
+`Unconfirmed` items, `Advisory:` and `Minor:` lines (the `Advisory: review … — suggestion` lines of `## Sweep` too),
+the ids on `Late: … (advisory)`, the keys under `accepted findings:` in `## Checks` (a row id there only while carried as `accepted`; judged again in `## Report` it is a defect) and the `## Carried` rows are not
+defects — leave them out of the list and do not fix them. Otherwise fix all of them in one pass inside the active plan — every finding and every place
 of its class: no new plan, no mode question. The task files are the `files:` list in `## Checks` of that `verify.md`
 plus the files changed since its commit. In this order:
 
 1. **The list.** Each `rule … — fail` line with all its `file:line`, the places after `sites to cover:` and its
    `Class:` — minus the places under `accepted violations:` in `## Checks`; every `wrong` line with its `Class:` and
-   `Repro:`; every `Decision:` line; every `Unrequested:` item; `Settings: violated`; an `Architecture gate: fail`.
+   `Repro:`; every `Decision:` line; every `Unrequested:` item; `Settings: violated`; an `Architecture gate: fail`;
+   from `## Sweep` of that `verify.md`, each `review <n> — critical` line with its `Repro:` and `Fix:`, and the security
+   findings behind its `Security gate: fail`.
    An `Unrequested:` item is fixed by tracing it: a change inside the scope of an existing task (the same class of
    fix, a neighbour its rule asked to walk) → write it into that task's text in the plan (a drift edit, not only a
    note); a change no task covers → revert it; a change worth keeping that no task covers → new work (item 2). A `## Report` that is

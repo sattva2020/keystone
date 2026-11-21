@@ -497,7 +497,7 @@ test('collect: history counts open, new and closed findings and the cost of each
   assert.match(h[1], /^run 1 · \d{4}-\d\d-\d\d · FAIL · open 3 · new 3 · closed 0 · cycle cost n\/a$/);
   assert.match(h[2], /^run 2 · \d{4}-\d\d-\d\d · FAIL · open 3 · new 1 · closed 1 · cycle cost \$0\.30$/);
   assert.match(h[3], /^run 3 · \d{4}-\d\d-\d\d · PASS-UNPROVEN · open 1 · new 0 · closed 2 · cycle cost \$0\.40$/);
-  assert.equal(h.at(-1), 'trend menu: on this FAIL');
+  assert.match(h.at(-1), /^run 3 /, 'history() prints no menu line (0.9.31: the ceiling is in --history only)');
   const cli = spawnSync(process.execPath, [SCRIPT, PLAN, '--history'], { cwd: root, encoding: 'utf8' });
   assert.match(cli.stdout, /^trend: converging$/m);
   const out = collect(root, PLAN).split('\n');
@@ -881,7 +881,13 @@ test('0.9.28 history: an accept-violation commit is not a run; accepted places a
 });
 
 test('0.9.28 trend: two rules-only FAIL runs print rules menu: on this FAIL; history does not', () => {
-  const { root, base } = edited(taskPlan(), 'I-1 a\n', REPORT);
+  // 0.9.31: the first run is PASS-UNPROVEN, so only two judged FAILs — under the ceiling, the rules menu stays
+  const root = repo();
+  commit(root, { 'README.md': 'x', [INTENT]: 'I-1 a\n' }, 'start');
+  commit(root, { [PLAN]: taskPlan() }, 'docs(plan)');
+  commit(root, { 'src/a.js': '1', 'src/b.js': '1' }, 'feat: a b');
+  const base = findBase(root, PLAN).base;
+  commit(root, { [VERIFY]: vmd(base, '- Task 1 — not proven — a\n', { verdict: 'PASS-UNPROVEN' }) }, 'docs: verify 1');
   commit(root, { [VERIFY]: vmd(base, 'rule .claude/rules/x.md:3 — fail — src/a.js:1\n') }, 'verify 2');
   commit(root, { [VERIFY]: vmd(base, 'rule .claude/rules/x.md:3 — fail — src/b.js:2\n') }, 'verify 3');
   assert.ok(trend(root, PLAN).includes('rules menu: on this FAIL'));
@@ -893,4 +899,9 @@ test('0.9.28 trend: two rules-only FAIL runs print rules menu: on this FAIL; his
     commit(r.root, { [VERIFY]: vmd(r.base, `rule .claude/rules/x.md:3 — fail — src/b.js:2\n${extra}`) }, 'verify 3');
     assert.ok(!trend(r.root, PLAN).includes('rules menu: on this FAIL'), extra);
   }
+  // 0.9.31 (I-7): three rules-only judged FAILs reach the ceiling, which replaces the rules menu
+  commit(root, { [VERIFY]: vmd(base, 'rule .claude/rules/x.md:3 — fail — src/c.js:3\n') }, 'verify 4');
+  const t = trend(root, PLAN);
+  assert.ok(t.includes('ceiling: reached — 3 judged FAIL runs'), t.join('\n'));
+  assert.ok(!t.includes('rules menu: on this FAIL'));
 });

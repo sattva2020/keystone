@@ -13,7 +13,8 @@ Recommended first and marked `(Recommended)`:
   `Fix critical only — wrong behaviour and security / architecture gate fails` (only when there are non-critical
   findings too) · `Fix every finding in a clean session — /keystone:fix verify` (Recommended when the context is
   large or the findings are many) · `Finish an unfinished task — /keystone:implement <plan>` (only when a row is
-  `missing`) · `Stop here`. With `rules menu: on this FAIL` or `trend menu: on this FAIL` the menu of `LOOP.md` replaces this one.
+  `missing`) · `Stop here`. With `ceiling: reached` (checked first) or `rules menu: on this FAIL` the menu of `LOOP.md`
+  replaces this one.
 - **PASS-UNPROVEN** — one `Prove now: <check>` option for each group of open rows that can be proven before
   production (a test to run, a read-only query against the database, `/keystone:security <plan>` for a security
   row, a local run) · `Accept as unproven (<n> rows: <short list>)` · on L `Run /keystone:review first` ·
@@ -23,6 +24,11 @@ Recommended first and marked `(Recommended)`:
   goes first) · `Stop here`.
 - **PASS** without release steps — `Review the diff — /keystone:review` (Recommended on L) · `Security check —
   /keystone:security <plan>` (when the diff touches auth, data or user input) · `Push` · `Stop here`.
+
+**After the sweep — no review and security again (I-4).** When the plan had its sweep (Step 1 `sweep: done in …`, or
+`Sweep: done` in this run), the menus above lose `Review the diff` and `Security check` (PASS), `Run /keystone:review
+first` (PASS-UNPROVEN, PASS with `## Release`), and `Next:` carries no `/keystone:review`. Say in one line that a manual
+`/keystone:review` or `/keystone:security` stays possible. M plans and plans with runs before the sweep keep the menus as they are.
 
 **Context drift (a second question, only when found).** Verify never edits context files. Compare the diff with
 `docs/architecture.md`, `CLAUDE.md` / `.claude/CLAUDE.md` and `.claude/rules/**`: a new module, top-level folder or
@@ -50,15 +56,13 @@ After the choice:
 - `Review`, `Security check` → run that skill now the same way (read its SKILL.md and follow it).
 - `Fix … in a clean session`, `Finish an unfinished task`, `Push` → not run here: the command becomes the `Next:`
   line (a clean session, or an irreversible step the human starts).
-- `Fix every finding — /keystone:fix verify` (the trend menu of `LOOP.md`) → the same as `Fix … in a clean session`:
-  `Next: /keystone:fix verify`.
+- `Decide each open finding` (the ceiling menu of `LOOP.md`) → go to **Decide at the ceiling** of `ACCEPT.md`; the
+  click is the confirmation to start, each finding is then asked there.
+- `Back to the plan — /keystone:plan <plan>` (the ceiling menu) → nothing is written: `Next: /keystone:plan <plan>`;
+  verify edits neither the plan nor the intent.
 - `Fix the whole class, then one last verify — /keystone:fix verify` (the rules menu of `LOOP.md`) → the same, in a
   clean session: `Next: /keystone:fix verify`.
 - `Accept the violation consciously` (the rules menu) → the click is the confirmation: go to **Accept a rule
   violation** of `ACCEPT.md` without asking again.
-- `Stop and decide` → nothing runs and verify edits neither the intent nor the plan: `Next: /keystone:intent <intent
-  path>` to narrow the intent. `Status: abandoned` goes into the plan header only after a second explicit yes —
-  AskUserQuestion `Mark the plan abandoned?` with `Yes` / `No`; `No` leaves the plan as it is. After `abandoned` →
-  `release --any` (**Owner record** of `ACCEPT.md`).
 - AskUserQuestion unavailable (`claude -p`, CI) → no menu: print the options as a numbered list and put the first one
   in `Next:`.

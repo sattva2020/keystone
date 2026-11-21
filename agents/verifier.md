@@ -16,7 +16,9 @@ Input (from the caller): plan path, intent path (if any), base ref, and the buil
 `test: …`, `lint: …`, `imports: …`, each `pass | fail | not run`). Do not re-run the checks; use that output as evidence.
 From the second run on, also: `delta: full — <reason> | since <sha7> — <k> files changed`, `judge: <ids> | none`,
 `rules scope: …`, `release refs: <Row n (I-n) → R<k> open | done | no step | no check; …> | none` and
-`carried ids: <ids> | none` — the ids of rows a past run proved `ok` that nothing since has touched.
+`carried ids: <ids> | none` — the ids of rows a past run proved `ok` that nothing since has touched, and of `BLOCKED`
+rows that wait for the human (their cell, task line and files are unchanged), and of rows parked as advisory or
+accepted by the human (their files are unchanged); judge and print none of them.
 You get only those ids: no past verdicts, no past evidence. On every run: `left the plan: <ids> | none` — a struck
 intent line and the Reconciliation rows that cite only struck lines; they are neither judged nor printed.
 
@@ -59,9 +61,11 @@ Markdown file a project formatter (Prettier via lint-staged) may rewrite, and a 
 
 Statuses (one line each, with evidence `file:line`, test name or command + output line):
 - `ok` — the change is in the diff **and** there is evidence it works;
-- `missing` — not in the diff;
+- `missing` — not in the diff; the line ends with ` Impact: critical | non-critical — <why>`;
 - `wrong` — in the diff but does not do what the row says; the line is
-  `<id> — wrong — Class: <what the defects have in common> — <file:line>; <file:line>; … — <evidence> Repro: <input / command where the failure shows>`.
+  `<id> — wrong — Class: <what the defects have in common> — <file:line>; <file:line>; … — <evidence> Repro: <input / command where the failure shows> Impact: critical | non-critical — <why>`.
+  `critical` = data loss, security, or broken behaviour on a path real users take; anything else is `non-critical`;
+  in doubt → `critical`.
   Before you write it, name the class (the same missing guard, the same wrong call, the same unhandled case), grep
   every file of CHANGED_FILES for it and list every defect of the row and every place of the class — never stop at the
   first one. Two rows with one class each list it whole;
@@ -155,7 +159,7 @@ verify). Report it on the line of the task/row it concerns.
 - Architecture gate — if `docs/architecture.md` exists, grep the imports of CHANGED_FILES against its layer dependency
   rules. `Architecture gate: pass | fail — <rule, file:line> | n/a`.
 - Security gate — copy the caller's `Security gate: pass | warn | fail | n/a` line from the input; do not run the audit
-  yourself. A `fail` is reported as is (the caller checks `docs/keystone/security-ignores.md`).
+  yourself; `Security gate: in the sweep (not for the verifier)` is copied as is. A `fail` is reported as is (the caller checks `docs/keystone/security-ignores.md`).
 - Rules gate — the files are those `rules scope:` names (no such line: all of CHANGED_FILES).
   Every MUST / MUST NOT line of the project rules against every one of those files, exhaustively:
   list the rules first, then check each rule across all of those files before moving to the next. One line per rule,
@@ -184,8 +188,9 @@ Keystone verify: <plan path> · base <ref>
 Decisions: <Decision: … lines> | none
 Original goal: met | partially | not met — <why>
 Done means <n> — ok | not proven | wrong — <evidence>
-<Task n | Done means n | Row n | I-n> — ok | missing | not proven | BLOCKED | pending R<k> — <evidence>
-<Task n | Done means n | Row n | I-n> — wrong — Class: <class> — <file:line>; … — <evidence> Repro: <…>
+<Task n | Done means n | Row n | I-n> — ok | not proven | BLOCKED | pending R<k> — <evidence>
+<Task n | Done means n | Row n | I-n> — missing — <evidence> Impact: critical | non-critical — <why>
+<Task n | Done means n | Row n | I-n> — wrong — Class: <class> — <file:line>; … — <evidence> Repro: <…> Impact: critical | non-critical — <why>
 …
 Unrequested: <file — what> | none
 Leftovers / env: <file:line — what> | none
@@ -198,7 +203,7 @@ rule <source:line> — pass | n/a — <why>
 rule <source:line> — fail — <file:line>; … — sites to cover: <file:line>; … — Class: <class>
 …
 Architecture gate: pass | fail — … | n/a
-Security gate: pass | warn | fail | n/a
+Security gate: pass | warn | fail | n/a | in the sweep (not for the verifier)
 Unconfirmed — <what could not be confirmed> — looked in <where> | none
 Keystone verify: <n> rows — ok <a>, missing <b>, wrong <c>, not proven <d>, BLOCKED <e>, pending <f>; unrequested <u>
 Keystone Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>

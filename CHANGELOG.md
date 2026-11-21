@@ -5,6 +5,35 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.40] — 2026-11-21
+
+### Changed
+- **One sweep beside the judge on L.** The first `/keystone:verify` run of an L plan whose checks are green runs review
+  (an Opus finder plus the review validator) and `/keystone:security` once, in the same message as the verifier; all
+  findings land in one `verify.md` (`## Sweep`) and one `/keystone:fix verify` pass. Only critical review items block;
+  suggestions are `Advisory`. The sweep repeats only on `--full` or for tasks added after it; a failed build, test or
+  agent leaves it due for the next run. The judge and the sweep never see each other's output.
+- **No second review after the sweep.** A plan that had its sweep gets no `Review the diff` / `Security check` options,
+  no `/keystone:review` in `Next:` and no built-in `/code-review`; running them by hand still works.
+- **Late non-critical findings go to Advisory.** The judge adds `Impact: critical | non-critical` to every `wrong` and
+  `missing` line. After the first PASS / PASS-UNPROVEN a late non-critical one is `Late: <id> (advisory)`, outside the
+  verdict; the chat shows only `Late advisory: <k>`.
+- **BLOCKED waits for you without a judge.** A `BLOCKED` row whose evidence cell, task tail and files are unchanged is
+  carried (`carried: … — BLOCKED — waiting for you …`); with nothing else to judge the verifier is not called.
+- **A ceiling of three judged FAILs.** From the third judged FAIL run (failed builds and accept commits do not count)
+  the verifier is not called until every open finding is decided — accept, debt or back to the plan
+  (`Accepted finding by …`, `## Debt … deferred`). A plan edit or `--full` lifts it for one run. It replaces the trend menu.
+- **`--full`** brings back the old behaviour for one run: full judge, sweep due, late rule off, no ceiling, no carried
+  BLOCKED.
+- **Sweep findings stay in their run.** A critical review item and a `Security gate: fail` of the sweep belong to the
+  `verify.md` whose `## Sweep` has them; `/keystone:fix verify` takes them from there, and a later run does not carry
+  them. A sweep that failed on unchanged code runs again on `--full`. The `nothing to judge` stop prints
+  `open findings:` (findings of the last judged run that are not rows, failed gates — its `## Sweep` included); when
+  there are any, `Next:` is `/keystone:fix verify`, not `accept`.
+- **Parked rows.** A late row routed to `Late: … (advisory)` and a row accepted at the ceiling are carried without the
+  judge (`carried: … — advisory | accepted`) until their files, their plan text or a cited row change. An accepted row
+  id covers only the runs up to its accept: judged again, it is a finding again.
+
 ## [0.9.39] — 2026-11-19
 
 ### Added
