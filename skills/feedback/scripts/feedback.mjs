@@ -227,16 +227,29 @@ export function parseSelf(text) {
   return finish(out, found);
 }
 
+// A class is a short label. A fourth field that is no label is the finding's text: the line came without a class.
+const isLabel = (s) => /^[A-Za-z0-9_-]{1,40}$/.test(s);
+const UNCLASSIFIED = 'unclassified';
+// the text of a classless finding: the field taken for the class, then everything up to `evidence:` (nothing may follow it)
+function classless(cls, rest, evidence) {
+  const text = rest ? redact(`${cls} | ${rest}`) : cls;
+  if (evidence !== undefined) return { cls: UNCLASSIFIED, text, evidence: redact(evidence) };
+  const e = rest.match(/^evidence:\s*(.*)$/i);
+  return e ? { cls: UNCLASSIFIED, text: cls, evidence: redact(e[1]) } : { cls: UNCLASSIFIED, text, evidence: '' };
+}
+
 export function parseJudge(text) {
   const out = { items: [], skipped: 0, none: false, truncated: false };
   const found = [];
   for (const l of lines(text)) {
-    const m = l.match(/^(skill-text|agent|environment)\s*\|\s*(confirmed|added|unconfirmed)\s*\|\s*([^|]*§[^|]*?)\s*\|\s*([^|]+?)\s*\|\s*(.+?)(?:\s*\|\s*evidence:\s*(.*))?$/i);
+    const m = l.match(/^(skill-text|agent|environment)\s*\|\s*(confirmed|added|unconfirmed)\s*\|\s*([^|]*§[^|]*?)\s*\|\s*([^|]+?)(?:\s*\|\s*(.+?))?(?:\s*\|\s*evidence:\s*(.*))?$/i);
     const as = m ? addresses(m[3]) : [];
-    const cls = m ? redact(m[4]) : '', body = m ? redact(m[5]) : '';
-    if (as.length && cls && body) {
+    const cls = m ? redact(m[4]) : '', body = m ? redact(m[5] ?? '') : '';
+    // a label needs a text after it; a fourth field that is no label is itself the text
+    if (as.length && cls && (body || !isLabel(cls))) {
+      const f = isLabel(cls) ? { cls, text: body, evidence: redact(m[6] ?? '') } : classless(cls, body, m[6]);
       // one finding of a class at several places = one line, one item per address
-      found.push(as.map((a) => ({ cause: m[1].toLowerCase(), source: m[2].toLowerCase(), skill: a.skill, section: a.section, cls, text: body, evidence: redact(m[6] ?? '') })));
+      found.push(as.map((a) => ({ cause: m[1].toLowerCase(), source: m[2].toLowerCase(), skill: a.skill, section: a.section, ...f })));
     } else if (/^none$/i.test(l)) out.none = true;
     else out.skipped++;
   }
@@ -286,7 +299,10 @@ const cs = (v, d = '-') => redact(typeof v === 'string' || typeof v === 'number'
 const ITEM_FIELDS = ['kind', 'skill', 'section', 'text', 'cause', 'source', 'cls', 'evidence'];
 function cleanRecord(r) {
   const items = (Array.isArray(r.items) ? r.items : []).filter((i) => i && typeof i === 'object' && !Array.isArray(i))
-    .map((i) => Object.fromEntries(ITEM_FIELDS.map((k) => [k, cs(i[k], '')])));
+    .map((i) => Object.fromEntries(ITEM_FIELDS.map((k) => [k, cs(i[k], '')])))
+    // stored shifted (a judge line without a class, written before parseJudge checked the class): the text sits in the class, `evidence: …` in the text — shown repaired
+    .map((i) => (i.cls && !isLabel(i.cls) && /^evidence:/i.test(i.text)
+      ? { ...i, cls: UNCLASSIFIED, text: i.cls, evidence: [i.text.replace(/^evidence:\s*/i, ''), i.evidence].filter(Boolean).join(' | ') } : i));
   const hash = typeof r.hash === 'string' ? cs(r.hash, '') : '';
   return { ...r, id: cs(r.id), kind: cs(r.kind), project: cs(r.project), task: cs(r.task), skill: cs(r.skill), session: cs(r.session),
     plugin_version: cs(r.plugin_version, '0'), hash: hash || undefined, none: r.none !== false, skipped: Number.isSafeInteger(r.skipped) && r.skipped > 0 ? r.skipped : 0,
@@ -512,6 +528,47 @@ const cell = (s) => String(s).replace(/\|/g, '\\|');
 const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
 const addr = (i) => `${i.skill} § ${String(i.section ?? '').replace(/\s+/g, ' ').trim()}`;
 
+// The anchors of a skill in this copy of the plugin: headings ##–#### and bold starts of lines and numbered items.
+const nk = (s) => norm(s).replace(/[`*_]/g, '').replace(/[\s.:;,—–-]+$/, '');
+const ANCHORS = new Map();
+function anchorsOf(skill) {
+  if (!ANCHORS.has(skill)) {
+    let text = '';
+    if (/^[a-z][a-z0-9-]{0,39}$/.test(skill)) {
+      for (const f of [resolve(here, '..', '..', skill, 'SKILL.md'), resolve(here, '../../../agents', `${skill}.md`)]) {
+        try { text = readFileSync(f, 'utf8'); break; } catch { /* not this one */ }
+      }
+    }
+    const out = new Set();
+    for (const l of text.split(/\r?\n/)) {
+      const m = l.match(/^#{2,4}\s+(.+)$/) ?? l.match(/^\s*(?:\d+\.\s+|[-*]\s+)?\*\*([^*]+)\*\*/);
+      const a = m ? nk(m[1]) : '';
+      if (a) out.add(a);
+    }
+    ANCHORS.set(skill, [...out]);
+  }
+  return ANCHORS.get(skill);
+}
+const stepOf = (s) => s.match(/^step\s+(\d+)(\.\d+|[a-z])?\b/);
+const prefix = (a, b) => a.startsWith(b) && !/[\p{L}\p{N}]/u.test(a[b.length] ?? '');
+// The key a section is grouped under: the skill's anchor it names, else the section as written. Rules in order — same name, same step
+// number (`Step 2.4` → step 2 when no 2.4 exists), one a prefix of the other; the first rule with a match decides, and only a single match
+// is taken: two candidates leave the section as written.
+// ponytail: matched against the plugin copy the script runs from — a section renamed in a later version stays as written for old records.
+function sectionKey(i) {
+  const sec = nk(i.section), anchors = anchorsOf(i.skill);
+  const pick = (hits) => (hits.length === 1 ? `${i.skill} § ${hits[0]}` : hits.length ? norm(addr(i)) : null);
+  const st = stepOf(sec);
+  const num = (a) => { const x = stepOf(a); return x ? x[1] + (x[2] ?? '') : null; };
+  let hits = anchors.filter((a) => a === sec);
+  if (!hits.length && st) {
+    hits = anchors.filter((a) => num(a) === st[1] + (st[2] ?? ''));
+    if (!hits.length && st[2]) hits = anchors.filter((a) => num(a) === st[1]);
+  }
+  if (!hits.length) hits = anchors.filter((a) => prefix(a, sec) || prefix(sec, a));
+  return pick(hits) ?? norm(addr(i));
+}
+
 const headOf = (p) => {
   let fd;
   try { fd = openSync(p, 'r'); const b = Buffer.alloc(HEAD); return b.toString('utf8', 0, readSync(fd, b, 0, HEAD, 0)); } catch { return ''; } finally { if (fd !== undefined) closeSync(fd); }
@@ -557,9 +614,10 @@ export function summary(opts, env = process.env) {
     return ['| address | class | count | projects | versions | records |', '|---|---|---|---|---|---|',
       ...rows.map((g) => `| ${cell(g.address)} | ${cell(g.cls)} | ${g.ids.size} | ${cell([...g.projects].join(', '))} | ${cell([...g.versions].join(', '))} | ${cell([...g.ids].join(', '))} |`)];
   };
-  const group = (map, address, cls, r) => {
-    const k = `${norm(address)}\u0000${norm(cls)}`;
-    const g = map.get(k) ?? { address, cls, ids: new Set(), projects: new Set(), versions: new Set() };
+  // the key is the skill's anchor and the class; the row shows the address as the first record of the group wrote it
+  const group = (map, i, cls, r) => {
+    const k = `${sectionKey(i)}\u0000${norm(cls)}`;
+    const g = map.get(k) ?? { address: addr(i), cls, ids: new Set(), projects: new Set(), versions: new Set() };
     g.ids.add(r.id); g.projects.add(r.project); g.versions.add(r.plugin_version);
     map.set(k, g);
   };
@@ -572,10 +630,10 @@ export function summary(opts, env = process.env) {
   }
   const cand = new Map(), unjudged = new Map(), other = { agent: 0, environment: 0 };
   for (const r of judges) for (const i of r.items) {
-    if (i.cause === 'skill-text') group(cand, addr(i), i.cls, r);
+    if (i.cause === 'skill-text') group(cand, i, i.cls, r);
     else if (i.cause in other) other[i.cause]++;
   }
-  for (const r of selfs) if (r.task === '-' || !judgedTasks.has(key(r))) for (const i of r.items) group(unjudged, addr(i), i.kind, r);
+  for (const r of selfs) if (r.task === '-' || !judgedTasks.has(key(r))) for (const i of r.items) group(unjudged, i, i.kind, r);
   const cov = coverage(selfs, opts.since, env);
   const covRows = [...cov.by].filter(([, c]) => c.ran);
 

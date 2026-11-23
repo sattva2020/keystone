@@ -5,6 +5,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.41] — 2026-11-21
+
+### Fixed
+- **Feedback: a judge line without a class keeps its text.** The fourth field counts as the class only when it is a short
+  label; otherwise the finding is stored as `unclassified` with that field as its text, and findings stored shifted
+  earlier are shown repaired in the summary (the files are not rewritten).
+- **Feedback summary: one skill section counts once.** Sections are matched to the skill's own headings (same name, same
+  step number, or a prefix — only a single match counts), so `verify § Step 3` and `verify § Step 3 — the verifier` with
+  one class are one row; the row still shows the address as first written.
+
 ## [0.9.40] — 2026-11-21
 
 ### Changed
