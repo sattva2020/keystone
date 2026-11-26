@@ -89,7 +89,11 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
 1. **Active plan.** It is the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
    - `$ARGUMENTS` empty and the active plan has `Mode: fix` → "Found existing fix plan. Executing the fix based on the
      plan." Skip Step 1; if `draft`, STOP ("Approve it in `/keystone:plan` first"); otherwise `take` it (see "One
-     session per plan") and only then, if `approved`, set `Status: implementing`. Go to Step 2 using the plan as a
+     session per plan") and only then, if `approved`, set `Status: implementing`. **Runtime resources (worktree):**
+     once, as a command of its own, `node "${CLAUDE_SKILL_DIR}/../implement/scripts/worktree-check.mjs" --linked-only`
+     (static, read-only: ports, `container_name`, Compose project, volumes, networks shared with another worktree).
+     One line (nothing to check) → show it or stay silent; a conflicts report → show its table and hint in the chat
+     and go on, no question, no stop; exit 1 → one line and go on. Go to Step 2 using the plan as a
      guide, still applying the Regression-First Policy.
    - `$ARGUMENTS` empty and no fix plan → "No fix plan and no problem description. Run `/keystone:fix <description>`."
      STOP.

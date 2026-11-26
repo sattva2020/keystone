@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.45] — 2026-11-26
+
+### Added
+- **worktree-check** — static, read-only check for runtime resources that clash between git worktrees: host ports,
+  `container_name`, Compose project, named volumes and networks from compose files, `.env*` (`*PORT*`,
+  `COMPOSE_PROJECT_NAME`), `.claude/launch.json` and `package.json` scripts, compared across every live worktree.
+  `${VAR}` resolves from each worktree's own `.env`; what cannot be resolved is "not checked", never a conflict; secret
+  values never reach the report. `/keystone:implement` (Step 0) and `/keystone:fix` (running a fix plan) run it once in
+  a linked worktree, show the table and a hint on a conflict and go on. Manual:
+  `node skills/implement/scripts/worktree-check.mjs [--json] [--linked-only]`. No dependencies; runs nothing but `git`.
+
 ## [0.9.44] — 2026-11-26
 
 ### Added

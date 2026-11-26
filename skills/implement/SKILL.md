@@ -88,7 +88,14 @@ Keep going without asking while the next step needs no human decision; stop only
      and the first line of your prompt is not `Keystone rush stage:` → read `${CLAUDE_SKILL_DIR}/references/RUSH.md`
      and follow it instead of Steps 1–2. A prompt that starts with `Keystone rush stage:` makes you a stage: skip this
      item and follow this file under RUSH.md § Stage rules.
-3. **Settings** are mandatory. Read the header line `Settings: tests — … · logging — … · docs — …`:
+3. **Runtime resources (worktree).** Only for `approved` / `implementing` (not release mode), once per session, as a
+   command of its own: `node "${CLAUDE_SKILL_DIR}/scripts/worktree-check.mjs" --linked-only` — a static, read-only
+   look for host ports, `container_name`, Compose project, volumes and networks that another worktree of this repo
+   also uses. One line (nothing to check) → show it or stay silent. A conflicts report → show its table and hint in
+   the chat and go on: no question, no stop — editing code in parallel is safe, only environments started at the same
+   time collide. Exit 1 → one line and go on. The final report gets `Worktree: <ok | конфликты: <ресурсы> | нечего
+   проверять>`.
+4. **Settings** are mandatory. Read the header line `Settings: tests — … · logging — … · docs — …`:
    - `tests — yes`: every task that changes behaviour gets a test in the same task.
    - `tests — tdd`: as `yes`, but test first — write the test, run it and see it fail for the expected reason, then
      write the code until it passes. A test that passes before the code is not a test of this task: fix it first.
@@ -97,13 +104,13 @@ Keep going without asking while the next step needs no human decision; stop only
      per task; one commit after the last task, tests and docs (2.6 rules apply to it).
    - `logging — minimal|standard|verbose`: read `${CLAUDE_SKILL_DIR}/references/LOGGING.md` only if it is not `minimal`.
    - `docs — yes`: the documentation step before the final report is `/keystone:docs update <affected topics>`.
-4. **Project context:** read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
+5. **Project context:** read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
    `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`.
    MUST / MUST NOT lines there override general habits. Follow the stack, import patterns, file
    placement and module boundaries they describe.
-5. **Context:** if the plan's `## Requirements Reconciliation` cites an `intent.md`, read it once — it explains *why*;
+6. **Context:** if the plan's `## Requirements Reconciliation` cites an `intent.md`, read it once — it explains *why*;
    the plan stays the source of *what* and *how*. The intent is read-only here.
-6. **Baseline first.** Run `git status`. If the plan file or the cited `intent.md` is untracked or modified and no code
+7. **Baseline first.** Run `git status`. If the plan file or the cited `intent.md` is untracked or modified and no code
    has changed yet, commit them on their own first (e.g. `docs(plan): <slug>` by the project's convention; ask the user
    once if commits need approval) — otherwise the baseline plan is lost and `/keystone:verify` cannot measure drift. If
    code already changed, say so in one line and continue. Other uncommitted changes (not this plan's): warn in one line
@@ -261,7 +268,8 @@ explicit yes, write each to `.claude/rules/<topic>.md` (`paths:` frontmatter whe
 edit an existing rule silently: a change to an existing rule is shown as a diff and needs its own yes. No yes → write
 nothing.
 
-Then `release` the plan (One session per plan) and add the line `Владелец: <remote>; <warning>`.
+Then `release` the plan (One session per plan) and add the line `Владелец: <remote>; <warning>`, and the
+`Worktree: …` line from Step 0, item 3.
 
 Close with the level and cost line:
 `Level: <S|M|L from the plan> · cost: $<X> (from /cost) | cost: not measured`.

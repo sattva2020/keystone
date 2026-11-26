@@ -234,6 +234,16 @@ untouched. A second session stops with who runs the plan and asks `Стоп` / `
 the record is stale and taking over becomes the recommended answer. Offline or without origin the mark stays local,
 with one warning. `KEYSTONE_GATES=off` turns it off too.
 
+**Conflicts between worktrees.** In a linked worktree `/keystone:implement` (and `/keystone:fix` when it runs a fix
+plan) runs `worktree-check` at start: statically, by reading files only, it compares with every live worktree of the
+repo (the main checkout too) the host ports, `container_name`, Compose project name, named volumes and networks from
+`docker-compose*.yml` / `compose*.yml`, `.env*` (`*PORT*`, `COMPOSE_PROJECT_NAME`), `.claude/launch.json` and
+`package.json` scripts. `${VAR}` resolves from the worktree's own `.env`; what cannot be resolved (no value, a port
+range, YAML anchors, inline blocks) is "not checked", never a conflict. Secret values never reach the report. On a
+conflict implement shows a table (resource, value, worktree · file:line) and a hint and goes on: editing code in
+parallel is safe, only environments started at the same time collide. The check does not prove isolation and runs
+nothing but `git`. Manual: `node skills/implement/scripts/worktree-check.mjs [--json]`.
+
 Every gate, release mode and the plan status flow: [`docs/gates.md`](docs/gates.md).
 
 ## Agent feedback
