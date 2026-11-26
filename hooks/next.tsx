@@ -31,7 +31,7 @@ export async function langOf($: EngineInterface): Promise<Lang> {
 
 const clear = ($: EngineInterface) => $.state.set({ plugin: 'keystone', key: 'buttons' }, [])
 
-async function pick($: EngineInterface, cmd: string) {
+export async function pick($: EngineInterface, cmd: string) {
   const box = await $.prompt.read()
   const filled = await $.prompt.fill({ text: box.text === '' ? cmd : ` ${cmd}`, mode: 'append' })
   if (filled.isFilled) await clear($)
@@ -131,8 +131,8 @@ export const register: Register = (on) => {
     const w = Math.max(t.plan.length, t.context.length)
     const desktop = e.surface === 'desktop'
     const cols = e.props.bodyColumns
-    const wide = cols >= 72
-    const cells = Math.max(6, Math.min(24, cols - (wide ? 30 : 0) - 34))
+    const wide = cols >= 80
+    const cells = Math.max(6, Math.min(24, cols - (wide ? 40 : 0) - 34))
     const bar = (key: string, label: string, frac: number, tone: Tone, tail: string, extra?: unknown) => (
       <Box key={key} flexDirection="row" alignItems="center" columnGap={1}>
         <Text dimColor>{label}</Text>
@@ -156,12 +156,12 @@ export const register: Register = (on) => {
             <Button key="handoff-later" label={t.later} dimColor onPress={() => $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, shown: ho.level })} />,
           ] : undefined),
       )
-    const title = pr ? `Keystone · ${pr.level} · ${pr.status}` : 'Keystone'
+    const title = pr ? `Keystone · ${pr.level} · ${pr.status}${(pr.cost ?? 0) > 0.005 ? ` · $${pr.cost.toFixed(2)}` : ''}` : 'Keystone'
     const rows = []
     rows.push(
       wide ? (
         <Box key="bars" flexDirection="row" columnGap={2}>
-          <Box width={28}><Text dimColor wrap="truncate-end">{title}</Text></Box>
+          <Box width={38}><Text dimColor wrap="truncate-end">{title}</Text></Box>
           <Box flexDirection="column">{bars}</Box>
         </Box>
       ) : (

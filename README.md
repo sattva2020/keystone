@@ -227,8 +227,9 @@ Method, tables and limits: [`docs/benchmarks.md`](docs/benchmarks.md).
 ## Status and cost (mod)
 
 A small TypeScript mod next to the hooks: `/keystone-status` and a status line with the plan, tasks and cost per stage
-(no model call), the next command in the prompt box and as buttons, handoff to a clean session through the plan, and
-a **Start clean** offer when the prompt cache has gone cold. Needs Claude Code 2.1.287+ (terminal) or 2.1.286+ (Desktop).
+(no model call), the next command in the prompt box and as buttons, handoff to a clean session through the plan,
+a **Start clean** offer when the prompt cache has gone cold, and a side panel in Desktop (`/keystone-panel`) with who
+waits for you, the child sessions, the plan, the checks and the cost. Needs Claude Code 2.1.287+ (terminal) or 2.1.286+ (Desktop).
 
 Every element, thresholds and the interface language option: [`docs/mod.md`](docs/mod.md).
 

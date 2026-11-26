@@ -4,60 +4,18 @@ import type { EngineInterface, Register } from 'claude-code'
 import { register as registerNext, langOf } from './next.tsx'
 import { pickLang, strings } from './i18n.ts'
 import { register as registerLinks, normalize } from './links.ts'
+import { onStart as panelStart, onTurn as panelTurn, register as registerPanel } from './panel.tsx'
+import { activePlan, folder, parsePlan, planRoots, plans, sessionPlan, slash, type Ledger, type Plan } from './plan.ts'
 import { COLD_MS, MARKER, isCold } from './handoff.ts'
 
-const ACTIVE = new Set(['draft', 'approved', 'implementing'])
+export { activePlan, parsePlan, sessionPlan, type Ledger, type Plan }
+
 const STAGE = /^\s*\/keystone:([a-z]+)/
 const EDITS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 
-export type Plan = {
-  file: string
-  level: string
-  mode: string
-  status: string
-  done: number
-  total: number
-  blocked: number
-  release: number // open `- [ ] R<n>.` steps in ## Release (run after verify)
-  security: boolean // a Threats: block without a ticked /keystone:security task: verify needs its gate line
-  doneMeans?: string
-}
-export type Ledger = Record<string, number> // stage → USD
-
-const slash = (p: string) => p.replace(/\\/g, '/')
-
-// Keystone keeps its task folders only in docs/keystone; it never reads another planner's folders.
-async function planRoots(_$: EngineInterface): Promise<string[]> {
-  return ['docs/keystone']
-}
-
-// Same rule as gate.mjs: task folders whose plan.md is in view (parsePlan), newest first — date prefix of the folder
-// name, then plan.md mtime. A folder without plan.md (intent only) never hides another plan.
-async function plans($: EngineInterface): Promise<Plan[]> {
-  const out: { plan: Plan; name: string; mtime: number }[] = []
-  for (const r of await planRoots($)) {
-    if (!(await $.fs.exists(r))) continue
-    for (const d of await $.fs.list(r)) {
-      const file = `${r}/${d.name}/plan.md`
-      if (d.kind !== 'dir' || !(await $.fs.exists(file))) continue
-      const plan = parsePlan(file, await $.fs.read(file))
-      if (plan) out.push({ plan, name: d.name, mtime: (await $.fs.stat(file)).mtimeMs })
-    }
-  }
-  out.sort((a, b) => (a.name.slice(0, 10) === b.name.slice(0, 10) ? b.mtime - a.mtime : b.name.slice(0, 10).localeCompare(a.name.slice(0, 10))))
-  return out.map((x) => x.plan)
-}
-
-// The repo's newest plan in view, whoever works with it (/keystone-status names it to an unbound session).
-export async function activePlan($: EngineInterface): Promise<Plan | null> {
-  return (await plans($))[0] ?? null
-}
-
-// A plan is this session's once it ran `/keystone:<stage>` naming the plan's folder (implement/verify with no argument
-// take the newest plan, as their skills do) or edited a file in that folder; gate.mjs reads the same from the transcript.
-const folder = (file: string) => file.replace(/\/[^/]*$/, '').replace(/^.*\//, '')
-const BOUND = { plugin: 'keystone', key: 'bound' } as const
 const NO_ARG = new Set(['implement', 'verify'])
+
+const BOUND = { plugin: 'keystone', key: 'bound' } as const // the engine wants the reference in the file that uses it
 
 // $.state does not outlive the app's restart; the store does, so the binding is kept there too, by session id.
 // ponytail: one store key per session id, never pruned (as turn:last)
@@ -92,38 +50,6 @@ async function bindEdit($: EngineInterface, path: string) {
   await bind($, names)
 }
 
-// The plan this session works with: the newest plan in view it is bound to; none → no status, buttons, handoff or cost.
-export async function sessionPlan($: EngineInterface): Promise<Plan | null> {
-  const { value: bound = [] } = await $.state.get(BOUND)
-  if (!bound.length) return null
-  return (await plans($)).find((p) => bound.includes(folder(p.file))) ?? null
-}
-
-export function parsePlan(file: string, raw: string): Plan | null {
-  const lines = raw.replace(/\r/g, '').split('\n')
-  const header = lines.find((l) => /^Level:/.test(l)) ?? lines.find((l) => /^Status:/.test(l)) ?? ''
-  const status = header.match(/\bStatus:\s*([a-z]+)/i)?.[1]?.toLowerCase() ?? ''
-  let inTasks = false, inRelease = false, done = 0, total = 0, blocked = 0, release = 0, secDone = false
-  for (const l of lines) {
-    if (/^## /.test(l)) { inTasks = /^## Tasks\b/.test(l); inRelease = /^## Release\b/.test(l); continue }
-    if (inRelease && /^\s*- \[ \]/.test(l)) release++
-    if (!inTasks) continue
-    if (/^\s*- \[x\]/i.test(l)) { done++; total++; if (l.includes('/keystone:security')) secDone = true }
-    else if (/^\s*- \[ \]/.test(l)) { total++; if (l.includes('BLOCKED:')) blocked++ }
-  }
-  // a verified plan stays in view only while its ## Release steps are open (release mode)
-  if (!ACTIVE.has(status) && !(status === 'verified' && release > 0)) return null
-  return {
-    file: slash(file),
-    level: header.match(/\bLevel:\s*([SML])\b/)?.[1] ?? '?',
-    mode: header.match(/\bMode:\s*([a-z]+)/i)?.[1]?.toLowerCase() ?? 'feature',
-    status,
-    done, total, blocked, release,
-    security: lines.some((l) => /^\s*Threats:/.test(l)) && !secDone,
-    doneMeans: lines.find((l) => /^Done means:/.test(l))?.replace(/^Done means:\s*/, ''),
-  }
-}
-
 export function gatesFor(p: Plan): string[] {
   if (p.status === 'verified') return [`release mode: ${p.release} step(s) in ## Release, each merge / push / deploy after your yes`]
   const g = ['push/PR closed until /keystone:verify']
@@ -156,6 +82,13 @@ export function nextButtons(p: Plan | null, hasIntent: boolean): string[] {
   return b
 }
 
+const usd = (n: number) => `$${n.toFixed(2)}`
+export const costLine = (l: Ledger) => {
+  const parts = Object.entries(l).filter(([, v]) => v > 0.005).map(([k, v]) => `${k} ${usd(v)}`)
+  const total = Object.values(l).reduce((a, b) => a + b, 0)
+  return parts.length ? `${parts.join(' · ')} · total ${usd(total)}` : 'not measured yet'
+}
+
 // show=false clears the band; errors leave it empty rather than break the turn.
 export async function publishButtons($: EngineInterface, show: boolean) {
   try {
@@ -172,13 +105,6 @@ export async function publishButtons($: EngineInterface, show: boolean) {
   }
 }
 
-const usd =(n: number) => `$${n.toFixed(2)}`
-export const costLine = (l: Ledger) => {
-  const parts = Object.entries(l).filter(([, v]) => v > 0.005).map(([k, v]) => `${k} ${usd(v)}`)
-  const total = Object.values(l).reduce((a, b) => a + b, 0)
-  return parts.length ? `${parts.join(' · ')} · total ${usd(total)}` : 'not measured yet'
-}
-
 export function statusText(p: Plan | null, l: Ledger): string {
   if (!p) return 'No active Keystone plan — no gates.\nNext: /keystone:start <task> (not sure which command? see docs/scenarios.md)'
   return [
@@ -191,16 +117,16 @@ export function statusText(p: Plan | null, l: Ledger): string {
   ].join('\n')
 }
 
-const ledgerKey = (p: Plan) => `cost:${p.file}`
+export const ledgerKey = (p: Plan) => `cost:${p.file}`
 
 async function refresh($: EngineInterface) {
   const p = await sessionPlan($)
   await $.state.set({ plugin: 'keystone', key: 'plan' }, p?.file ?? '').catch(() => undefined) // next.tsx offers a handoff only with a plan
-  const progress = p && { level: p.level, status: p.status, done: p.done, total: p.total, blocked: p.blocked, next: nextCommand(p) }
+  const l = p ? (((await $.store.get(ledgerKey(p)).catch(() => undefined)) ?? {}) as Ledger) : {} // the bar does not depend on the ledger
+  const total = Object.values(l).reduce((a, b) => a + b, 0)
+  const progress = p && { level: p.level, status: p.status, done: p.done, total: p.total, blocked: p.blocked, next: nextCommand(p), cost: total }
   await $.state.set({ plugin: 'keystone', key: 'progress' }, progress).catch(() => undefined) // the plan bar in next.tsx
   if (!p) return $.ui.status(undefined)
-  const l = ((await $.store.get(ledgerKey(p))) ?? {}) as Ledger
-  const total = Object.values(l).reduce((a, b) => a + b, 0)
   $.ui.status(`Keystone · ${p.level} · ${p.status} · ${p.done}/${p.total}${p.blocked ? ` · ${p.blocked} blocked` : ''}${total ? ` · ${usd(total)}` : ''}`)
 }
 
@@ -263,6 +189,7 @@ async function watchCold($: EngineInterface, last: number) {
 export const register: Register = (on, options) => {
   registerNext(on, options)
   registerLinks(on, options)
+  registerPanel(on, options, { nextButtons, costLine, ledgerKey })
   let stage = 'other'
   let costStage = 'other' // like `stage`, but an answer to a menu or a question keeps paying into the stage it serves
   let lastUsd: number | undefined
@@ -297,7 +224,13 @@ export const register: Register = (on, options) => {
     } catch {
       // the cold-cache offer is optional
     }
-    return next(e)
+    const out = await next(e)
+    try {
+      $.clock.after(0, () => void panelStart($))
+    } catch {
+      // no timer: no panel this time
+    }
+    return out
   }).catch(($, e, next) => next(e))
 
   on('turn.start', async ($, e, next) => {
@@ -347,35 +280,43 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     const out = await next(e)
     if (e.agentId) return out
-    await checkHandoff($, e.answer)
     try {
-      const at = await $.clock.now()
-      await $.store.set(await lastKey($), at)
-      await setCold($, null) // a fresh answer: whatever a timer wrote while it ran is stale
-      await watchCold($, at)
-    } catch {
-      // the cold-cache offer is optional
+      await checkHandoff($, e.answer)
+      try {
+        const at = await $.clock.now()
+        await $.store.set(await lastKey($), at)
+        await setCold($, null) // a fresh answer: whatever a timer wrote while it ran is stale
+        await watchCold($, at)
+      } catch {
+        // the cold-cache offer is optional
+      }
+      await publishButtons($, true) // the band stays while the session has a plan, also after a plain prompt or an answer
+      const now = (await $.session.usage()).cost?.usd
+      if (now === undefined) return out
+      const delta = lastUsd === undefined ? 0 : Math.max(0, now - lastUsd)
+      lastUsd = now
+      const p = (await sessionPlan($)) ?? lastPlan
+      if (p) lastPlan = p
+      if (!p && costStage !== 'other' && delta > 0) early[costStage] = (early[costStage] ?? 0) + delta
+      if (p && (delta > 0 || Object.keys(early).length)) {
+        const l = ((await $.store.get(ledgerKey(p))) ?? {}) as Ledger
+        for (const [k, v] of Object.entries(early)) l[k] = (l[k] ?? 0) + v
+        early = {}
+        l[costStage] = (l[costStage] ?? 0) + delta
+        await $.store.set(ledgerKey(p), l)
+      }
+      await refresh($)
+      const active = await sessionPlan($)
+      suggestion = stage !== 'other' && active ? nextCommand(active) : null
+      if (suggestion) void $.prompt.suggest({ text: suggestion })
+      return out
+    } finally {
+      try {
+        $.clock.after(0, () => void panelTurn($))
+      } catch {
+        // no timer: no panel this time
+      }
     }
-    await publishButtons($, true) // the band stays while the session has a plan, also after a plain prompt or an answer
-    const now = (await $.session.usage()).cost?.usd
-    if (now === undefined) return out
-    const delta = lastUsd === undefined ? 0 : Math.max(0, now - lastUsd)
-    lastUsd = now
-    const p = (await sessionPlan($)) ?? lastPlan
-    if (p) lastPlan = p
-    if (!p && costStage !== 'other' && delta > 0) early[costStage] = (early[costStage] ?? 0) + delta
-    if (p && (delta > 0 || Object.keys(early).length)) {
-      const l = ((await $.store.get(ledgerKey(p))) ?? {}) as Ledger
-      for (const [k, v] of Object.entries(early)) l[k] = (l[k] ?? 0) + v
-      early = {}
-      l[costStage] = (l[costStage] ?? 0) + delta
-      await $.store.set(ledgerKey(p), l)
-    }
-    await refresh($)
-    const active = await sessionPlan($)
-    suggestion = stage !== 'other' && active ? nextCommand(active) : null
-    if (suggestion) void $.prompt.suggest({ text: suggestion })
-    return out
   }).catch(($, e, next) => next(e))
 
   // the engine's own guess after a Keystone turn gives way to the plan's next command

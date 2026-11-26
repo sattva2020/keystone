@@ -5,6 +5,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.42] — 2026-11-25
+
+### Added
+- **Side panel** (Claude Code Desktop). Who waits for you and the next command, this session's child sessions with their
+  stage and progress, the plan, the checks and the cost; minimized, one line of numbers. It opens by itself when the
+  session has a plan or child sessions, stays closed once you close it, and `/keystone-panel` opens it again. Refreshed
+  after a turn and every 30 seconds while seen, with no model call. It reads `~/.claude/sessions`, the app's list of child
+  sessions, git and plan files; nothing is sent, and only the fact of closing is stored. Off: plugin option `panel`.
+
+### Changed
+- **Cost in the band.** The title above the prompt shows the plan's measured cost: `Keystone · L · implementing · $3.20`.
+
 ## [0.9.41] — 2026-11-21
 
 ### Fixed

@@ -48,9 +48,10 @@ export function readPlan(body) {
   const status = header.match(/\bStatus:\s*([a-z]+)/i)?.[1]?.toLowerCase() ?? 'unknown';
   const unchecked = section(body, 'Tasks').filter((l) => /^\s*- \[ \]/.test(l));
   const open = unchecked.filter((l) => !l.includes('BLOCKED:'));
+  const done = section(body, 'Tasks').filter((l) => /^\s*- \[x\]/i.test(l)).length;
   const blocked = unchecked.length > 0 && open.length === 0 ? unchecked[0].split('BLOCKED:')[1].trim() : null;
   const release = section(body, 'Release').filter((l) => /^\s*- \[ \]/.test(l)).map((l) => l.match(/R\d+/)?.[0] ?? 'R?');
-  return { status, open: open.length, blocked, release };
+  return { status, open: open.length, blocked, release, done, total: done + unchecked.length };
 }
 
 // `git status --porcelain -z`: plain paths (no quoting), a rename/copy entry is followed by its old path.
@@ -117,12 +118,12 @@ function planRow(p) {
   if (p.intentOnly) return null;
   if (p.fixedAfterFail) return { group: 'message', step: `/keystone:verify ${p.path}`, plan: p.path };
   if (p.verdict === 'FAIL') return { group: 'message', step: '/keystone:fix verify', plan: p.path };
-  if (p.verdict === 'PASS-UNPROVEN' && p.status !== 'verified') return { group: 'waiting', reason: 'ждёт accept' };
-  if (p.status === 'implementing' && p.blocked) return { group: 'waiting', reason: `BLOCKED: ${p.blocked}` };
+  if (p.verdict === 'PASS-UNPROVEN' && p.status !== 'verified') return { group: 'waiting', reason: 'ждёт accept', code: 'accept' };
+  if (p.status === 'implementing' && p.blocked) return { group: 'waiting', reason: `BLOCKED: ${p.blocked}`, code: 'blocked', arg: p.blocked };
   if ((p.status === 'approved' || p.status === 'implementing') && p.open > 0) return { group: 'message', step: `/keystone:implement ${p.path}`, plan: p.path };
   if (p.status === 'implementing' && p.open === 0 && !p.verify) return { group: 'message', step: `/keystone:verify ${p.path}`, plan: p.path };
-  if (p.status === 'draft') return { group: 'waiting', reason: 'план ждёт Approve' };
-  if (p.status === 'verified' && p.release.length) return { group: 'waiting', reason: `релиз: ${p.release.join(', ')} — ваш шаг` };
+  if (p.status === 'draft') return { group: 'waiting', reason: 'план ждёт Approve', code: 'approve' };
+  if (p.status === 'verified' && p.release.length) return { group: 'waiting', reason: `релиз: ${p.release.join(', ')} — ваш шаг`, code: 'release', arg: p.release.join(', ') };
   return null;
 }
 
@@ -133,16 +134,17 @@ export function decide(s, f) {
     if (r) return r;
   }
   if (f.dirty && !f.merged && f.plans.every(done)) return { group: 'message', step: 'закоммить изменения' };
-  if (f.dirty) return { group: 'waiting', reason: `незакоммиченные файлы: ${f.files.slice(0, 10).join(', ')}`, files: f.files.slice(0, 50) };
-  if (f.ignored?.length) return { group: 'waiting', reason: `игнорируемые файлы удалятся с worktree: ${f.ignored.slice(0, 10).join(', ')}`, files: f.ignored.slice(0, 50) };
+  if (f.dirty) return { group: 'waiting', reason: `незакоммиченные файлы: ${f.files.slice(0, 10).join(', ')}`, files: f.files.slice(0, 50), code: 'dirty', arg: f.files.slice(0, 3).join(', ') };
+  if (f.ignored?.length) return { group: 'waiting', reason: `игнорируемые файлы удалятся с worktree: ${f.ignored.slice(0, 10).join(', ')}`, files: f.ignored.slice(0, 50), code: 'ignored', arg: f.ignored.slice(0, 3).join(', ') };
   const intent = f.plans.find((p) => p.intentOnly);
-  if (intent) return { group: 'waiting', reason: 'intent без плана — `/keystone:plan`' };
+  if (intent) return { group: 'waiting', reason: 'intent без плана — `/keystone:plan`', code: 'intent' };
   // a plan that is not verified-without-R<n> and gave no step above is never archived (I-2, I-3)
   if (f.plans.every(done)) {
     if (!f.own || !f.ownCommits || f.merged) return { group: 'archive' };
-    return { group: 'waiting', reason: `влить ${s.branch || 'HEAD'} в ${s.sourceBranch || 'main'} — ваш шаг` };
+    return { group: 'waiting', reason: `влить ${s.branch || 'HEAD'} в ${s.sourceBranch || 'main'} — ваш шаг`, code: 'merge', arg: `${s.branch || 'HEAD'} → ${s.sourceBranch || 'main'}` };
   }
-  return { group: 'waiting', reason: `не распознано: ${f.plans.map((p) => p.status ?? 'intent').join(', ')}` };
+  const statuses = f.plans.map((p) => p.status ?? 'intent').join(', ');
+  return { group: 'waiting', reason: `не распознано: ${statuses}`, code: 'unrecognised', arg: statuses };
 }
 
 export function classify(sessions, { self, sent = {}, factsOf = facts, ownerOf = null } = {}) {
@@ -168,37 +170,37 @@ export function classify(sessions, { self, sent = {}, factsOf = facts, ownerOf =
     const base = { sessionId: s.sessionId, title: s.title ?? s.sessionId };
     if (r.group === 'archive') out.archive.push({ ...base, depth: depth(s) });
     else if (r.group === 'message') out.message.push({ ...base, step: r.step, text: text(r.step) });
-    else if (r.group === 'waiting') out.waiting.push({ ...base, reason: r.reason, ...(r.files ? { files: r.files } : {}) });
+    else if (r.group === 'waiting') out.waiting.push({ ...base, reason: r.reason, ...(r.files ? { files: r.files } : {}), ...(r.code ? { code: r.code } : {}), ...(r.arg ? { arg: r.arg } : {}) });
     else out.working += 1;
   };
   // deepest first, so a parent sees what happened to its children
   for (const s of [...family].sort((a, b) => depth(b) - depth(a))) {
     const state = s.state ?? 'unknown';
     if (state === 'working') { put(s, { group: 'working' }); continue; }
-    if (state === 'failed' || state === 'stopped') { put(s, { group: 'waiting', reason: 'ход упал или остановлен' }); continue; }
-    if (state === 'unknown') { put(s, { group: 'waiting', reason: 'состояние неизвестно — повторите разбор' }); continue; }
-    if (state === 'waiting') { put(s, { group: 'waiting', reason: 'ждёт вашего ответа' }); continue; }
+    if (state === 'failed' || state === 'stopped') { put(s, { group: 'waiting', reason: 'ход упал или остановлен', code: 'failed' }); continue; }
+    if (state === 'unknown') { put(s, { group: 'waiting', reason: 'состояние неизвестно — повторите разбор', code: 'unknown' }); continue; }
+    if (state === 'waiting') { put(s, { group: 'waiting', reason: 'ждёт вашего ответа', code: 'answer' }); continue; }
     const mine = norm(s.worktreePath);
     // a descendant already in this run's archive no longer counts; a worktree inside my own worktree always does —
     // not in the shared folder (worktreePath = originCwd), which holds every session's worktree (Design `nested`)
     const nested = family.some((o) => o !== s &&
       ((isDesc(o, s) && result.get(o.sessionId) !== 'archive') ||
         (mine && mine !== norm(s.originCwd) && (inside(norm(o.worktreePath), mine) || inside(norm(o.originCwd), mine)))));
-    if (nested) { put(s, { group: 'waiting', reason: 'есть живые дочерние сессии' }); continue; }
-    if (state !== 'idle') { put(s, { group: 'waiting', reason: `состояние ${state} не распознано` }); continue; }
+    if (nested) { put(s, { group: 'waiting', reason: 'есть живые дочерние сессии', code: 'nested' }); continue; }
+    if (state !== 'idle') { put(s, { group: 'waiting', reason: `состояние ${state} не распознано`, code: 'state' }); continue; }
     let r;
     try {
       r = decide(s, factsOf(s));
     } catch (e) {
-      r = { group: 'waiting', reason: `git: ${String(e.message).split('\n')[0]}` };
+      r = { group: 'waiting', reason: `git: ${String(e.message).split('\n')[0]}`, code: 'git' };
     }
     if (r.group === 'message') {
-      if (r.plan && !PLAN_PATH.test(r.plan)) r = { group: 'waiting', reason: 'путь плана не прошёл проверку' };
-      else if (sent[s.sessionId]?.step === r.step) r = { group: 'waiting', reason: `не продвинулась после «${r.step}»` };
+      if (r.plan && !PLAN_PATH.test(r.plan)) r = { group: 'waiting', reason: 'путь плана не прошёл проверку', code: 'path' };
+      else if (sent[s.sessionId]?.step === r.step) r = { group: 'waiting', reason: `не продвинулась после «${r.step}»`, code: 'stuck', arg: r.step };
       else if (ownerOf && r.plan && /^\/keystone:(implement|fix) /.test(r.step)) {
         let o = null;
         try { o = ownerOf(sessionDir(s), r.plan); } catch { /* no answer → the step stays: better an extra step than a stuck session */ }
-        if (o?.live && !o.mine) r = { group: 'waiting', reason: `план ведёт ${o.owner.place} · ветка ${o.owner.branch} с ${o.owner.since}` };
+        if (o?.live && !o.mine) r = { group: 'waiting', reason: `план ведёт ${o.owner.place} · ветка ${o.owner.branch} с ${o.owner.since}`, code: 'owner', arg: `${o.owner.place} · ${o.owner.branch}` };
       }
     }
     put(s, r);
