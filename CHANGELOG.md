@@ -5,6 +5,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.44] — 2026-11-26
+
+### Added
+
+- Rush mode for M and L (`/keystone:start --rush`, `/keystone:intent --rush`, `/keystone:plan --rush`): the plan header
+  gets `Pace: rush`, and after Approve the chain implement → verify → fix → verify runs by itself in the same turn,
+  every stage a subagent on Opus with high effort (`skills/implement/references/RUSH.md`, `scripts/rush.mjs`). The
+  verifier judges finished tasks during implement (`## Early check (rush)`); the final verify, the gates and the
+  ceiling are unchanged. A stage runs its own agents in the foreground; the driver never relays between agents.
+  The feedback judge reads rush stage transcripts. The benchmark measures the whole chain
+  (`run.py --chain`, `--replay`).
+
 ## [0.9.43] — 2026-11-26
 
 ### Added

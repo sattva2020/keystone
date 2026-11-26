@@ -166,6 +166,34 @@ long multi-turn plan, grill and check sessions set `/effort high` for the sessio
 Keystone never asks about tests, logging or docs. The plan infers them from the repository and writes a `Settings:`
 line in its header; you can change it at Approve.
 
+## Rush mode
+
+When the deadline is burning and tokens are not the issue: `/keystone:start --rush <task>` (M → `/keystone:plan <task>
+--rush`, L → `/keystone:intent --rush <idea>`). The plan header gets the line `Pace: rush`, and after Approve the chain
+implement → verify → fix → verify runs by itself, in the same turn: no `/clear`, no command from you until the verdict.
+
+- **What it does.** Every stage is a subagent on Opus with high effort that reads its stage's SKILL.md; the main
+  session only drives the chain. During implement the verifier judges finished tasks in a clean context (the early
+  check, the `early` section of `agents/verifier.md`): its findings are fixed before the final verify and show up as
+  `early check` lines in `## Implementation notes`; the early check writes no `verify.md` and is not a verify run.
+  Questions before Approve come in one batch; after Approve only a requirement conflict, a blocker for a human or an
+  irreversible step asks, every other menu takes its Recommended option.
+- **What stays yours.** Signing the intent (L), Approve, accept, push, release, `/keystone:review`. On the third judged
+  FAIL the chain stops at the ceiling menu.
+- **What does not change.** The final verify is full and as strict; the verifier stays independent; the Security gate
+  and the push gate stay; one session per plan; your permission mode. There is no spending cap.
+- **A failure** (usage limit, a failed stage, a refused tool) → one line
+  `Rush остановлен на <stage>: <reason>. Продолжить: /keystone:implement <plan>`; the state stays in the plan and
+  `verify.md`. The closing line: `rush: <verdict> · с одобрения <Hh Mmin> · прогонов verify <n> · токены стадий <n>`;
+  the session's dollar cost is in `/keystone-status`.
+- **Turn it off** by deleting the `Pace: rush` line from the plan header: the usual path follows. It cannot be switched
+  on for an already approved plan. No subagents available → "rush недоступен: <reason>" and the usual path.
+- **Measured** — [benchmark 2026-11-21](benchmarks/results/2026-11-21-rush.md): on small tasks where the usual chain
+  passes on the first verify, rush is slower in machine time (1.2–1.7×) and costs more; on a replayed real plan of 7
+  tasks it was 1.33× slower and 1.48× costlier, with 3 verify runs, the same as without rush. Rush does not cut machine
+  time; what it saves is one command instead of several and no human wait between stages. In `claude -p` and CI run it
+  with `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`, or background stages are stopped after 10 minutes.
+
 ## What to run next
 
 Every Keystone answer ends with a `Next:` line — the exact command with paths, or "nothing now — waiting for …".

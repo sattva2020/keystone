@@ -603,3 +603,41 @@ test('add: task, hash and skill from the command line are cleaned like the text;
   const r = fb.add({ skill: 'plan', task: 'x' }, many, env, cwd);
   assert.match(r.line, /20 notes .* — only the first 10 lines and 30 notes kept$/);
 });
+
+// ---- rush mode: the judge sees rush stages (subagent transcripts with `Keystone rush stage:`), not other subagents ----
+
+test('rush stages: signals --session and signals <plan> read stage transcripts; verifier ones and the stage prompt are not counted', () => {
+  const row = (o) => JSON.stringify(o);
+  const use = (id, name, input) => row({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] } });
+  const res = (id) => row({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'boom', is_error: true }] } });
+  const prompt = (text) => row({ type: 'user', message: { role: 'user', content: text } });
+  const setup = (withStage) => {
+    const w = world({ transcripts: [] });
+    const main = join(w.cfg, 'projects/x/rs-1.jsonl');
+    writeFileSync(main, [prompt('<command-name>/keystone:implement</command-name> ' + PLAN)].join('\n') + '\n');
+    const sub = join(w.cfg, 'projects/x/rs-1/subagents');
+    mkdirSync(sub, { recursive: true });
+    writeFileSync(join(sub, 'agent-v.jsonl'), [prompt('You are the verifier. ' + PLAN), use('v1', 'Bash', { command: 'git x' }), res('v1')].join('\n') + '\n');
+    if (withStage) writeFileSync(join(sub, 'agent-s.jsonl'), [prompt(`Keystone rush stage: implement · ${PLAN}\nRead x`), use('s1', 'Edit', { file_path: 'a.js' }), res('s1')].join('\n') + '\n');
+    return w;
+  };
+  for (const [name, call] of [['--session', (w) => fb.signals({ session: 'rs-1' }, w.env, w.cwd)], ['<plan>', (w) => fb.signals({ plan: PLAN }, w.env, w.cwd)]]) {
+    const on = call(setup(true));
+    assert.match(on, /tool errors: 1\b/, `${name}: the stage error counts, the verifier's does not`);
+    assert.match(on, /implement/, `${name}: the stage skill`);
+    assert.match(on, /user messages \(implement\/verify\/fix\): 0/, `${name}: the stage prompt is not a user message`);
+    assert.match(call(setup(false)), /tool errors: 0\b/, `${name}: no stage file → as before`);
+  }
+});
+
+test('rush stages: coverage counts a verify stage without its self-report as missing', () => {
+  const store = tmp(), cfg = tmp();
+  const dir = join(cfg, 'projects/x');
+  mkdirSync(join(dir, 'R/subagents'), { recursive: true });
+  const row = (o) => JSON.stringify(o);
+  const hook = row({ type: 'attachment', attachment: { hookEvent: 'SessionStart', type: 'hook_additional_context', content: [fb.context('/p', 'R')] } });
+  writeFileSync(join(dir, 'R.jsonl'), [hook, row({ type: 'user', message: { role: 'user', content: '<command-name>/keystone:implement</command-name>' } })].join('\n') + '\n');
+  writeFileSync(join(dir, 'R/subagents/agent-1.jsonl'), row({ type: 'user', message: { role: 'user', content: `Keystone rush stage: verify · ${PLAN}` } }) + '\n');
+  const all = fb.summary({}, envOf(store, { CLAUDE_CONFIG_DIR: cfg })).split('### Coverage')[1].split('###')[0];
+  assert.match(all, /^- verify: report written in 0 of 1 session\(s\) — 1 missing$/m);
+});

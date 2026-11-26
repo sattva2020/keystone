@@ -344,6 +344,7 @@ export function readTrail(file) {
   const skip = new Set(); // tool_use ids of feedback calls
   const calls = new Map(); // name + input → count
   const free = (text) => !FREE_SKIP.some((s) => text.includes(s));
+  let firstUser = true; // a rush stage transcript: its first user row is the stage prompt, not the human's words
   for (const line of raw.split('\n')) {
     if (!(line.includes('tool_use') || line.includes('tool_result') || line.includes('"type":"user"') || line.includes('keystone') || line.includes('queued_command') || line.includes(ON))) continue;
     let row;
@@ -372,6 +373,9 @@ export function readTrail(file) {
           t.errors.push({ tool: cut(names.get(b.tool_use_id) ?? '?', 40), text: cut(textOf(b.content), 120) });
       }
       const isToolResult = Array.isArray(c) && c.some((b) => b?.type === 'tool_result');
+      const stage = firstUser ? text.trimStart().match(STAGE) : null;
+      firstUser = false;
+      if (stage) { t.skills.add(stage[1]); continue; }
       if (!row.isMeta && !isToolResult && text.trim() && free(text)) t.userMsgs.push(cut(text, 150));
     } else if (row.type === 'assistant' && Array.isArray(c)) {
       for (const b of c) {
@@ -387,6 +391,21 @@ export function readTrail(file) {
   }
   t.repeats = [...calls.values()].filter((x) => x.n >= 2).map((x) => ({ tool: x.tool, hint: x.hint, n: x.n }));
   return t;
+}
+
+// Rush stages of a main session (`<id>.jsonl`): its subagent transcripts `<id>/subagents/agent-*.jsonl` whose first row is
+// a user prompt that starts with `Keystone rush stage:`. Other subagents (verifier, Explore) are not read.
+const STAGE = /^Keystone rush stage: ([a-z-]+)/;
+export function rushStages(mainFile) {
+  const dir = join(dirname(mainFile), basename(mainFile, '.jsonl'), 'subagents');
+  let files = [];
+  try { files = readdirSync(dir).filter((f) => /^agent-.*\.jsonl$/.test(f)); } catch { return []; }
+  return files.map((f) => join(dir, f)).filter((p) => {
+    try {
+      const row = JSON.parse(headOf(p).split('\n')[0]);
+      return row?.type === 'user' && STAGE.test(textOf(row.message?.content).trimStart());
+    } catch { return false; }
+  });
 }
 
 const git = (cwd, args) => spawnSync('git', ['-C', cwd, ...args], { encoding: 'utf8' });
@@ -424,7 +443,7 @@ export function taskTranscripts(planPath, env = process.env, cwd = process.cwd()
       const p = join(dir, f);
       try {
         if (statSync(p).mtimeMs < bound) continue;
-        if (readFileSync(p, 'utf8').includes(task)) out.push(p);
+        if (readFileSync(p, 'utf8').includes(task)) out.push(p, ...rushStages(p));
       } catch { /* unreadable → not taken */ }
     }
   }
@@ -437,7 +456,7 @@ function sessionTranscripts(id, env) {
   if (!existsSync(projects)) return out;
   for (const d of readdirSync(projects)) {
     const p = join(projects, d, `${id}.jsonl`);
-    if (existsSync(p)) out.push(p);
+    if (existsSync(p)) out.push(p, ...rushStages(p));
   }
   return out;
 }
@@ -592,6 +611,7 @@ export function coverage(selfs, since, env = process.env) {
       if (!headOf(p).includes(ON)) continue;
       const t = readTrail(p);
       if (!t.on || (since && cmpVer(t.version, since) < 0)) continue;
+      for (const st of rushStages(p)) for (const s of readTrail(st).skills) t.skills.add(s);
       sessions++;
       const w = wrote.get(f.slice(0, -'.jsonl'.length)) ?? new Set();
       for (const [s, c] of by) if (t.skills.has(s) || w.has(s)) { c.ran++; if (w.has(s)) c.written++; }

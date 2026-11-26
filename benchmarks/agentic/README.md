@@ -102,6 +102,35 @@ keystone arms do not follow `--model`; it sets only the baseline and control arm
   name the right word for a wrong reason.
 - If the arms converge, the results say so.
 
+## Chain mode
+
+`--chain` measures the whole chain after Approve instead of one verify: rush mode against the usual chain on the same
+plan (machine time and verify runs, intent I-24 of `docs/keystone/2026-11-19-rush-mode/`).
+
+- A cell starts from one commit `base: plan approved` — the plan of the task with empty boxes, no code; the chain
+  writes the code. Tasks: `missing-task`, `weak-test`, `rule-break` (`--task all`); `clean` repeats the plan of
+  `missing-task` and is left out. The hidden check of the task stays the judge of the code.
+- Arm `chain`: separate `claude -p` processes — `/keystone:implement <plan>`, `/keystone:verify <plan>`, then up to two
+  pairs `/keystone:fix verify` + `/keystone:verify <plan>` until PASS / PASS-UNPROVEN. Arm `rush`: one
+  `claude -p "/keystone:implement <plan>"` on the same plan with `Pace: rush` in the header.
+- Every process: `--output-format stream-json --verbose`, the plugin from this checkout, no `--max-budget-usd` and no
+  verdict prompt. 3600 s per process of `chain`, 6 × 3600 s for the one `rush` process; a killed process is counted.
+- `correct` = the hidden check holds and the last `Verdict:` of `verify.md` is PASS or PASS-UNPROVEN. `time_s` — the
+  clock of `run.py`; `cost` — the sum of the last `total_cost_usd` of each process; `verify_runs` — commits of
+  `verify.md`. A `rush` cell with a pass and more than 2 verify runs adds the line `I-22 не выполнено: <n> прогонов`.
+- `--fixture ceiling --arms rush`: three judged FAIL runs are already committed; right = the driver stopped at the
+  ceiling and committed nothing.
+- `--replay "<repo>@<sha>:<plan>" --replay-check "<command>"`: a clone at `<sha>^` with the plan folder of `<sha>`,
+  its `## Release` removed and no origin; right = the check exits 0 and the verdict passes.
+- `--fast` adds `--settings {"fastMode": true}`; `--feedback on` sets `KEYSTONE_FEEDBACK=on` and keeps the
+  self-reports in the cell (`_feedback/`), otherwise feedback is off as in every other run.
+
+```bash
+python run.py --chain --dry-run --task all --arms chain,rush
+python run.py --chain --task all --arms chain,rush --runs 2 --model opus
+python run.py --chain --fixture ceiling --arms rush --runs 1
+```
+
 ## Results
 
 [2026-10-17](../results/2026-10-17-agentic.md) — the first run.

@@ -2,7 +2,7 @@
 name: implement
 description: "Keystone: execute an approved plan task by task — requirement consistency gate, checkbox after every task, resume after /clear, plan drift edited in the same commit, literal BLOCKED:, line-by-line evidence report. Use only via explicit /keystone:implement [plan path]."
 argument-hint: "[path to plan.md]"
-allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Skill TaskCreate TaskUpdate Bash(node *feedback.mjs*)
+allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Skill TaskCreate TaskUpdate Agent Bash(node *feedback.mjs*)
 disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-implement/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
@@ -84,6 +84,10 @@ Keep going without asking while the next step needs no human decision; stop only
    - `verified` with no open `## Release` steps / `abandoned` → run
      `node "${CLAUDE_SKILL_DIR}/scripts/owner.mjs" release --any <plan>` (drops a record a crashed run left), then STOP
      and say so.
+   - `Pace: rush` in the header, `Status: approved` or `implementing` (never `verified` — release mode stays as it is),
+     and the first line of your prompt is not `Keystone rush stage:` → read `${CLAUDE_SKILL_DIR}/references/RUSH.md`
+     and follow it instead of Steps 1–2. A prompt that starts with `Keystone rush stage:` makes you a stage: skip this
+     item and follow this file under RUSH.md § Stage rules.
 3. **Settings** are mandatory. Read the header line `Settings: tests — … · logging — … · docs — …`:
    - `tests — yes`: every task that changes behaviour gets a test in the same task.
    - `tests — tdd`: as `yes`, but test first — write the test, run it and see it fail for the expected reason, then

@@ -39,6 +39,12 @@
 ### Понятная задача на несколько файлов (M)
 `/keystone:start` → M → `/keystone:plan <задача>` → Approve → `/keystone:implement` → `/keystone:verify` → push.
 
+### Горят сроки
+`/keystone:start --rush <задача>` → M: `/keystone:plan <задача> --rush`, L: `/keystone:intent --rush <идея>` →
+`/keystone:intent accept <путь>` → `/keystone:plan <путь к intent>` → вопросы одним пакетом → Approve → цепочка идёт
+сама до вердикта. Остановилась (`Rush остановлен на …`) → `/keystone:implement <план>` продолжает с того же места.
+Выключить — убрать `Pace: rush` из шапки плана. Подробно — [Режим rush](../README.ru.md#режим-rush).
+
 ### Мелкая правка (S)
 `/keystone:start <правка>` → S → агент правит и проверяет сразу, без плана. Отчёт `Level: S`. Всё.
 

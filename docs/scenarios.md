@@ -42,6 +42,12 @@ If none of these helps, find your situation below.
 ### A clear task across several files (M)
 `/keystone:start` → M → `/keystone:plan <task>` → Approve → `/keystone:implement` → `/keystone:verify` → push.
 
+### A deadline is burning
+`/keystone:start --rush <task>` → M: `/keystone:plan <task> --rush`, L: `/keystone:intent --rush <idea>` →
+`/keystone:intent accept <path>` → `/keystone:plan <intent path>` → one batch of questions → Approve → the chain runs
+by itself to the verdict. Stopped (`Rush остановлен на …`) → `/keystone:implement <plan>` continues where it stopped.
+Turn it off by deleting `Pace: rush` from the plan header.
+
 ### A small edit (S)
 `/keystone:start <edit>` → S → the agent edits and checks right away, no plan. Report `Level: S`. Done.
 

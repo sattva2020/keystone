@@ -181,6 +181,15 @@ Compare `git log --format=%ad --date=short -- <intent>` with the plan's first co
 `rework signal: intent.md changed after the plan`. Same first commit → `not measurable (intent and plan first
 committed together)`.
 
+## Early check (rush)
+
+Only when the input contains a line `early: <ids>` (a rush implement stage calls you between tasks; `<ids>` are
+`Task <a>, Task <b>, …`). Then judge only the tasks named in `early:` — one line each,
+`Task <n> — ok | missing | wrong | not proven | BLOCKED — …`, by the same rules as §3 (`wrong` with `Class:`, sites,
+`Repro:` and `Impact:`) — and the Rules gate (§6) over CHANGED_FILES. Do not print `Original goal`, `Done means`,
+Reconciliation rows, `I-n` lines or `Keystone Chain`; the `Keystone verify: <n> rows …` count covers only the lines you
+printed. There is no verdict: the code is not finished, and the final verify judges everything again.
+
 ## Output (exactly this shape)
 
 ```text

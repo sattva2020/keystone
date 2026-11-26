@@ -14,6 +14,7 @@ Level: <M|L> · Mode: feature · Status: draft
 Authority: intent.md — `<path>` (Created <date>, <accepted | planned from draft intent — accepted by user at planning time>)
 Settings: tests — <yes|tdd|no> (<why, from repo>) · logging — <minimal|standard|verbose> (<why>) · docs — <yes|no> (<why>) · commits — <task|end> (<why>)
 Done means: <verifiable outcomes — what is run and what must come out; on L from I-n, on M from the request>
+<Pace: rush — optional: only in rush mode (`--rush`, or `Pace: rush` in the intent)>
 
 ## Original Request
 <exact user-provided request text, never translated, summarized or normalized>
@@ -62,7 +63,7 @@ Project rules check: read <CLAUDE.md, docs/architecture.md, .claude/rules/*.md, 
 
 Rules for the template:
 
-- `Authority:` line only when an intent exists (L, or M with an intent). Header lines are exactly the three shown.
+- `Authority:` line only when an intent exists (L, or M with an intent). Header lines are exactly the three shown, plus `Pace: rush` when the plan runs in rush mode.
 - `Status` is always `draft` when written; `/keystone:plan` flips it to `approved` only on the human's Approve.
 - `Original Request` is raw source input: no translation, even when the plan is in another language.
 - The `## Requirements Reconciliation` heading and the table header `| Decision | Source | Verification evidence |`

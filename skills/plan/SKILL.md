@@ -1,8 +1,8 @@
 ---
 name: plan
 description: "Keystone: plan an M or L change into docs/keystone/[date]-[slug]/plan.md — reconnaissance, Requirements Reconciliation Gate against intent.md (I-n) and project rules, Rules check, Risks, tasks with files and checks, a pre-approval interrogation round, and on L an independent /keystone:check. Settings are inferred from the repo, never asked. Explicit /keystone:plan only."
-argument-hint: "<path to intent.md or its folder | task text> [S | M | L]"
-allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion Task Skill Bash(node *feedback.mjs*)
+argument-hint: "<path to intent.md or its folder | task text> [S | M | L] [--rush]"
+allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion Task Skill Agent Bash(node *rush.mjs*) Bash(node *feedback.mjs*)
 model: opus
 effort: high
 disable-model-invocation: true
@@ -85,10 +85,13 @@ instead of creating a second one.
 source for the gate, the chat is not. If the argument is plain task
 text, it is the request (M); an intent file that sits next to it is then not assumed.
 
-**Original Request.** The text the user gave, after the level token is removed and only outer whitespace is trimmed.
+**Original Request.** The text the user gave, after the level token and `--rush` are removed and only outer whitespace is trimmed.
 Preserve internal whitespace, line breaks, wording, casing and punctuation exactly. It goes into the plan under
 `## Original Request`; do not rewrite, summarize, translate or normalize it. In intent mode the request is the user's
 words that came with the path; if there were none, the intent's Problem line is cited instead and the section says so.
+
+**Pace.** `--rush` in the argument or a `Pace: rush` line in the intent header → the line `Pace: rush` in the plan header
+right after `Done means:` (rush mode: after Approve the chain runs by itself — `../implement/references/RUSH.md`).
 
 **Project context.** Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
 `.claude/rules/**/*.md` (a rule with `paths:` frontmatter applies only to matching files); `AGENTS.md` if present.
@@ -147,6 +150,8 @@ If the open user-owned decisions contain a dependency edge (answer B depends on 
 `/keystone:grill` contract instead of scattered questions; a single fork or a batch of independent questions stays an
 ordinary question. Facts from the codebase are looked up, never asked. Confirmed decisions go to the intent's
 `## Decisions log` only by telling the user to update the intent — the plan does not edit it.
+With `Pace: rush` all questions of this stage go in one round (one message or one AskUserQuestion); after Approve the
+chain asks only on a requirement conflict, a blocker for the human, or an irreversible step.
 
 ### Requirements Reconciliation Gate
 
@@ -279,13 +284,16 @@ convention (the chain is the audit trail; stage only the task folder). Then tell
 `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
 if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(plan)`).
 
+**`Pace: rush`** → after the approval commit read `${CLAUDE_SKILL_DIR}/../implement/references/RUSH.md` and run the
+chain now, in this turn, instead of the advice below (no fresh session, no `/clear`).
+
 - implement in a **fresh session** — a new conversation or `/clear` (not `/compact`) — with
   `/keystone:implement <plan path>`; Sonnet is enough for a plan this explicit;
 - finish with `/keystone:verify`;
 - while the plan is `draft`, a hook refuses code edits outside `docs/keystone/`; lift it with `Status: abandoned` in the
   header or the env var `KEYSTONE_GATES=off`.
 
-STOP after planning; the user decides when to implement. If the plan is not ready for implementation (a blocking open
+STOP after planning; the user decides when to implement — unless `Pace: rush`: then the chain runs (RUSH.md). If the plan is not ready for implementation (a blocking open
 question remains), say so, leave it `draft`, and list the questions.
 
 Suggest freeing context before implementation: `/clear` (full reset), not `/compact`.

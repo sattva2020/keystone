@@ -30,7 +30,7 @@ test('0.9.31: no skill or agent description has <angle-bracket> text — claude.
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.43');
+  assert.equal(p.version, '0.9.44');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -920,4 +920,44 @@ test('plan Settings: tests — tdd and commits — task|end are in the format an
   const impl = read('skills/implement/SKILL.md');
   assert.match(impl, /`tests — tdd`: as `yes`, but test first/);
   assert.match(impl, /`commits — end`: no commit/);
+});
+
+test('rush early check: the verifier judges only the tasks named in early:, no verdict', () => {
+  has('agents/verifier.md', '## Early check (rush)', '`early: <ids>`', 'only the tasks named in');
+  const v = read('agents/verifier.md');
+  assert.ok(v.indexOf('## Early check (rush)') < v.indexOf('## Output (exactly this shape)'), 'early section before Output');
+});
+
+test('rush driver: RUSH.md carries every rule of the Design, implement enters it only on Pace: rush', () => {
+  const R = 'skills/implement/references/RUSH.md';
+  has(R, 'Keystone rush stage:', 'RUSH: done', 'RUSH: question', 'RUSH: stop', 'model: "opus"', 'effort: "high"', '$ARGUMENTS',
+    'the active plan in this file means', 'Fix directly here', 'menu:', 'start with the fix stage', 'tool denied', 'early:',
+    'never writes verify.md', 'ceiling:', 'rules menu: on this FAIL', 'nothing to judge', 'Rush остановлен на', 'nothing changed',
+    'build or test failed twice', 'Next: nothing now — waiting for', 'no conclusions', 'rush недоступен', '/fast', 'rush.mjs summary',
+    'subagent_tokens', '/keystone-status', 'Accept', 'Approve', '/keystone:review');
+  assert.doesNotMatch(read(R), /max-budget|mode:|trend menu/);
+  assert.match(read(R).split('\n')[0], /^<!-- original Keystone file \(MIT\) -->$/);
+  assert.match(front('skills/implement/SKILL.md'), /allowed-tools:.*\bAgent\b/);
+  has('skills/implement/SKILL.md', 'Keystone rush stage:', 'never `verified`', 'references/RUSH.md');
+});
+
+test('rush entry points: start routes --rush, intent and plan write Pace: rush, plan runs the chain on Approve', () => {
+  assert.match(front('skills/start/SKILL.md'), /--rush/);
+  has('skills/start/SKILL.md', 'M → `/keystone:plan <task> --rush`', 'L → `/keystone:intent --rush <idea>`', 'rush не нужен на S', 'The level question stays one');
+  assert.match(front('skills/intent/SKILL.md'), /--rush/);
+  has('skills/intent/SKILL.md', '`Pace: rush` right after `Goal check:`', '<Pace: rush — only with --rush>', 'the whole frontier',
+    'mandatory edge-case pass', 'eleven areas', 'in the same batch', 'only for questions whose answer depends on ones already asked',
+    'The `Goal check` confirmation is the only separate question before accept');
+  assert.match(front('skills/plan/SKILL.md'), /allowed-tools:.*\bAgent\b/);
+  assert.match(front('skills/plan/SKILL.md'), /rush\.mjs/);
+  has('skills/plan/SKILL.md', 'the line `Pace: rush` in the plan header right after `Done means:`', 'all questions of this stage go in one round',
+    'read `${CLAUDE_SKILL_DIR}/../implement/references/RUSH.md` and run the chain now, in this turn', 'unless `Pace: rush`', 'level token and `--rush` are removed');
+  has('skills/plan/references/PLAN-FORMAT.md', 'Pace: rush', 'plus `Pace: rush` when the plan runs in rush mode');
+});
+
+test('rush docs: README and the skills reference describe --rush', () => {
+  has('README.ru.md', '--rush', '## Режим rush', 'Pace: rush');
+  has('README.md', '--rush', '## Rush mode');
+  has('docs/skills.md', '--rush');
+  has('docs/skills.ru.md', '--rush');
 });

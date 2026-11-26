@@ -1,7 +1,7 @@
 ---
 name: start
 description: "Keystone: size a change as S, M or L and route it — S (diff in one sentence) → code + check, no intent, no plan; M (one clear approach) → short plan with 3-line Risks; L (several decisions, data, security, other teams' modules) → intent → plan → implement → verify. Picks the model per stage, caps exploration, and asks for the cost line in the report. Use at the start of any task: 'start', 'what level is this', 'how should we do this'."
-argument-hint: "<task in your own words>"
+argument-hint: "[--rush] <task in your own words>"
 allowed-tools: Read Glob Grep Bash(git *) AskUserQuestion Task Bash(node *feedback.mjs*)
 ---
 
@@ -103,6 +103,10 @@ from the higher row appears — say so; never re-size down silently.
   Settings (tests, logging, docs) from the repo instead of asking, asks the three risk questions and Approve / Adjust.
 - **L** — `/keystone:intent <idea>` (grill → intent.md → human reads and accepts), then `/keystone:plan <intent path>`,
   which runs `/keystone:check` (analyzer + validator in clean contexts) before Approve.
+- **`--rush`** (deadline mode: after Approve the chain implement → verify → fix → verify runs by itself, stages on the
+  judge model with high effort — `../implement/references/RUSH.md`): M → `/keystone:plan <task> --rush`; L →
+  `/keystone:intent --rush <idea>`; S → one line "rush не нужен на S" and the S route. The level question stays one;
+  the flag is not part of the task text.
 - **Where the other skills switch on.** Not separate steps — each is pulled in by the stage that needs it: L with
   security/auth/payments/PII → `/keystone:plan` adds a threat block and a `/keystone:security <scope>` task, and
   `/keystone:verify` requires its result; `docs — yes` → `/keystone:implement` runs `/keystone:docs update`;

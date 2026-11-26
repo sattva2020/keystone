@@ -220,3 +220,18 @@ TASKS = {
     "rule-break":   _task("order-summary", report_seed, report_impl, check_report, "bad", "FAIL", r"print"),
     "clean":        _task("text-helpers", text_seed, text_impl, check_text, "good", "PASS", None),
 }
+
+# ---------------------------------------------------------------- chain mode (run.py --chain)
+# The chain starts from the approved plan with empty boxes (`seed`) and builds the code itself; `clean` repeats the
+# plan of `missing-task`, so it is not a chain task.
+CHAIN_TASKS = ("missing-task", "weak-test", "rule-break")
+
+def with_pace(text):
+    """The plan header gets `Pace: rush` right after `Done means:` (rush mode)."""
+    return re.sub(r"(?m)^(Done means:.*\n)", r"\1Pace: rush\n", text, count=1)
+
+def chain_seed(task, rush):
+    """Files of the one `base: plan approved` commit of a chain cell; `Pace: rush` only in the rush arm."""
+    files = dict(task["seed"])
+    if rush: files[task["plan"]] = with_pace(files[task["plan"]])
+    return files

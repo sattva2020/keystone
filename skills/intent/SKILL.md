@@ -1,7 +1,7 @@
 ---
 name: intent
 description: "Capture a change as intent.md — what and why, in the originator's words, decisions confirmed via /keystone:grill, every line with an ID (I-1…) — and have the human sign it off. The first file of the Keystone chain intent → plan → code → verify (Anthropic's AI-native SDLC playbook, adapted: the plan is the spec). Use for 'intent', 'capture the idea', 'what exactly do we want', or before planning an L-level change."
-argument-hint: "[idea text] | accept <path to intent.md or its folder>"
+argument-hint: "[--rush] [idea text] | accept <path to intent.md or its folder>"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) Bash(mkdir *) AskUserQuestion Task Bash(node *feedback.mjs*)
 model: opus
 effort: high
@@ -84,6 +84,11 @@ Two subcommands:
    show it, and get one explicit confirmation; "ok to all" given to the raw rounds is not that confirmation.
    **Scope decisions first:** any decision that changes how much work this is belongs to the first rounds — never
    leave it as an Open question.
+   **`--rush` in the argument** (rush mode, `/keystone:start --rush`): the interview goes as one batch — the round
+   holds the whole frontier (no ~8-question cap) together with the questions of the mandatory edge-case pass and of
+   the final sweep over the eleven areas (`../grill/SKILL.md` § 4), in the same batch; a next round only for questions
+   whose answer depends on ones already asked. The `Goal check` confirmation is the only separate question before
+   accept. The intent header gets the line `Pace: rush` right after `Goal check:`; the flag is not part of the idea text.
 2. **One change per intent.** If the confirmed decisions describe several independent changes, propose splitting into
    separate intents before writing, and write only the one the user picks first.
 3. **Write in the originator's words.** No solutions, no architecture, no task list — that is plan work.
@@ -100,6 +105,7 @@ Source: <idea | ticket URL | incident/alert link>
 <Written after plan: <path> — only for a retrospective intent>
 <Roadmap: M-<n> — optional; only when docs/roadmap.md exists and the task belongs to a milestone>
 Goal check: <matches | narrowed — confirmed <date>: "<user's words>" | replaced — confirmed <date>: "<user's words>">
+<Pace: rush — only with --rush>
 
 ## Original goal
 <the user's first request for this change, verbatim — never edited, never paraphrased>
@@ -153,6 +159,8 @@ Goal check: <matches | narrowed — confirmed <date>: "<user's words>" | replace
    that command ends. Every `/keystone:*` skill that finds a `draft` or uncommitted intent for the change it works on
    says so in one line first.
 8. Next: `/keystone:intent accept <path>`, then `/keystone:plan <path>/intent.md` (it runs `/keystone:check` before Approve).
+   With `Pace: rush` the `Next:` after accept is the same `/keystone:plan <path>/intent.md` — the flag is already in the
+   intent, plan carries it into the plan header.
 
 ## `/keystone:intent accept <path>`
 

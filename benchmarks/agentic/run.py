@@ -9,15 +9,16 @@ is right when it says FAIL and names the gap (or PASS / PASS-UNPROVEN on `clean`
   python run.py --dry-run --task missing-task    print the seeded path and the command, no API
   python run.py --task all --arms baseline,control,keystone --runs 5 --model opus
   python run.py --rescore runs/<stamp>           recompute the table from kept workspaces, no API
+  python run.py --chain --task all --arms chain,rush --runs 2   the whole chain after Approve: chain vs rush (README)
 
 ponytail: the claude CLI is the harness, stdlib only; stats live here, not in a compare.py, until a second plugin
 candidate needs a paired comparison.
 """
-import argparse, concurrent.futures, contextlib, datetime, io, json, math, os, random, re, shutil, signal, stat, statistics, subprocess, sys, tempfile
+import argparse, concurrent.futures, contextlib, datetime, io, json, math, os, random, re, shutil, signal, stat, statistics, subprocess, sys, tempfile, time
 from collections import defaultdict
 from pathlib import Path
 
-from tasks import TASKS, _load
+from tasks import CHAIN_TASKS, TASKS, _load, chain_seed, with_pace
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]                      # the Keystone plugin under test: this checkout, not the installed cache
@@ -288,8 +289,315 @@ def selftest():
         (Path(d) / "_claude.json").write_text(json.dumps({"result": "VERDICT: PASS", "total_cost_usd": 1,
             "modelUsage": {"claude-opus-5-5": {"outputTokens": 300}, "claude-sonnet-5-5": {"outputTokens": 200}}}), encoding="utf-8")
         ok(score("clean", "keystone", "m", d)["out"] == 500, "score  out sums output tokens over every model")
+    chain_selftest(ok)
     print(f"\nselftest: {'all instruments valid' if not fails else f'{fails} BROKEN'}")
     return fails
+
+# ---------------------------------------------------------------- chain mode (--chain): Approve → verdict, chain vs rush
+# chain: separate `claude -p` processes — implement, verify, then up to two (fix verify, verify) pairs until PASS /
+# PASS-UNPROVEN. rush: one `claude -p "/keystone:implement <plan>"` on a plan with `Pace: rush`. No --max-budget-usd
+# (rush has no spending ceiling, I-18) and no VERDICT_ASK (the chain changes code).
+CHAIN_ARMS = ("chain", "rush")
+CHAIN_TIMEOUT = 3600                        # seconds per process of the chain arm; one rush process gets the whole arm's
+CHAIN_FIX_PAIRS = 2
+PASSED = ("PASS", "PASS-UNPROVEN")
+EXCLUDE = "_claude*\n_feedback/\n"           # bench files never show up as untracked files in collect.mjs
+
+def chain_tids(arg):
+    return list(CHAIN_TASKS) if arg == "all" else [t.strip() for t in (arg or "").split(",") if t.strip()]
+
+def chain_timeout(arm):
+    return CHAIN_TIMEOUT * (2 + 2 * CHAIN_FIX_PAIRS if arm == "rush" else 1)   # rush: 6 x, as long as the chain arm
+
+def chain_env(ws, feedback="off"):
+    # `claude -p` stops background subagents 10 min after the last turn: a stage or a verifier longer than that is killed
+    e = {**ENV, "KEYSTONE_FEEDBACK": feedback, "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "0"}
+    if feedback == "on": e["KEYSTONE_FEEDBACK_DIR"] = str(Path(ws) / "_feedback")
+    return e
+
+def chain_cmd(prompt, model, fast=False):
+    cmd = [shutil.which("claude") or "claude", "-p", prompt, "--model", MODELS.get(model, model),
+           "--permission-mode", "bypassPermissions", "--output-format", "stream-json", "--verbose",
+           "--setting-sources", "project,local", "--strict-mcp-config", "--plugin-dir", str(ROOT)]
+    return cmd + (["--settings", json.dumps({"fastMode": True})] if fast else [])
+
+def build_chain_cmds(plan, arm, model, fast=False):
+    """The first commands of a cell; the chain arm adds fix_pair() rounds in run_chain while there is no pass."""
+    prompts = [f"/keystone:implement {plan}"] + ([f"/keystone:verify {plan}"] if arm == "chain" else [])
+    return [chain_cmd(p, model, fast) for p in prompts]
+
+def fix_pair(plan, model, fast=False):
+    return [chain_cmd("/keystone:fix verify", model, fast), chain_cmd(f"/keystone:verify {plan}", model, fast)]
+
+def _exclude(ws):
+    p = Path(ws) / ".git" / "info" / "exclude"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with open(p, "a", encoding="utf-8", newline="\n") as f: f.write("\n" + EXCLUDE)
+
+def _commit(ws, msg):
+    _git(ws, "add", "-A"); _git(ws, "commit", "-q", "--no-verify", "-m", msg)
+
+def seed_chain(ws, task, rush):
+    _write(ws, chain_seed(task, rush))
+    _git(ws, "init", "-q", "-b", "main")
+    _exclude(ws)
+    _commit(ws, "base: plan approved")
+
+def _ceiling_verify(base, plan, i):
+    return (f"# Verify: x\nDate: 2026-11-0{i} · Base: {base} · Verdict: FAIL\n\n## Checks\n- base: {base}\n\n## Carried\n\n"
+            f"## Report\nKeystone verify: {plan} · base {base}\n- Task 2 — missing — truncate not written ({i}). Repro: "
+            f"`grep truncate src/textutil.py` → nothing\n\n## Verdict\nFAIL\n")
+
+def seed_ceiling(ws):
+    """missing-task with its gap, `Pace: rush` in the approval commit and in the overlay, three judged FAIL runs."""
+    t = TASKS["missing-task"]
+    seed_chain(ws, t, True)
+    base = _git(ws, "rev-parse", "--short=7", "HEAD").stdout.strip()
+    _write(ws, {**t["bad"], t["plan"]: with_pace(t["bad"][t["plan"]])})
+    _commit(ws, "impl: all plan tasks done")
+    vpath = f"{Path(t['plan']).parent.as_posix()}/verify.md"
+    for i in (1, 2, 3):
+        _write(ws, {vpath: _ceiling_verify(base, t["plan"], i)})
+        _commit(ws, f"docs(verify): text-helpers — FAIL {i}")
+    return t["plan"]
+
+def strip_release(text):
+    return re.sub(r"(?ms)^## Release\n.*?(?=^## |\Z)", "", text)
+
+def seed_replay(ws, spec, rush):
+    """`<repo>@<sha>:<plan>`: a clone at <sha>^ with the plan folder of <sha>, no `## Release`, no origin."""
+    repo, rest = spec.rsplit("@", 1)
+    sha, plan = rest.split(":", 1)
+    r = subprocess.run(["git", "clone", "-q", "--no-hardlinks", repo, str(ws)], capture_output=True, text=True)
+    if r.returncode: raise RuntimeError(f"clone {repo}: {r.stderr.strip()[:200]}")
+    _git(ws, "checkout", "-q", f"{sha}^")
+    _git(ws, "checkout", sha, "--", Path(plan).parent.as_posix())
+    p = Path(ws) / plan
+    text = strip_release(p.read_text(encoding="utf-8"))
+    p.write_text(with_pace(text) if rush else text, encoding="utf-8", newline="\n")
+    _git(ws, "remote", "remove", "origin")
+    _exclude(ws)
+    _commit(ws, "docs(plan): approved")
+    return plan
+
+def last_result(path):
+    """The last `result` event of a stream-json file, or None."""
+    res = None
+    try: text = Path(path).read_text(encoding="utf-8", errors="ignore")
+    except OSError: return None
+    for line in text.splitlines():
+        try: ev = json.loads(line)
+        except ValueError: continue
+        if isinstance(ev, dict) and ev.get("type") == "result": res = ev
+    return res
+
+def transcript_tokens(ws, config=None):
+    """(all tokens, output tokens) of the cell's sessions and their subagents, from <config>/projects/<cwd as dashes>/.
+    A cross-check of `total_cost_usd`: on a rush cell their output tokens sum to the result's `modelUsage` (subagents in)."""
+    config = Path(config or os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+    d = config / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(Path(ws).resolve()))
+    seen, total, out = set(), 0, 0
+    for p in [*d.glob("*.jsonl"), *d.glob("*/subagents/*.jsonl")]:
+        for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+            try: row = json.loads(line)
+            except ValueError: continue
+            m = row.get("message") if isinstance(row, dict) and row.get("type") == "assistant" else None
+            u = (m or {}).get("usage")
+            if not u or (p, m.get("id")) in seen: continue
+            seen.add((p, m.get("id")))
+            out += u.get("output_tokens") or 0
+            total += sum(u.get(k) or 0 for k in ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
+    return total or None, out or None
+
+def verdict_at(ws, plan):
+    p = Path(ws) / Path(plan).parent / "verify.md"
+    m = VERIFY_MD_RE.findall(p.read_text(encoding="utf-8", errors="ignore")) if p.exists() else []
+    return m[-1] if m else "none"
+
+def run_chain(cell, ws, opts):
+    tid, arm, model, _ = cell
+    if tid == "ceiling": plan = seed_ceiling(ws)
+    elif tid == "replay": plan = seed_replay(ws, opts.replay, arm == "rush")
+    else: seed_chain(ws, TASKS[tid], arm == "rush"); plan = TASKS[tid]["plan"]
+    head0 = _git(ws, "rev-parse", "HEAD").stdout.strip()
+    env, limit, steps, killed = chain_env(ws, opts.feedback), chain_timeout(arm), 0, False
+    def go(cmd):
+        nonlocal steps, killed
+        with open(ws / f"_claude_{steps}.jsonl", "wb") as so, open(ws / f"_claude_{steps}.stderr.txt", "wb") as se:
+            proc = subprocess.Popen(cmd, cwd=str(ws), stdout=so, stderr=se, env={**os.environ, **env},
+                                    start_new_session=(os.name != "nt"))
+            try: proc.wait(timeout=limit)
+            except subprocess.TimeoutExpired:
+                _tree_kill(proc); killed = True
+                se.write(f"\n[KILLED after {limit}s]".encode())
+        steps += 1
+    t0 = time.monotonic()
+    for c in build_chain_cmds(plan, arm, model, opts.fast): go(c)
+    if arm == "chain":
+        for _ in range(CHAIN_FIX_PAIRS):
+            if verdict_at(ws, plan) in PASSED: break
+            for c in fix_pair(plan, model, opts.fast): go(c)
+    return score_chain(cell, ws, plan, head0, time.monotonic() - t0, steps, killed, opts)
+
+def score_chain(cell, ws, plan, head0, time_s, steps, killed, opts):
+    tid, arm, model, _ = cell
+    results = [last_result(ws / f"_claude_{i}.jsonl") for i in range(steps)]
+    vpath = f"{Path(plan).parent.as_posix()}/verify.md"
+    v = verdict_at(ws, plan)
+    if tid == "ceiling": ok = _git(ws, "rev-parse", "HEAD").stdout.strip() == head0      # stopped: nothing committed
+    elif tid == "replay": ok = v in PASSED and subprocess.run(opts.replay_check, shell=True, cwd=str(ws), capture_output=True).returncode == 0
+    else: ok = v in PASSED and TASKS[tid]["check"](ws)
+    tokens, out = transcript_tokens(ws)
+    return {"task": tid, "arm": arm, "model": model, "cell": ws.name, "verdict": v, "correct": int(bool(ok)),
+            "time_s": round(time_s, 1), "cost": sum((r or {}).get("total_cost_usd") or 0 for r in results) or None,
+            "tokens": tokens, "out": out,
+            "verify_runs": len(_git(ws, "log", "--format=%H", "--", vpath).stdout.split()), "steps": steps,
+            "killed": killed, "is_error": any((r or {}).get("is_error") for r in results), "error": None}
+
+def report_chain(results):
+    by = defaultdict(list)
+    for c in results: by[(c["task"], c["arm"])].append(c)
+    f = lambda x, d: "-" if x is None else f"{x:.{d}f}"
+    lines = ["| task | arm | n | correct | verdicts | time s (median) | cost $ (median) "
+             "| tokens (median) | out tokens (median) | verify runs | killed | rush/chain time |",
+             "|---|---|--:|--:|---|--:|--:|--:|--:|---|--:|--:|"]
+    for t in sorted({t for t, _ in by}):
+        for a in CHAIN_ARMS:
+            cs = by[(t, a)]
+            if not cs: continue
+            vs = ", ".join(f"{k} {n}" for k, n in sorted(_count(c["verdict"] for c in cs).items()))
+            rt, ct = _median(cs, "time_s"), _median(by[(t, "chain")], "time_s")
+            ratio = f(rt / ct, 2) + "×" if a == "rush" and rt and ct else "-"
+            lines.append(f"| {t} | {a} | {len(cs)} | {sum(c['correct'] for c in cs)}/{len(cs)} | {vs} | {f(rt, 0)} "
+                         f"| {f(_median(cs, 'cost'), 2)} | {f(_median(cs, 'tokens'), 0)} | {f(_median(cs, 'out'), 0)} "
+                         f"| {', '.join(str(c['verify_runs']) for c in cs)} "
+                         f"| {sum(1 for c in cs if c.get('killed'))} | {ratio} |")
+    miss = [f"I-22 не выполнено: {c['verify_runs']} прогонов ({c['task']} · {c['cell']})" for c in results
+            if c["arm"] == "rush" and c["task"] != "ceiling" and c["verdict"] in PASSED and c["verify_runs"] > 2]
+    total = sum(c.get("cost") or 0 for c in results)
+    return "\n".join(lines + [""] + miss + [f"cells: {len(results)} · spend: ${total:.2f} · killed: "
+                                            f"{sum(1 for c in results if c.get('killed'))} · errors: {sum(1 for c in results if c.get('is_error'))}"])
+
+def chain_selftest(ok):
+    for tid in CHAIN_TASKS:
+        t = TASKS[tid]
+        for rush in (False, True):
+            p = chain_seed(t, rush)[t["plan"]]
+            ok("Status: approved" in p and "- [x]" not in p and ("Pace: rush" in p) is rush,
+               f"chain  {tid:12} {'rush' if rush else 'chain'}: approved, empty boxes, Pace only in rush")
+    ok(chain_tids("all") == ["missing-task", "weak-test", "rule-break"], "chain  --task all = the three chain tasks")
+    cmds = build_chain_cmds("p/plan.md", "chain", "opus")
+    flat = [x for c in cmds + fix_pair("p/plan.md", "opus") for x in c]
+    ok([c[2] for c in cmds] == ["/keystone:implement p/plan.md", "/keystone:verify p/plan.md"]
+       and [c[2] for c in build_chain_cmds("p/plan.md", "rush", "opus")] == ["/keystone:implement p/plan.md"]
+       and [c[2] for c in fix_pair("p/plan.md", "opus")] == ["/keystone:fix verify", "/keystone:verify p/plan.md"],
+       "chain  commands: chain = implement, verify (+ fix pairs); rush = implement")
+    ok(VERDICT_ASK not in flat and "--max-budget-usd" not in flat and "stream-json" in flat and "--settings" not in flat,
+       "chain  no VERDICT_ASK, no --max-budget-usd, stream-json")
+    fc = build_chain_cmds("p/plan.md", "rush", "opus", fast=True)[0]
+    ok(fc[fc.index("--settings") + 1] == '{"fastMode": true}', "chain  --fast adds --settings {\"fastMode\": true}")
+    with tempfile.TemporaryDirectory() as d:
+        e = chain_env(d, "on")
+        ok(e["KEYSTONE_FEEDBACK"] == "on" and Path(e["KEYSTONE_FEEDBACK_DIR"]).parent == Path(d)
+           and chain_env(d)["KEYSTONE_FEEDBACK"] == "off" and "KEYSTONE_FEEDBACK_DIR" not in chain_env(d)
+           and chain_env(d)["CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"] == "0",
+           "chain  --feedback on: KEYSTONE_FEEDBACK=on, KEYSTONE_FEEDBACK_DIR inside the cell; off by default")
+    ok(chain_timeout("rush") == 6 * CHAIN_TIMEOUT and chain_timeout("chain") == CHAIN_TIMEOUT, "chain  rush timeout = 6 x CHAIN_TIMEOUT")
+    with tempfile.TemporaryDirectory() as d:
+        seed_chain(Path(d), TASKS["missing-task"], True)
+        for f in ("_claude.json", "_claude.stderr.txt", "_claude_0.jsonl", "_feedback/x"):
+            (Path(d) / f).parent.mkdir(parents=True, exist_ok=True); (Path(d) / f).write_text("x", encoding="utf-8")
+        ok(_git(d, "status", "--porcelain").stdout.strip() == "", "chain  bench files are excluded: git status is empty")
+    node = shutil.which("node")
+    with tempfile.TemporaryDirectory() as d:
+        plan = seed_ceiling(Path(d))
+        pace = subprocess.run([node, str(ROOT / "skills/implement/scripts/rush.mjs"), "pace", plan], cwd=d, capture_output=True, text=True).stdout
+        hist = subprocess.run([node, str(ROOT / "skills/verify/scripts/collect.mjs"), plan, "--history"], cwd=d, capture_output=True, text=True).stdout
+        ok(pace.strip() == "pace: rush" and "ceiling: reached" in hist, "chain  fixture ceiling: pace: rush, ceiling: reached")
+    with tempfile.TemporaryDirectory() as d:
+        src, ws = Path(d) / "src", Path(d) / "ws"
+        rel = "docs/keystone/2026-01-01-r/plan.md"
+        _write(src, {"a.txt": "a"}); _git(src, "init", "-q", "-b", "main"); _commit(src, "start")
+        _write(src, {rel: "# Plan: r\n\nLevel: M · Mode: feature · Status: approved\nDone means: x\n\n## Tasks\n- [ ] 1. a\n\n"
+                          "## Release\n- [ ] R1. echo release — check: true\n\n## Implementation notes\n"})
+        _commit(src, "docs(plan): approved")
+        sha = _git(src, "rev-parse", "HEAD").stdout.strip()
+        ws.mkdir(); plan = seed_replay(ws, f"{src.as_posix()}@{sha}:{rel}", True)
+        text = (ws / plan).read_text(encoding="utf-8")
+        ok(not re.search(r"(?m)^- \[ \] R\d", text) and "## Release" not in text and "## Implementation notes" in text
+           and "Pace: rush" in text and not _git(ws, "remote").stdout.strip(),
+           "chain  --replay: plan without R<n> lines, Pace: rush, no origin")
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "s.jsonl"
+        p.write_text("\n".join(json.dumps(x) for x in [{"type": "result", "total_cost_usd": 1}, {"type": "assistant"},
+                                                        {"type": "result", "total_cost_usd": 2.5}]) + "\nnot json\n", encoding="utf-8")
+        ok(last_result(p)["total_cost_usd"] == 2.5, "chain  stream-json: the last result event wins")
+    with tempfile.TemporaryDirectory() as cfg, tempfile.TemporaryDirectory() as ws:
+        d = Path(cfg) / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(Path(ws).resolve()))
+        (d / "s1" / "subagents").mkdir(parents=True)
+        a = lambda i, o: json.dumps({"type": "assistant", "message": {"id": i, "usage": {"input_tokens": 1, "output_tokens": o, "cache_read_input_tokens": 10}}})
+        (d / "s1.jsonl").write_text("\n".join([a("m1", 5), a("m1", 5), a("m2", 7)]), encoding="utf-8")   # one message, two rows
+        (d / "s1" / "subagents" / "agent-x.jsonl").write_text(a("m9", 100), encoding="utf-8")
+        ok(transcript_tokens(ws, cfg) == (16 + 18 + 111, 112), "chain  tokens: main session + subagents, a message counted once")
+    rows = [{"task": "missing-task", "arm": "rush", "cell": "c", "verdict": "PASS", "verify_runs": 3, "correct": 1, "time_s": 10},
+            {"task": "missing-task", "arm": "chain", "cell": "d", "verdict": "PASS", "verify_runs": 2, "correct": 1, "time_s": 20}]
+    tbl = report_chain(rows)
+    ok("I-22 не выполнено: 3 прогонов" in tbl and "0.50×" in tbl and "cells: 2" in tbl, "chain  report: ratio and the I-22 line")
+
+def chain_main(a):
+    arms = ["chain", "rush"] if a.arms == DEFAULT_ARMS else [x.strip() for x in a.arms.split(",")]
+    if any(x not in CHAIN_ARMS for x in arms): sys.exit(f"--chain --arms from {list(CHAIN_ARMS)}")
+    if a.fixture:
+        if a.fixture != "ceiling" or arms != ["rush"]: sys.exit("--fixture ceiling goes with --chain --arms rush")
+        tids = ["ceiling"]
+    elif a.replay:
+        if not a.replay_check: sys.exit("--replay needs --replay-check \"<command>\"")
+        tids = ["replay"]
+    else:
+        tids = chain_tids(a.task)
+        if not tids or any(t not in CHAIN_TASKS for t in tids): sys.exit(f"--chain --task from {list(CHAIN_TASKS)} or all")
+    plan_of = lambda t: a.replay.rsplit("@", 1)[1].split(":", 1)[1] if t == "replay" else TASKS["missing-task" if t == "ceiling" else t]["plan"]
+    if a.dry_run:
+        for t in tids:
+            for arm in arms:
+                print(t, arm, plan_of(t))
+                for c in build_chain_cmds(plan_of(t), arm, a.model, a.fast): print("  ", " ".join(c))
+                if arm == "chain": print(f"   then up to {CHAIN_FIX_PAIRS} x:", " | ".join(" ".join(c) for c in fix_pair(plan_of(t), a.model, a.fast)))
+        return
+    if selftest(): sys.exit("instruments broken; refusing to spend on the API")
+    if not shutil.which("claude"): sys.exit("claude CLI not found on PATH")
+    warm = warm_up(a.model)
+    if warm: sys.exit(f"claude -p does not work here, nothing spent on cells: {warm}")
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    out = RUNS_DIR / f"{stamp}-chain"
+    out.mkdir(parents=True, exist_ok=True)
+    scratch = Path(tempfile.mkdtemp(prefix=f"keystone-chain-{stamp}-"))
+    cells = [(t, arm, a.model, r) for t in tids for arm in arms for r in range(a.runs)]
+    meta = {"date": stamp, "mode": "chain", "model": MODELS.get(a.model, a.model), "claude": _claude_version(), "fast": a.fast,
+            "feedback": a.feedback, "replay": a.replay,
+            "keystone": json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]}
+    results = []
+    def one(spec):
+        ws = scratch / "__".join(map(str, spec))
+        ws.mkdir()
+        try: return run_chain(spec, ws, a)
+        finally: move(ws, out / ws.name)
+    print(f"running {len(cells)} chain cells, {a.workers} at a time -> {out}", flush=True)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=a.workers) as ex:
+        futs = {ex.submit(one, s): s for s in cells}
+        for i, fut in enumerate(concurrent.futures.as_completed(futs), 1):
+            t, arm, m, r = futs[fut]
+            try: res = fut.result()
+            except Exception as e: res = {"task": t, "arm": arm, "model": m, "cell": f"{t}__{arm}__{m}__{r}", "error": str(e)[:200],
+                                          "verdict": "none", "correct": 0, "verify_runs": 0, "killed": False, "is_error": True}
+            results.append(res)
+            print(f"  [{i}/{len(cells)}] {t} / {arm} #{r} verdict={res.get('verdict')} correct={res.get('correct')} "
+                  f"time={res.get('time_s')}s cost=${res.get('cost')} verify_runs={res.get('verify_runs')} killed={res.get('killed')}", flush=True)
+            (out / "results.json").write_text(json.dumps({**meta, "results": results}, indent=2), encoding="utf-8")
+    shutil.rmtree(scratch, ignore_errors=True)
+    table = report_chain(results)
+    (out / "table.md").write_text(f"{json.dumps(meta)}\n\n{table}\n", encoding="utf-8")
+    print("\n" + table + f"\n\nwrote {out}")
 
 # ---------------------------------------------------------------- main
 def _claude_version():
@@ -331,11 +639,18 @@ def main():
     ap.add_argument("--model", default="opus")
     ap.add_argument("--runs", type=int, default=1)
     ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--chain", action="store_true", help="the whole chain after Approve: arms chain and rush")
+    ap.add_argument("--fixture", help="--chain only: 'ceiling' (three judged FAIL runs already committed)")
+    ap.add_argument("--replay", help="--chain only: <repo path>@<sha>:<plan> — a real plan from that repo's history")
+    ap.add_argument("--replay-check", help="--replay only: a shell command that must exit 0 in the cell")
+    ap.add_argument("--fast", action="store_true", help="--chain only: --settings {\"fastMode\": true}")
+    ap.add_argument("--feedback", choices=("on", "off"), default="off", help="--chain only: KEYSTONE_FEEDBACK of the cells")
     a = ap.parse_args()
     global BASE_PLUGIN_DIR
     BASE_PLUGIN_DIR = a.base_plugin_dir
     if a.selftest: sys.exit(1 if selftest() else 0)
     if a.rescore: return rescore(a.rescore, a.ref)
+    if a.chain: return chain_main(a)
     tids = list(TASKS) if a.task == "all" else [t.strip() for t in (a.task or "").split(",") if t.strip()]
     arms = [x.strip() for x in a.arms.split(",")]
     if not tids or any(t not in TASKS for t in tids) or any(x not in ARMS for x in arms):
