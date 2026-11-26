@@ -30,7 +30,7 @@ test('0.9.31: no skill or agent description has <angle-bracket> text — claude.
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.42');
+  assert.equal(p.version, '0.9.43');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -911,4 +911,13 @@ test('feedback judge: source says where a finding comes from (never "cause uncer
 test('feedback judge: findings of one class at several places stay one line, the script stores one item per address', () => {
   has('agents/feedback-judge.md', 'Findings of one class at several', 'all addresses joined by `, `');
   has('skills/feedback/scripts/feedback.mjs', 'one item per address');
+});
+
+test('plan Settings: tests — tdd and commits — task|end are in the format and honoured by implement', () => {
+  for (const f of ['skills/plan/references/PLAN-FORMAT.md', 'skills/fix/SKILL.md']) {
+    assert.match(read(f), /Settings: tests — <yes\|tdd\|no>.*· commits — <task\|end>/, f);
+  }
+  const impl = read('skills/implement/SKILL.md');
+  assert.match(impl, /`tests — tdd`: as `yes`, but test first/);
+  assert.match(impl, /`commits — end`: no commit/);
 });

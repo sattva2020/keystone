@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.43] — 2026-11-26
+
+### Added
+- **Plan Settings: test-first and one commit at the end.** `tests — tdd` makes `/keystone:implement` write each test
+  first and see it fail before the code; `commits — end` replaces per-task commits with one commit after the last task,
+  tests and docs. Defaults are unchanged (`tests — yes|no`, a commit per task).
+
 ## [0.9.42] — 2026-11-25
 
 ### Added

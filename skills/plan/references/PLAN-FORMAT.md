@@ -12,7 +12,7 @@ Read this before writing `plan.md`. The header and section order are parsed by h
 
 Level: <M|L> · Mode: feature · Status: draft
 Authority: intent.md — `<path>` (Created <date>, <accepted | planned from draft intent — accepted by user at planning time>)
-Settings: tests — <yes|no> (<why, from repo>) · logging — <minimal|standard|verbose> (<why>) · docs — <yes|no> (<why>)
+Settings: tests — <yes|tdd|no> (<why, from repo>) · logging — <minimal|standard|verbose> (<why>) · docs — <yes|no> (<why>) · commits — <task|end> (<why>)
 Done means: <verifiable outcomes — what is run and what must come out; on L from I-n, on M from the request>
 
 ## Original Request

@@ -102,9 +102,12 @@ present it — a plan that breaks a project rule is a bug.
 
 **Settings — do not ask.** Infer from the repo and write one line in the header; the human adjusts it at Approve:
 
-- `tests` — yes if a test runner or test files exist, no otherwise (say which);
+- `tests` — yes if a test runner or test files exist, no otherwise (say which); `tdd` only when the user or a project
+  rule asks for test-first;
 - `logging` — minimal / standard / verbose from the existing logger and its habits (no logger → minimal);
-- `docs` — yes if `docs/` or a README with usage sections exists, no otherwise.
+- `docs` — yes if `docs/` or a README with usage sections exists, no otherwise;
+- `commits` — `task` (a commit per task, or per `## Commit Plan` checkpoint) by default; `end` (one commit after the
+  last task, tests and docs) when the user or a project rule asks for it — then no `## Commit Plan`.
 
 The line binds the rest of the work: no test tasks when `tests — no`; log instructions in tasks follow `logging`.
 

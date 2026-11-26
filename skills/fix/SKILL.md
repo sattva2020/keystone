@@ -195,7 +195,7 @@ a module owned by others is L: say so and use `/keystone:start` instead.
 # Plan: fix — <short name>
 
 Level: S · Mode: fix · Status: implementing
-Settings: tests — <yes|no> (<why, from repo>) · logging — <minimal|standard|verbose> (<why>) · docs — <yes|no> (<why>)
+Settings: tests — <yes|tdd|no> (<why, from repo>) · logging — <minimal|standard|verbose> (<why>) · docs — <yes|no> (<why>) · commits — <task|end> (<why>)
 
 ## Original Request
 <the user's words, verbatim>

@@ -86,7 +86,11 @@ Keep going without asking while the next step needs no human decision; stop only
      and say so.
 3. **Settings** are mandatory. Read the header line `Settings: tests — … · logging — … · docs — …`:
    - `tests — yes`: every task that changes behaviour gets a test in the same task.
+   - `tests — tdd`: as `yes`, but test first — write the test, run it and see it fail for the expected reason, then
+     write the code until it passes. A test that passes before the code is not a test of this task: fix it first.
    - `tests — no`: write none, unless a task lists one.
+   - `commits — task` (or no `commits` key): commit per task / `## Commit Plan` (2.6). `commits — end`: no commit
+     per task; one commit after the last task, tests and docs (2.6 rules apply to it).
    - `logging — minimal|standard|verbose`: read `${CLAUDE_SKILL_DIR}/references/LOGGING.md` only if it is not `minimal`.
    - `docs — yes`: the documentation step before the final report is `/keystone:docs update <affected topics>`.
 4. **Project context:** read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
@@ -170,7 +174,8 @@ path rather than relying only on synthetic fixtures.
 **2.5 Tick the box — immediately.** Right after the task is done, change `- [ ]` to `- [x]` for that task in `plan.md`
 (use Edit), then mark its live task `completed`. Never batch the ticks to the end; the plan is the source of truth for progress and for the next session.
 
-**2.6 Commit.** Commit after each task, or at the points marked in `## Commit Plan` when the plan has one. Use a
+**2.6 Commit.** Commit after each task, or at the points marked in `## Commit Plan` when the plan has one, or once
+at the end with `commits — end` (step 3). Use a
 conventional commit message by the project's rules (`type(scope): subject`). Do not ask permission per commit unless the
 project requires it. Before every commit run `git diff --cached --stat` (see Drift) and `beat` (2.0); `taken` → STOP
 without the commit.
