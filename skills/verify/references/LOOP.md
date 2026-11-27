@@ -17,6 +17,13 @@ check is its finding. No menu: no ceiling, no rules menu. A `not run` check (a t
 here: the verifier is called as usual. For the history this run is a FAIL whose findings are `check: <kind> failed`
 plus every finding of the run before it; the next run's delta counts from the last run that was judged.
 
+**The cause is not this change.** The script cannot tell; you may. Never edit its lines and never call the verifier:
+the run stays a FAIL stop. Add one line to `## Checks`, under the failed check: `cause: environment — <output line>`
+(missing dependencies, a tool or network error; no installing) or `cause: red in base — <test>` (the same test fails
+on a checkout of the base; not checked → no such line). An environment error may be collected again once. `Next:` is
+then the step that repairs the environment, or the human's decision about the tests red in base — not `/keystone:fix
+verify`. A plan's second command does not replace the failed check and does not lift the stop.
+
 ## Late findings
 
 A row in Step 1's `late watch:` was `ok` in the last run and its files have not changed since, yet it is judged again
@@ -51,6 +58,7 @@ plan or intent edit, committed or not) and the verdict of run `<sha7>` — the l
 run does not count — was FAIL → do not call the verifier: say so, keep `verify.md`, and make the Next command
 `/keystone:fix verify` — the open findings need a fix, not another verify. A second run is justified only after the code
 or the evidence changed; never re-run the verifier hoping for a milder verdict.
+A verifier that broke off without an answer gave no verdict: resume it, or start it again with the same prompt.
 
 ## The ceiling — `ceiling: reached`
 

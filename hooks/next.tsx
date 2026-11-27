@@ -4,6 +4,7 @@
 import type { EngineInterface, Register } from 'claude-code'
 import { coldText, handoffPrompt, kTokens, levelFor, thresholdsFor } from './handoff.ts'
 import { strings, type Lang } from './i18n.ts'
+import { openPane } from './panel.tsx' // a cycle (panel.tsx imports chip, langOf, pick): both sides use it only at run time
 
 const IDLE = { level: 0, tokens: 0, window: 0, shown: 0, pending: null, cold: null }
 const BUSY = new Set(['pending', 'running', 'waiting'])
@@ -64,7 +65,14 @@ async function startClean($: EngineInterface) {
   )
 }
 
-export const register: Register = (on) => {
+// The band's panel button: what /keystone-panel does, no model turn; its answer only when it is news.
+async function openPanel($: EngineInterface) {
+  const t = strings(await langOf($))
+  const text = await openPane($)
+  if (text !== t.panelOpened) $.ui.toast(text)
+}
+
+export const register: Register = (on, options) => {
   on('session.measure', async ($, e, next) => {
     try {
       const { tokens, window } = e.context
@@ -103,6 +111,7 @@ export const register: Register = (on) => {
     const { value: ho = IDLE } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
     const { value: plan = '' } = await $.state.get({ plugin: 'keystone', key: 'plan' })
     const { value: pr = null } = await $.state.get({ plugin: 'keystone', key: 'progress' })
+    const { value: paneUp = false } = await $.state.get({ plugin: 'keystone', key: 'panelOpen' })
     const cold = plan !== '' && ho.pending === null && ho.cold !== null && !!pr?.next
     // «Записать и начать» is the same handoff: one offer at a time
     const offer = plan !== '' && ho.pending === null && ho.level > ho.shown && !cold
@@ -193,6 +202,9 @@ export const register: Register = (on) => {
           {buttons.map((cmd, i) => (
             <Button key={`next${i + 1}`} label={chip(cmd, t.status)} variant={i === 0 ? 'primary' : 'secondary'} onPress={() => pick($, cmd)} />
           ))}
+          {options?.panel !== false && paneUp !== true ? (
+            <Button key="panel-open" label={t.panelChip} variant="secondary" onPress={() => openPanel($)} />
+          ) : null}
           <Box flexGrow={1} />
           <Button key="dismiss" label="×" role="dismiss" dimColor onPress={() => clear($)} />
         </Box>,

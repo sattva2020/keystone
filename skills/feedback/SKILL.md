@@ -72,6 +72,8 @@ no suggested fixes (the author reads the table and decides). Rows under `Candida
 a look first; `Self-reports of unjudged tasks` are the agents' own words, not yet checked. `Coverage` says whether the reports
 were written at all: per chain skill, in how many sessions that started with feedback on it ran, and in how many of those its
 self-report exists — `missing` means the agent skipped the report, not that it had nothing to say. An error line → show it, stop.
+In the Keystone repository the last line may be `Keystone feedback: <skill> has <n> skill-text findings of the judge to take — run /keystone:evolve skills <skill>`:
+show it as it is — it is a count, not a fix; the fix is proposed only by `/keystone:evolve skills`.
 
 ## Judge by task / by session / auto
 
@@ -93,8 +95,9 @@ self-report exists — `missing` means the agent skipped the report, not that it
    `node '${CLAUDE_SKILL_DIR}/scripts/feedback.mjs' add --kind judge --skill feedback --task "<task folder name|->" --session "<id|->" --hash <hash from the signals> --tokens <total_tokens of the Agent result> <<'EOF'` … `EOF`.
    Use the Bash tool. If a line of the answer holds a literal command that pushes to git or opens a PR, write "push" / "PR" in
    its place first: the push gate scans the whole command text.
-5. **One line to the chat** — the line `add` printed (`Keystone feedback judge: <n> findings → <file> (<id>)`). The file is
-   outside the working directory: give its path as plain text, never as a link.
+5. **One line to the chat** — the line(s) `add` printed (`Keystone feedback judge: <n> findings → <file> (<id>)`) — a second
+   line, when present, is the Evolve offer: show it as it is. The file is outside the working directory: give its path as
+   plain text, never as a link.
 
 **The judge failed** (the Agent returned an error, timed out, or gave not a single line of the format): one line
 `Keystone feedback judge: error — <reason>`, no record is created, the work goes on. The script says the same itself when
@@ -102,7 +105,8 @@ self-report exists — `missing` means the agent skipped the report, not that it
 
 ## What closes the answer
 
-- **Called by another skill** through the Skill tool (`auto`, or `judge` from verify): print the single line — `add`'s,
-  `not needed` or `error` — and nothing else: no `Next:` and no menu, so the calling skill keeps the end of its own answer.
-- **Run directly by the user:** the line (or the summary), then the `Next:` line. After a summary: `Next: /keystone:feedback judge <plan path>`
+- **Called by another skill** through the Skill tool (`auto`, or `judge` from verify): print the line(s) — `add`'s (with the
+  offer line when present), `not needed` or `error` — and nothing else: no `Next:` and no menu, so the calling skill keeps the end of its own answer.
+- **Run directly by the user:** the line (or the summary), then the `Next:` line. After a summary: with the offer line,
+  `Next: /keystone:evolve skills <skill>` from that line; otherwise `Next: /keystone:feedback judge <plan path>`
   for a task with unjudged self-reports, or `Next: nothing now — waiting for more runs`. One sensible next step → no menu.

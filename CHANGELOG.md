@@ -5,6 +5,54 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.47] — 2026-11-27
+
+### Added
+- **`/keystone:evolve skills [<skill>]` — the skill text, fixed from the judge's findings.** In the Keystone repository,
+  proposes diffs to one skill's text from the judge's skill-text findings, writes them to the working branch after a yes
+  and runs the tests; decisions go to `docs/keystone/evolve-log.md` by record key. A finding whose section changed after
+  the record's version is listed as possibly fixed, not proposed. For each accepted section it also writes a
+  `CHANGELOG.md` line under `[Unreleased]` (keys only through `docs/keystone/evolve-log.md`), shown with the section's
+  diff. The feedback summary and the judge print one offer line when a skill has 3 or more such findings to take.
+
+### Changed
+- **`/keystone:verify` — rules taken from judge findings (keys in `docs/keystone/evolve-log.md`).**
+  - A failed build or test whose cause is not the change gets a line under the check — `cause: environment` or
+    `cause: red in base` — and `Next:` becomes the step that repairs the environment, or the human's decision, instead of
+    `/keystone:fix verify`. The run stays a FAIL stop.
+  - Handling of a suite longer than the limit: raise `KEYSTONE_CHECK_TIMEOUT_MS` and collect once more, then the test
+    commands the plan names; a run of another session is never `pass (reused: …)`.
+  - A restart rule: a verifier that broke off without an answer gave no verdict — resume it or start it again.
+  - The commitlint scope rule covers every verify commit, not only the PASS one.
+- **`/keystone:implement` — rules taken from judge findings (keys in `docs/keystone/evolve-log.md`).**
+  - Step 0: with code already changed, the `Status: implementing` edit goes into the first task's commit; when sessions
+    run in parallel, `git log --oneline HEAD..main -- <plan files>` once and name the overlap.
+  - A behaviour fixed by an accepted decision of an earlier task (intent I-n / Decisions log, `docs/notes`) that the plan
+    does not supersede is a cited requirement.
+  - A task check proves the task, not the tree: the full suite runs once before the final report.
+  - A task whose check runs in the background is ticked only after that check is green.
+  - A pre-commit hook that fails or rewrites files leaves no commit: re-stage and commit again, never skip the hook.
+  - A plan task with a step only a human can do gets `BLOCKED: needs the human — <what>`.
+  - A run that stops with boxes still open does not `release`; owner exit 1 is said once, without a retry.
+  - The documentation step is skipped when a plan task already wrote the docs `Settings:` names.
+  - A yes in the chat does not open the push gate either.
+
+## [0.9.46] — 2026-11-26
+
+### Changed
+- **Buttons follow the answer's `Next:` line.** The main button above the prompt, the dim suggestion, `/keystone-status`,
+  the command put into the box after `/clear` and the panel's button all take the command of the last answer's `Next:`
+  line (the code block under it, or a command in the line itself). `Next: nothing now` or a line with no slash command
+  leaves no main button. With no `Next:` line, `verify.md` decides (a fresh FAIL → `/keystone:fix verify`, PASS-UNPROVEN
+  → `/keystone:verify accept`), else the plan's status, as before.
+
+### Added
+- **Panel button in the band.** While the side panel is closed, a «panel» button next to the plan's buttons opens it,
+  with no model call.
+
+### Fixed
+- **No empty pane with `panel: false`.** A panel left open from before is closed when the session starts.
+
 ## [0.9.45] — 2026-11-26
 
 ### Added

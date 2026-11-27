@@ -1,8 +1,8 @@
 ---
 name: evolve
-description: "Keystone: turn the lessons of finished tasks into project rules. Reads fix plans (Root cause, Prevention), verify FAIL and Found lines, Implementation notes deviations, saved review and security findings and docs/notes; finds recurring patterns and stack pitfalls; proposes rules for .claude/rules/ — written only after you see the diff and say yes. Processed sources are logged in docs/keystone/evolve-log.md so a re-run skips them. `add [rule text]` writes one rule you dictate (dedupe, topic file, paths:) after the same diff and yes. Use for 'evolve', 'learn from our fixes', 'what keeps going wrong', after several fixes, and for 'add rule', 'remember this convention', 'always do X'."
-argument-hint: "[all | plan | implement | fix | verify | <rules topic> | add <rule text>]"
-allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion
+description: "Keystone: turn the lessons of finished tasks into project rules. Reads fix plans (Root cause, Prevention), verify FAIL and Found lines, Implementation notes deviations, saved review and security findings and docs/notes; finds recurring patterns and stack pitfalls; proposes rules for .claude/rules/ — written only after you see the diff and say yes. Processed sources are logged in docs/keystone/evolve-log.md so a re-run skips them. `add [rule text]` writes one rule you dictate (dedupe, topic file, paths:) after the same diff and yes. Use for 'evolve', 'learn from our fixes', 'what keeps going wrong', after several fixes, and for 'add rule', 'remember this convention', 'always do X'. `skills [skill]` (only in the Keystone repository) proposes diffs to a Keystone skill's text from the feedback judge's findings, written to the working branch after a yes."
+argument-hint: "[all | plan | implement | fix | verify | <rules topic> | add <rule text> | skills [<skill>]]"
+allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion Bash(node *feedback.mjs*) Bash(npm test*)
 model: opus
 effort: high
 disable-model-invocation: true
@@ -55,11 +55,14 @@ text, without backticks. Link only a file you checked exists.
 
 Claude Code loads `.claude/rules/*.md` by itself, so a lesson written there reaches every later session with no extra
 layer. **Keystone has no per-skill override layer and its skills are never edited** — a plugin's files are replaced on
-update. Everything evolve learns becomes a **project rule**.
+update. Everything evolve learns becomes a **project rule** — except Mode skills, which runs only in the Keystone
+repository itself and edits its own skills/*/SKILL.md, their references/ and agents/*.md, and a `CHANGELOG.md` line for
+each accepted section.
 
 Arguments: `$ARGUMENTS` — `all` or empty (every source and topic), a Keystone stage (`plan`, `implement`, `fix`,
 `verify`, `check`, `review`) to look only at lessons for that stage, or any other word as a rules topic filter.
-The first word `add` switches to **Mode add** below; the rest of the argument is the rule text.
+The first word `add` switches to **Mode add** below; the rest of the argument is the rule text. The first word `skills`
+switches to **Mode skills**; the next word, if any, is the skill.
 
 ## Mode add — one rule you dictate (`/keystone:evolve add <rule text>`)
 
@@ -84,6 +87,61 @@ No sources, no registry, no 8-proposal cap: the human's words are the evidence. 
 7. **Log.** Append to `docs/keystone/evolve-log.md` an entry `## <date> — evolve add` with an `Added:` line (or
    `Rejected:` on Cancel) and no `Sources:` line. Then Step 6.
 
+## Mode skills — fix the text of a Keystone skill from the judge's findings (`/keystone:evolve skills [<skill>]`)
+
+Only in the Keystone repository: the feedback judge's findings on the text of one skill become diffs of that skill. No
+rules, no sources of Step 1, no 8-proposal cap. The script is `node '${CLAUDE_SKILL_DIR}/../feedback/scripts/feedback.mjs'`
+(single quotes). One skill per run.
+
+1. **Off.** No `Keystone feedback: on` line in the context → the single line `Keystone evolve: nothing to do — feedback is off`,
+   stop; nothing is written.
+2. **Findings.** Run the script with `evolve` (and `--skill <skill>` when one was named). A line starting `Keystone evolve:
+   nothing to do` → show it (with the possibly-fixed table if printed) and stop: nothing is written. A line starting
+   `Keystone evolve: error` → show it and stop the same way. An output starting `## Keystone evolve` lists the findings to
+   take — key, address, class, source, version, text, evidence, note — and a "Possibly fixed" table. Anything else (no
+   output, another line) → show it and stop the same way.
+3. **Branch.** If the current branch is `main` (or `master`) or HEAD is detached, say so and stop before writing: Mode skills writes only to a
+   working branch. It comes before any question, so that no answer is asked for and lost.
+4. **Read** only the cited sections in the working tree: `skills/<skill>/SKILL.md`, its `references/`, or `agents/<skill>.md`.
+   A cited file that does not exist → its passage is gone (step 5).
+5. **Draft.** One minimal diff per section, answering every finding of that section that a change of the text can answer;
+   never a rewrite of the skill. A finding without a diff gets one of two marks, with the reason in one line — never with
+   neither: `propose reject` (the text already answers it — quote where; the passage is gone; the change would be wrong)
+   or `needs a script` (the change belongs outside this skill's text — a script, another skill — name the file). A `section not found` note →
+   look for the passage by its meaning in the files of step 4 first.
+6. **Show** for each finding: the address `<skill> § <section>`, its class (the kind of problem), its key, and the diff of
+   its section as a unified diff together with the diff of its `CHANGELOG.md` line (step Write) — or, without a diff, its mark
+   and reason. Then the "Possibly fixed" table as it came — no
+   diffs for it. Nothing is written before the human's answer.
+7. **Ask** with AskUserQuestion (batch up to 4): one question per diff — `Accept` / `Reject`; one question per finding
+   without a diff (findings of one section with the same mark share it) — `Reject` / `Keep open`. Every finding ends with
+   exactly one outcome: accepted, rejected or open. Open — kept open, left without an answer, or answered in other words that
+   are none of the options — is not logged: it comes back next run. Only an edit of its section in `skills/<skill>/SKILL.md`
+   or `agents/<skill>.md`, by this run too, moves it to "Possibly fixed", where it is not offered again; an edit in
+   `references/` does not, and a finding whose note is `not checked` or `section not found` is not compared at all and
+   comes back. Say so in the question when this run has a diff for the same section.
+   AskUserQuestion is unavailable → the diffs are shown, nothing is written, stop.
+8. **Privacy.** In the skill text, commit messages, CHANGELOG and the log only record keys (`<record id>#<n>`) — never
+   project or task names, never quotes of the findings or of project code: skills and CHANGELOG go to the public repository.
+9. **Write** the accepted diffs with Edit, then the log (No diff accepted → only the log). A diff Edit cannot apply → its
+   keys stay open: name them, do not log them. Before the log, one line per accepted section whose Edit applied in
+   `CHANGELOG.md` under `## [Unreleased]` → `### Changed`, in the item for `/keystone:<skill>` (create the `### Changed` heading
+   and the item if missing): what the text asks now, keys only through `docs/keystone/evolve-log.md`, no project or task
+   names. An edit of `agents/<name>.md` goes into the item of the skill that dispatches it: `verifier` → `/keystone:verify`,
+   `feedback-judge` → `/keystone:feedback`, `analyzer` and `validator` → `/keystone:check`, `review-validator` →
+   `/keystone:review`. Its diff is shown in step 6 with the diff of its section; a `Reject` of the section → no line. The log: the script with `evolved --skill <skill> --accepted <keys>
+   --rejected <keys>` (keys joined by `,`); show its line. The script alone writes these log lines. No key to log (every
+   finding open) → skip the call. A line starting `Keystone evolve: error` → correct the call once; still an error → show it
+   and stop: the edits stay uncommitted, name the keys that were not logged.
+10. **Test.** No edit was written → skip it, say so. `npm test` — longer than the tool's limit → run it in the background and
+   wait for its result. Green → report. No result (broken off, timed out) → not green: leave the edits uncommitted, say that the tests
+   did not run to the end, and stop like Red. Red → leave the edits uncommitted, show the failing lines of the output, and
+    stop: do not revert, do not commit. Say that this run's log entry and its `CHANGELOG.md` lines are uncommitted with
+    them: whoever discards the edits discards them too, or the findings stay logged as accepted.
+11. **End.** Mode skills never commits and never releases. Report: accepted, rejected and open keys, the CHANGELOG lines written,
+    `git status --short` of the touched files; an open `needs a script` finding goes to `Found:` with `/keystone:fix <what>`. `Next:` — review and
+    commit the edits, then the release steps of the project.
+
 ## Where a rule goes
 
 | Lesson applies to | Target |
@@ -94,7 +152,7 @@ No sources, no registry, no 8-proposal cap: the human's words are the evidence. 
 
 Rules are short imperative lines in English (agents read them), one rule = one bullet, each with its evidence in a
 trailing comment, for example `- MUST guard nullable relations before reading nested fields. <!-- evolve: docs/keystone/2026-09-02-x/plan.md -->`.
-Never write to `CLAUDE.md` from here; never touch anything under the plugin folder.
+Never write to `CLAUDE.md` from here; never touch anything under the plugin folder — Mode skills excepted (see above).
 
 ## Step 0: context
 
@@ -285,8 +343,10 @@ Context is heavy after reading many sources — suggest `/clear` or `/compact`.
 4. **Cumulative** — each run builds on the log and the existing rules.
 5. **No hallucination** — only what the sources and the code show; a rule rests on an isolated execution contrast
    or a recurring pattern, never on a fix having been accepted.
-6. **Plugin files are never edited**; Keystone has no per-skill override files.
+6. **Plugin files are never edited**; Keystone has no per-skill override files — Mode skills excepted, in the Keystone
+   repository itself.
 7. **English only** for rule text; the report may follow the user's language.
 8. **No new skills** — a pattern that keeps recurring and needs a procedure is a candidate for `/keystone:distill`.
 9. **Read-only** towards sources: plans, verify.md and notes are never changed by evolve.
-10. **Ownership** — evolve writes only `.claude/rules/**` and `docs/keystone/evolve-log.md`.
+10. **Ownership** — evolve writes only `.claude/rules/**` and `docs/keystone/evolve-log.md`. Mode skills also writes
+    skills/**, agents/** and the `## [Unreleased]` lines of `CHANGELOG.md` of the Keystone repository; its log lines are written by feedback.mjs evolved.

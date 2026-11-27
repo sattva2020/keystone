@@ -1,4 +1,5 @@
-// Keystone agent feedback. One script, no dependencies, no model: `hook`, `add`, `signals`, `summary`.
+// Keystone agent feedback. One script, no dependencies, no model: `hook`, `add`, `signals`, `summary`, and in the Keystone repository
+// `evolve` / `evolved` for /keystone:evolve skills.
 // Off by default: the SessionStart hook prints the self-report instruction only when the plugin option `feedback` is true
 // (CLAUDE_PLUGIN_OPTION_FEEDBACK) or KEYSTONE_FEEDBACK=on. KEYSTONE_FEEDBACK=off switches everything off.
 // Records live on this machine only: <KEYSTONE_FEEDBACK_DIR | <CLAUDE_CONFIG_DIR | ~/.claude>/keystone-feedback>/<project>/feedback.jsonl,
@@ -20,6 +21,7 @@ const T_ERRORS = 3; // tool errors
 const T_VERIFY_ROUNDS = 2; // commits of verify.md
 const T_INTERRUPTS = 1; // "[Request interrupted by user"
 const T_USER_MSGS = 2; // free user messages in implement / verify / fix sessions
+const T_EVOLVE = 3; // judge findings on the text of one skill, still to take, that make the Evolve offer line
 const MAX_ITEMS = 10; // lines of one report
 const MAX_ADDR = 5; // addresses of one line
 const MAX_TOTAL = 30; // items of one record
@@ -91,7 +93,7 @@ export function context(pluginRoot, sessionId = '-') {
     'EOF',
     'The command prints one line: your final answer MUST contain that line verbatim, on its own line — the only feedback output, no report text. If it prints an error, show that one line and carry on with the work.',
     'This write goes to the local feedback store: it is not an action outside the repository in the sense of the stop rule of implement and fix — do not stop and do not ask.',
-    'Judge: in /keystone:verify on M or L, run it after verify.md is written and the Final report is printed, and before the Step 6 menu — first the self-report of verify, then the Skill `keystone:feedback` with the args `auto <plan path>`. Its single line goes into the output, so the `Next:` line and the menu of verify stay last.',
+    'Judge: in /keystone:verify on M or L, run it after verify.md is written and the Final report is printed, and before the Step 6 menu — first the self-report of verify, then the Skill `keystone:feedback` with the args `auto <plan path>`. Its line (a second line when the Evolve offer is due) goes into the output, so the `Next:` line and the menu of verify stay last.',
     `plugin: ${pluginVersion()}`, // read back by coverage(): `summary --since` counts only the sessions of that version and later
     `session: ${session}`,
   ].join('\n');
@@ -287,7 +289,8 @@ export function add(opts, stdin, env = process.env, cwd = process.cwd()) {
     const n = record.items.length;
     const head = n ? `${n} ${judge ? 'findings' : 'notes'} → ${slash(file)} (${record.id})` : `no ${judge ? 'findings' : 'notes'} (${record.id})`;
     const warn = [parsed.skipped ? `skipped ${parsed.skipped} malformed line(s)` : '', parsed.truncated ? `only the first ${MAX_ITEMS} lines and ${MAX_TOTAL} notes kept` : ''].filter(Boolean).join(', ');
-    return { line: `${P}: ${head}${warn ? ` — ${warn}` : ''}`, record };
+    const offer = judge ? offerLine(env, cwd) : ''; // never throws: the record is saved whatever it says
+    return { line: `${P}: ${head}${warn ? ` — ${warn}` : ''}${offer ? `\n${offer}` : ''}`, record };
   } catch (e) {
     return { line: `${P}: error — ${String(e?.message ?? e).split('\n')[0]}` };
   }
@@ -549,6 +552,17 @@ const addr = (i) => `${i.skill} § ${String(i.section ?? '').replace(/\s+/g, ' '
 
 // The anchors of a skill in this copy of the plugin: headings ##–#### and bold starts of lines and numbered items.
 const nk = (s) => norm(s).replace(/[`*_]/g, '').replace(/[\s.:;,—–-]+$/, '');
+// The anchor lines of a text: { i: line, a: anchor, level: 2–4 for a heading, 9 for a bold start }.
+function anchorLines(text) {
+  const out = [];
+  String(text).split(/\r?\n/).forEach((l, i) => {
+    const h = l.match(/^(#{2,4})\s+(.+)$/), b = h ? null : l.match(/^\s*(?:\d+\.\s+|[-*]\s+)?\*\*([^*]+)\*\*/);
+    const a = h ? nk(h[2]) : b ? nk(b[1]) : '';
+    if (a) out.push({ i, a, level: h ? h[1].length : 9 });
+  });
+  return out;
+}
+const anchorsIn = (text) => [...new Set(anchorLines(text).map((x) => x.a))];
 const ANCHORS = new Map();
 function anchorsOf(skill) {
   if (!ANCHORS.has(skill)) {
@@ -558,34 +572,32 @@ function anchorsOf(skill) {
         try { text = readFileSync(f, 'utf8'); break; } catch { /* not this one */ }
       }
     }
-    const out = new Set();
-    for (const l of text.split(/\r?\n/)) {
-      const m = l.match(/^#{2,4}\s+(.+)$/) ?? l.match(/^\s*(?:\d+\.\s+|[-*]\s+)?\*\*([^*]+)\*\*/);
-      const a = m ? nk(m[1]) : '';
-      if (a) out.add(a);
-    }
-    ANCHORS.set(skill, [...out]);
+    ANCHORS.set(skill, anchorsIn(text));
   }
   return ANCHORS.get(skill);
 }
 const stepOf = (s) => s.match(/^step\s+(\d+)(\.\d+|[a-z])?\b/);
 const prefix = (a, b) => a.startsWith(b) && !/[\p{L}\p{N}]/u.test(a[b.length] ?? '');
-// The key a section is grouped under: the skill's anchor it names, else the section as written. Rules in order — same name, same step
-// number (`Step 2.4` → step 2 when no 2.4 exists), one a prefix of the other; the first rule with a match decides, and only a single match
-// is taken: two candidates leave the section as written.
-// ponytail: matched against the plugin copy the script runs from — a section renamed in a later version stays as written for old records.
-function sectionKey(i) {
-  const sec = nk(i.section), anchors = anchorsOf(i.skill);
-  const pick = (hits) => (hits.length === 1 ? `${i.skill} § ${hits[0]}` : hits.length ? norm(addr(i)) : null);
+// The anchor a section names, or null. Rules in order — same name, same step number (`Step 2.4` → step 2 when no 2.4 exists), one a prefix
+// of the other; the first rule with a match decides, and only a single match is taken: two candidates give null.
+function matchAnchor(section, anchors) {
+  const sec = nk(section);
+  const one = (hits) => (hits.length === 1 ? hits[0] : hits.length ? null : undefined);
   const st = stepOf(sec);
   const num = (a) => { const x = stepOf(a); return x ? x[1] + (x[2] ?? '') : null; };
-  let hits = anchors.filter((a) => a === sec);
-  if (!hits.length && st) {
-    hits = anchors.filter((a) => num(a) === st[1] + (st[2] ?? ''));
-    if (!hits.length && st[2]) hits = anchors.filter((a) => num(a) === st[1]);
+  let r = one(anchors.filter((a) => a === sec));
+  if (r === undefined && st) {
+    r = one(anchors.filter((a) => num(a) === st[1] + (st[2] ?? '')));
+    if (r === undefined && st[2]) r = one(anchors.filter((a) => num(a) === st[1]));
   }
-  if (!hits.length) hits = anchors.filter((a) => prefix(a, sec) || prefix(sec, a));
-  return pick(hits) ?? norm(addr(i));
+  if (r === undefined) r = one(anchors.filter((a) => prefix(a, sec) || prefix(sec, a)));
+  return r ?? null;
+}
+// The key a section is grouped under: the skill's anchor it names, else the section as written.
+// ponytail: matched against the plugin copy the script runs from — a section renamed in a later version stays as written for old records.
+function sectionKey(i) {
+  const a = matchAnchor(i.section, anchorsOf(i.skill));
+  return a ? `${i.skill} § ${a}` : norm(addr(i));
 }
 
 const headOf = (p) => {
@@ -620,7 +632,7 @@ export function coverage(selfs, since, env = process.env) {
   return { sessions, by };
 }
 
-export function summary(opts, env = process.env) {
+export function summary(opts, env = process.env, cwd = process.cwd()) {
   let recs = readRecords(env);
   if (opts.since) recs = recs.filter((r) => cmpVer(r.plugin_version, opts.since) >= 0);
   const selfs = recs.filter((r) => r.kind === 'self');
@@ -675,7 +687,144 @@ export function summary(opts, env = process.env) {
     '',
     '### Other causes (agent / environment)',
     `agent: ${other.agent} · environment: ${other.environment}`,
+    // the Evolve offer counts all records, whatever --since says; only in the Keystone repository
+    ...((o) => (o ? ['', o] : []))(offerLine(env, cwd)),
   ].join('\n');
+}
+
+// ---- evolve --------------------------------------------------------------------------------------------------------
+// In the Keystone repository only: which judge findings on a skill's text are still to take (for the offer line and
+// `/keystone:evolve skills`), and the log of what the human decided. A finding is keyed `<record id>#<n>`.
+
+// The Keystone repository: the work tree whose .claude-plugin/plugin.json names `keystone`; null anywhere else.
+export function keystoneRoot(cwd = process.cwd()) {
+  const r = spawnSync('git', ['-C', String(cwd), 'rev-parse', '--show-toplevel'], { encoding: 'utf8' });
+  const top = r.status === 0 ? r.stdout.trim() : '';
+  if (!top) return null;
+  try { return JSON.parse(readFileSync(join(top, '.claude-plugin/plugin.json'), 'utf8')).name === 'keystone' ? slash(top) : null; } catch { return null; }
+}
+
+const LOG = 'docs/keystone/evolve-log.md';
+const KEY = /^[\w.-]{1,80}#\d{1,3}$/;
+export function evolveLog(repo) {
+  const m = new Map();
+  let t = '';
+  try { t = readFileSync(join(repo, LOG), 'utf8'); } catch { return m; }
+  for (const l of t.split(/\r?\n/)) { const x = l.match(/^- ([\w.-]+#\d+) · (accepted|rejected)\s*$/); if (x) m.set(x[1], x[2]); }
+  return m;
+}
+
+// The text of a section: from its anchor line to the next anchor of the same or a higher rank (a heading ends at a heading of its level
+// or above, a bold start at any anchor); LF, trailing spaces cut. No such anchor → null.
+function sectionText(text, anchor) {
+  const marks = anchorLines(text), at = marks.findIndex((x) => x.a === anchor);
+  if (at < 0) return null;
+  const end = marks.slice(at + 1).find((x) => x.level <= marks[at].level);
+  return String(text).split(/\r?\n/).slice(marks[at].i, end ? end.i : undefined).map((l) => l.trimEnd()).join('\n');
+}
+
+// { repo, records, logged: Map<skill, count>, take: Map<skill, finding[]>, fixed: finding[] } — or null outside the Keystone repository.
+// A finding to take: a judge item with cause skill-text and source confirmed|added, not in the log, whose section did not change since the
+// record's version (its text at tag v<version> equals the work tree's). A changed section → `fixed` (possibly fixed already).
+// ponytail: key = position after cleanRecord; a hand-edited record with a non-object item shifts later keys
+export function takeable(env = process.env, cwd = process.cwd()) {
+  const repo = keystoneRoot(cwd);
+  if (!repo) return null;
+  const log = evolveLog(repo), recs = readRecords(env);
+  const out = { repo, records: recs.length, logged: new Map(), take: new Map(), fixed: [] };
+  const files = new Map(), texts = new Map();
+  const fileOf = (s) => {
+    if (!files.has(s)) files.set(s, [`skills/${s}/SKILL.md`, `agents/${s}.md`].find((p) => existsSync(join(repo, p))) ?? null);
+    return files.get(s);
+  };
+  const textAt = (ver, f) => {
+    const k = `${ver}\u0000${f}`;
+    if (!texts.has(k)) {
+      if (ver) { const r = spawnSync('git', ['-C', repo, 'show', `v${ver}:${f}`], { encoding: 'utf8' }); texts.set(k, r.status === 0 ? r.stdout : null); }
+      else { try { texts.set(k, readFileSync(join(repo, f), 'utf8')); } catch { texts.set(k, null); } }
+    }
+    return texts.get(k);
+  };
+  for (const r of recs) {
+    if (r.kind !== 'judge' || !/^[\w.-]{1,80}$/.test(r.id)) continue;
+    r.items.forEach((i, n) => {
+      if (i.cause !== 'skill-text' || !['confirmed', 'added'].includes(i.source) || !/^[a-z][a-z0-9-]{0,39}$/.test(i.skill)) return;
+      const key = `${r.id}#${n + 1}`;
+      if (log.has(key)) { out.logged.set(i.skill, (out.logged.get(i.skill) ?? 0) + 1); return; }
+      const f = { key, skill: i.skill, address: addr(i), cls: i.cls, source: i.source, version: r.plugin_version, text: i.text, evidence: i.evidence, note: '' };
+      const file = fileOf(i.skill), now = file ? textAt('', file) : null;
+      const anchor = now ? matchAnchor(i.section, anchorsIn(now)) : null;
+      const old = anchor && /^\d+(\.\d+){0,2}$/.test(f.version) ? textAt(f.version, file) : undefined;
+      if (!anchor) f.note = 'section not found';
+      else if (old === undefined || old === null) f.note = `not checked: no tag v${f.version}`;
+      else if (sectionText(old, anchor) !== sectionText(now, anchor)) { out.fixed.push({ ...f, changedAfter: `v${f.version}` }); return; }
+      out.take.set(i.skill, [...(out.take.get(i.skill) ?? []), f]);
+    });
+  }
+  return out;
+}
+
+// The one offer line, or '' (outside the Keystone repository, under the threshold, or on any failure: it never breaks its caller).
+export function offerLine(env = process.env, cwd = process.cwd()) {
+  try {
+    const t = takeable(env, cwd);
+    const top = t ? [...t.take].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))[0] : null;
+    return top && top[1].length >= T_EVOLVE
+      ? `Keystone feedback: ${top[0]} has ${top[1].length} skill-text findings of the judge to take — run /keystone:evolve skills ${top[0]}` : '';
+  } catch { return ''; }
+}
+
+const E = 'Keystone evolve';
+const fixedTable = (rows) => ['### Possibly fixed — the section changed after the record\'s version', '| key | address | class | version | changed after |', '|---|---|---|---|---|',
+  ...rows.map((f) => `| ${f.key} | ${cell(f.address)} | ${cell(f.cls)} | ${cell(f.version)} | ${f.changedAfter} |`)];
+
+// What `/keystone:evolve skills` works from: the findings of one skill (named, or the one with the most to take). No project or task names.
+export function evolveReport(opts, env = process.env, cwd = process.cwd()) {
+  if (off(env)) return `${E}: nothing to do — feedback is off`;
+  const t = takeable(env, cwd);
+  if (!t) return `${E}: nothing to do — not the Keystone repository`;
+  if (!t.records) return `${E}: nothing to do — no feedback records`;
+  const named = opts.skill !== undefined ? skillName(opts.skill) : '';
+  if (opts.skill !== undefined && !isSkill(named)) return `${E}: error — unknown skill`;
+  const skill = named || ([...t.take].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))[0] ?? [''])[0];
+  const take = t.take.get(skill) ?? [], fixed = t.fixed.filter((f) => f.skill === skill);
+  if (!take.length) {
+    const head = `${E}: nothing to do — no judge findings on the skill text to take${named ? ` for ${named}` : ''}`;
+    return named && fixed.length ? [head, '', ...fixedTable(fixed)].join('\n') : head;
+  }
+  return [
+    `## Keystone evolve — ${skill}`,
+    `${take.length} to take · ${fixed.length} possibly fixed · ${t.logged.get(skill) ?? 0} already in the evolve log`,
+    '',
+    '### Findings to take',
+    '| key | address | class | source | version | text | evidence | note |', '|---|---|---|---|---|---|---|---|',
+    ...take.map((f) => `| ${f.key} | ${cell(f.address)} | ${cell(f.cls)} | ${f.source} | ${cell(f.version)} | ${cell(f.text)} | ${cell(f.evidence)} | ${f.note} |`),
+    ...(fixed.length ? ['', ...fixedTable(fixed)] : []),
+  ].join('\n');
+}
+
+// Appends the human's decisions to docs/keystone/evolve-log.md of the Keystone repository (keys only). Any bad input → one error line, no write.
+export function evolved(opts, env = process.env, cwd = process.cwd()) {
+  if (off(env)) return `${E}: nothing to do — feedback is off`;
+  try {
+    const list = (v) => String(v ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+    const acc = list(opts.accepted), rej = list(opts.rejected);
+    const skill = skillName(opts.skill ?? '');
+    if (!isSkill(skill)) return `${E}: error — --skill takes a skill of this plugin`;
+    if (!acc.length && !rej.length) return `${E}: error — no keys (--accepted / --rejected)`;
+    const bad = [...acc, ...rej].find((k) => !KEY.test(k));
+    if (bad !== undefined) return `${E}: error — not a key: ${cut(bad, 40)}`;
+    const repo = keystoneRoot(cwd);
+    if (!repo) return `${E}: error — not the Keystone repository`;
+    const file = join(repo, LOG);
+    mkdirSync(dirname(file), { recursive: true });
+    if (!existsSync(file)) appendFileSync(file, '# Evolve log\n');
+    const lines = [...acc.map((k) => `- ${k} · accepted`), ...rej.map((k) => `- ${k} · rejected`)];
+    appendFileSync(file, `\n## ${new Date().toISOString().slice(0, 10)} — evolve skills [${skill}]\n${lines.join('\n')}\n`);
+    return `${E}: ${acc.length} accepted, ${rej.length} rejected → ${LOG}`;
+  } catch (e) {
+    return `${E}: error — ${String(e?.message ?? e).split('\n')[0]}`;
+  }
 }
 
 // ---- CLI -----------------------------------------------------------------------------------------------------------
@@ -687,7 +836,7 @@ export function main(argv, env = process.env) {
   const { values: o, positionals } = parseArgs({
     args: rest, allowPositionals: true, strict: false,
     options: { skill: { type: 'string' }, task: { type: 'string' }, session: { type: 'string' }, kind: { type: 'string' }, hash: { type: 'string' }, tokens: { type: 'string' },
-      since: { type: 'string' }, auto: { type: 'boolean' }, transcript: { type: 'string', multiple: true } },
+      since: { type: 'string' }, auto: { type: 'boolean' }, transcript: { type: 'string', multiple: true }, accepted: { type: 'string' }, rejected: { type: 'string' } },
   });
   if (cmd === 'hook') {
     let input = null;
@@ -708,10 +857,12 @@ export function main(argv, env = process.env) {
       if (since !== undefined && !/^\d+(\.\d+){0,2}$/.test(since)) return 'Keystone feedback: error — --since takes a version like 0.9.30';
       return summary({ since }, env);
     }
+    if (cmd === 'evolve') return evolveReport({ skill: v('skill') }, env);
+    if (cmd === 'evolved') return evolved({ skill: v('skill'), accepted: v('accepted'), rejected: v('rejected') }, env);
   } catch (e) {
-    return `Keystone feedback: error — ${String(e?.message ?? e).split('\n')[0]}`;
+    return `${cmd === 'evolve' ? E : 'Keystone feedback'}: error — ${String(e?.message ?? e).split('\n')[0]}`;
   }
-  return 'Keystone feedback: error — usage: feedback.mjs hook | add | signals | summary';
+  return 'Keystone feedback: error — usage: feedback.mjs hook | add | signals | summary | evolve | evolved';
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

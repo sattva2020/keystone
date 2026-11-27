@@ -5,26 +5,28 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { PanelData, PanelOwn, PanelRow } from '../types'
 import { strings, type Strings } from './i18n.ts'
 import { chip, langOf, pick } from './next.tsx'
-import { sessionPlan, type Ledger, type Plan } from './plan.ts'
+import { nextOf, sessionPlan, verdictOf, type Ledger, type Plan } from './plan.ts'
 
 const PANE = 'keystone-panel'
 const PANEL = { plugin: 'keystone', key: 'panel' } as const
 const CLOSED = { plugin: 'keystone', key: 'panelClosed' } as const
+const OPEN = { plugin: 'keystone', key: 'panelOpen' } as const // next.tsx hides its panel button while the pane is up
 const SHOWN = 8
 const TICK_MS = 30000
 const EMPTY: PanelOwn = { plan: null, next: null, wait: null, verdict: null, coverage: null, security: null, cost: '', sessionUsd: null }
 
 // keystone.ts hands these over (no circular import); a function that takes $ cannot be handed over, so sessionPlan is imported
-type Deps = { nextButtons: (p: Plan | null, hasIntent: boolean) => string[]; costLine: (l: Ledger) => string; ledgerKey: (p: Plan) => string }
+type Deps = { nextButtons: (p: Plan | null, hasIntent: boolean, main?: string | null) => string[]; costLine: (l: Ledger) => string; ledgerKey: (p: Plan) => string }
 type Listed = { sessionId: string; title?: string; branch?: string; isArchived?: boolean; isRunning?: boolean; starting?: boolean; startedBy?: string }
 type Detail = { worktreePath?: string; originCwd?: string; sourceBranch?: string }
 
-// What this session's plan waits for from the person; the first match wins.
-export function ownWait(p: Plan | null, verdict: string | null): { code: string; arg: string } | null {
+// What this session's plan waits for from the person; the first match wins. A fresh FAIL waits for the agent (fix verify).
+export function ownWait(p: Plan | null, verdict: string | null, stale = false): { code: string; arg: string } | null {
   if (!p) return null
   if (p.status === 'draft') return { code: 'approve', arg: '' }
   if (p.status === 'verified' && p.release > 0) return { code: 'release', arg: String(p.release) }
   if (p.status !== 'implementing') return null
+  if (verdict === 'FAIL' && !stale) return null
   if (verdict === 'PASS-UNPROVEN') return { code: 'accept', arg: '' }
   if (p.blocked > 0 && p.total - p.done - p.blocked === 0) return { code: 'blocked', arg: String(p.blocked) }
   return null
@@ -105,12 +107,14 @@ async function ownBlock($: EngineInterface): Promise<PanelOwn> {
   if (!p) return { ...EMPTY, cost: deps.costLine({}), sessionUsd }
   const read = async (f: string) => ((await $.fs.exists(f)) ? $.fs.read(f) : '')
   const verify = await read(p.file.replace(/[^/]*$/, 'verify.md'))
-  const verdict = [...verify.matchAll(/Verdict:\s*(PASS-UNPROVEN|PASS|FAIL)/g)].at(-1)?.[1] ?? null
-  const wait = ownWait(p, verdict)
+  const v = await verdictOf($, p)
+  const verdict = v?.verdict ?? null
+  const wait = ownWait(p, verdict, v?.stale)
+  const m = await nextOf($, p)
   const { file, level, status, done, total, blocked, release } = p
   return {
     plan: { file, level, status, done, total, blocked, release },
-    next: wait?.code === 'accept' ? `/keystone:verify accept ${file}` : wait?.code === 'blocked' ? null : deps.nextButtons(p, false)[0] ?? null,
+    next: m && (deps.nextButtons(p, false, m)[0] ?? null),
     wait,
     verdict,
     coverage: (await read(file)).match(/^Coverage:\s*([^%\n]*%)/m)?.[1] ?? null,
@@ -199,7 +203,8 @@ async function maybeOpen($: EngineInterface) {
   if ((await closed($)) || (await isOpen($)) || !(await onDesktop($))) return
   const { value: d = null } = await $.state.get(PANEL)
   if (!d?.own.plan && !d?.rows?.length) return
-  await $.ui.open({ id: PANE, title: 'Keystone' })
+  const r = await $.ui.open({ id: PANE, title: 'Keystone' })
+  await $.state.set(OPEN, !!r?.isPlaced)
   startTimer($)
 }
 
@@ -215,12 +220,39 @@ async function auto($: EngineInterface) {
   }
 }
 
+// /keystone-panel and the band's «panel» button (next.tsx): a $.command.run from this plugin would not reach its own hook
+export async function openPane($: EngineInterface): Promise<string> {
+  const t = strings(await langOf($))
+  let text: string = t.panelOpened
+  try {
+    await mark($, false)
+    const r = await $.ui.open({ id: PANE, title: 'Keystone' })
+    startTimer($)
+    await $.state.set(OPEN, r.isPlaced)
+    if (!r.isPlaced) text = t.panelWaits(r.reason)
+    $.clock.after(0, () => void refreshPanel($))
+  } catch (err) {
+    text = t.panelWaits(clean(String((err as Error)?.message ?? err)))
+  }
+  return text
+}
+
 // keystone.ts calls these from its own session.start and turn.complete (one hook per event per plugin), off the hook
 export async function onStart($: EngineInterface) {
-  if (!enabled) return
+  if (!enabled) {
+    // panel: false — a pane left from before (the app keeps it over a reload) would stay an empty frame
+    try {
+      if (await isOpen($)) await $.ui.close({ id: PANE })
+    } catch {
+      // no panes here
+    }
+    return
+  }
   await $.command.register({ name: 'keystone-panel', description: 'Keystone: open the side panel (no model call)' }).catch(() => undefined)
   try {
-    if (await isOpen($)) startTimer($) // a reload drops the timer, the pane stays
+    const up = await isOpen($)
+    await $.state.set(OPEN, up)
+    if (up) startTimer($) // a reload drops the timer, the pane stays
   } catch {
     // no panes here
   }
@@ -249,24 +281,12 @@ export function register(on: Parameters<Register>[0], options: Parameters<Regist
 
   on('ui.close', { id: PANE }, async ($, e, next) => {
     stopTimer()
+    await $.state.set(OPEN, false).catch(() => undefined)
     if (e.origin.kind === 'person') await mark($, true)
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  on('command.run', { command: 'keystone-panel' }, async ($) => {
-    const t = strings(await langOf($))
-    let text: string = t.panelOpened
-    try {
-      await mark($, false)
-      const r = await $.ui.open({ id: PANE, title: 'Keystone' })
-      startTimer($)
-      if (!r.isPlaced) text = t.panelWaits(r.reason)
-      $.clock.after(0, () => void refreshPanel($))
-    } catch (err) {
-      text = t.panelWaits(clean(String((err as Error)?.message ?? err)))
-    }
-    return { text }
-  }).catch(($, e, next) => next(e))
+  on('command.run', { command: 'keystone-panel' }, async ($) => ({ text: await openPane($) })).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     placement = e.props.placement

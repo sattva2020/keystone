@@ -113,8 +113,10 @@ Keep going without asking while the next step needs no human decision; stop only
 7. **Baseline first.** Run `git status`. If the plan file or the cited `intent.md` is untracked or modified and no code
    has changed yet, commit them on their own first (e.g. `docs(plan): <slug>` by the project's convention; ask the user
    once if commits need approval) — otherwise the baseline plan is lost and `/keystone:verify` cannot measure drift. If
-   code already changed, say so in one line and continue. Other uncommitted changes (not this plan's): warn in one line
-   and continue; never stash or discard them.
+   code already changed, say so in one line and continue; the `Status: implementing` edit then goes into the first
+   task's commit. Other uncommitted changes (not this plan's): warn in one line and continue; never stash or discard
+   them. Sessions in other worktrees are not in `git status`: when the user says sessions run in parallel, run
+   `git log --oneline HEAD..main -- <this plan's files>` once and name what overlaps before the first task.
 
 ### Step 0.1: Resume / Recovery (after a break or after /clear)
 
@@ -169,6 +171,10 @@ corrected. No `TaskCreate` (`claude -p`, CI) → skip the list; the progress dis
 4. If behavior depends on independent selectors, states, modes, or input shapes, confirm that the task covers each
    applicable supported combination across validation, persistence, output/transition, and side effects. Do not infer a
    restriction on one dimension from a rule about another.
+5. A behaviour fixed by an accepted decision of an earlier task (an I-n or Decisions-log line of its `intent.md`, a
+   `docs/notes` record) that this plan does not supersede by name is a cited requirement too: look such decisions up
+   for the files the task touches (`search_decisions`, or a grep of `docs/keystone/*/intent.md` and `docs/notes/`) and
+   treat a clash as in 3.
 
 If an old plan lacks `## Requirements Reconciliation`, perform this gate from the task, the Original Request, project
 rules, and any authoritative sources they explicitly reference. Do not expand into unrelated research.
@@ -180,16 +186,20 @@ convention), propose the edit to the user instead of making it yourself.
 
 **2.4 Verify.** Check the code compiles/runs, verify the functionality, fix immediate issues, and run the check named in
 the task. When a representative repository artifact defines the contract, exercise that artifact through the primary
-path rather than relying only on synthetic fixtures.
+path rather than relying only on synthetic fixtures. That check proves the task, not the tree: the full suite runs once
+before the final report (Final report).
 
 **2.5 Tick the box — immediately.** Right after the task is done, change `- [ ]` to `- [x]` for that task in `plan.md`
 (use Edit), then mark its live task `completed`. Never batch the ticks to the end; the plan is the source of truth for progress and for the next session.
+A task whose check runs in the background is done when that check is green: tick it after the result, not before.
 
 **2.6 Commit.** Commit after each task, or at the points marked in `## Commit Plan` when the plan has one, or once
 at the end with `commits — end` (step 3). Use a
 conventional commit message by the project's rules (`type(scope): subject`). Do not ask permission per commit unless the
 project requires it. Before every commit run `git diff --cached --stat` (see Drift) and `beat` (2.0); `taken` → STOP
 without the commit.
+A pre-commit hook that fails or rewrites files (line endings, formatting) leaves no commit: check `git log -1`, stage
+the rewritten files and commit again; never skip the hook.
 **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
 `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
 if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(plan)`, `docs(release)`).
@@ -223,6 +233,8 @@ When a planned check or a mandatory step cannot run (no DB, no network, no depen
 to the END of that task's `- [ ] N.` line (not a nested bullet). Write it literally: the word `BLOCKED`, a colon right after it, then the reason —
 `BLOCKED: smoke needs the DB`, never `BLOCKED (smoke):`; parsers count rows by the exact `BLOCKED:` prefix. A task whose
 mandatory step is blocked stays `[ ]` with `BLOCKED: <reason>` — never `[x]`. Tell the user.
+A plan task with a step only a human can do (an interactive session, a design round, work another agent finishes) gets
+`BLOCKED: needs the human — <what>` the same way; the human's result lifts it in a later run.
 
 ## One session per plan
 
@@ -243,6 +255,10 @@ work (`;`, `&&`).
   tick, no commit. Same place (folder or cloud session) and branch = the same owner, so `/clear` and resume pass.
 - `release <plan>` after the last task of the run (every box `[x]` or `BLOCKED:`, or the end of release mode) and its
   commit.
+- A run that stops with boxes still open does not `release`: the record stays, and the next session in the same place
+  and branch takes it back.
+- Exit 1 → say it once and go on; do not retry the call: the next `beat` writes the record again when no other session
+  holds the plan.
 - `remote: "local"` with a `warning` (no origin, offline, push refused) → the mark is seen only on this machine; say
   the warning once and go on. `KEYSTONE_GATES=off` → `{ "off": true }`, nothing is guarded.
 - The final report gets the line `Владелец: <remote>; <warning>` (`Владелец: off` when off).
@@ -259,8 +275,10 @@ calls); reading the rule or the code without that check is presence → `not run
 you just printed (not from memory); `a + b + c + d` must equal `n`, and `n` must equal the number of table rows —
 recount if it does not. If the plan has no reconciliation section, say so in one line.
 
-Before the report, if `docs — yes`, run the documentation step `/keystone:docs update <affected topics>` and commit the
-result.
+Before the report, run the project's full test command once (the one `Settings:` names, else the project's test
+script) and report a red run as `fail` on the rows it covers. If `docs — yes`, run the documentation step
+`/keystone:docs update <affected topics>` and commit the result — unless a task of the plan already wrote the
+documentation `Settings:` names; then say so in one line.
 
 **Project rules learned (optional).** If the work exposed a convention the project does not state yet, you may propose up
 to 3 new rules at the end of the task. Ask once (AskUserQuestion, one option per rule plus "none") and, only on an
@@ -336,6 +354,7 @@ sessions on a long plan.
 - Violate the project's architecture and file-placement conventions.
 - Run `git push` or open a PR — the gate denies it until the plan is `verified`. In a cloud session the work branch
   may be pushed (the cloud keeps work only on the remote); the default branch and a PR still wait for `verified`.
+  A yes in the chat does not open it either.
 
 ## Critical rules
 

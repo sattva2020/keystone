@@ -78,7 +78,7 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only wit
 Run from the repository root: `node ${CLAUDE_SKILL_DIR}/scripts/collect.mjs <plan path> [base ref] [--full]` — the diff base,
 this task's commits and files (uncommitted ones included), build / test / lint by `references/CHECKS.md`, then `delta:`,
 `judge:`, `rules scope:`, `release refs:`, `left the plan:`, `carried ids:`, the record-only marker, and under it `edited:` / `late watch:` / `accepted violations:` / `accepted findings:` / `late rule:` / `waiting:` / `sweep:` / `carried:` / `history:`. `verifier: not called` (failed build / test, `ceiling: …`, `nothing to judge …`) → no verifier (`references/LOOP.md`). **Installing dependencies is not allowed**; it honours `Settings:` (`tests — no` → no test run, no failure). A
-`not run` line is never a pass, (a timeout included); `pass (reused: …)` is a pass (CHECKS.md). `Mode: fix` plans: note whether existing test files were
+`not run` line is never a pass (a timeout: CHECKS.md, Limits); `pass (reused: …)` is a pass. `Mode: fix` plans: note whether existing test files were
 edited (a violation of the fix contract). A check the plan names (a task's `check:`, a read-only `curl` GET against a
 local/staging URL in the plan) may run as a second command.
 Two gates join the same lines:
@@ -186,11 +186,12 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
    `git diff --cached --stat` lists exactly those two. Then the owner `release --any` (`ACCEPT.md`). Push opens now.
 3. **PASS-UNPROVEN** → status unchanged, `git push` stays closed. Commit `verify.md` alone (`docs(verify): <slug>`);
    Step 6: prove now or accept.
-   **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
-   `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
-   if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(verify)`).
 4. **FAIL** → status unchanged; commit `verify.md` alone. Recommend `/keystone:fix verify` — every finding of this
    `verify.md` in one pass, so verify runs once more, not once per finding — or `/keystone:implement` (a task never finished). The push gate stays closed (lifting it: ACCEPT.md — never as a way around a FAIL).
+
+**Commit scope.** Every commit here: if the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
+`package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
+if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(verify)`).
 
 Each run overwrites `verify.md` in its own commit; add files by path, never `-A`; nothing to commit → `verify.md unchanged`.
 

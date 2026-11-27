@@ -3,7 +3,7 @@
 # Keystone verify — build / test / lint / imports
 
 These tables are implemented by `scripts/collect.mjs`: the verify skill runs it once and passes its lines to the
-verifier, so no model reads this file during a run. Change a table here and in the script together. Never install
+verifier; during a run the skill reads only "Limits". Change a table here and in the script together. Never install
 dependencies. A tool that is missing, or a command that cannot run here, is recorded as `not run (<reason>)`, never as a pass.
 
 ## Build & compile check
@@ -66,6 +66,13 @@ command and each output line are in backticks (`verify.md` copies these lines; P
 A timeout is `not run`, not a failure (limit: `KEYSTONE_CHECK_TIMEOUT_MS`, default 10 min; the line names the variable:
 `not run (timeout after 600 s — raise KEYSTONE_CHECK_TIMEOUT_MS)`). `pass (reused: …)` is a pass
 measured earlier on the same code: only this task's folder or docs/**/*.md changed since.
+
+## Limits
+
+A suite longer than the limit: raise `KEYSTONE_CHECK_TIMEOUT_MS` and run collect once more. Still too long → the test
+commands the plan names (`Done means:`, a task's `check:`) run as second commands: they prove their own rows, the
+`test:` line stays `not run`. A build or test run of another session or checkout is not `pass (reused: …)`, even on
+an equal tree: the reuse is only the script's own.
 
 ## Between runs (lines after the checks)
 

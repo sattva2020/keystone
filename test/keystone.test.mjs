@@ -30,7 +30,7 @@ test('0.9.31: no skill or agent description has <angle-bracket> text — claude.
 test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
   assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.45');
+  assert.equal(p.version, '0.9.47');
   assert.equal(json('package.json').version, p.version);
   assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
@@ -401,7 +401,7 @@ test('every skill ends with an explicit Next: line; grill run directly routes it
   for (const s of SKILLS) has(`skills/${s}/SKILL.md`, '**Next step (mandatory).**');
   for (const d of readdirSync(join(root, 'skills'))) has(`skills/${d}/SKILL.md`, 'the next session (after `/clear`) starts there', 'its absolute path');
   has('skills/grill/SKILL.md', 'Run directly by the user', 'Next: /keystone:intent <topic>');
-  has('hooks/keystone.ts', 'Next: ${nextCommand(p)');
+  has('hooks/keystone.ts', 'Next: ${next ??');
   for (const f of ['docs/scenarios.md', 'docs/scenarios.ru.md']) has(f, '/keystone-status', '/keystone:verify accept');
 });
 
@@ -878,7 +878,7 @@ test('feedback wiring: the 8 chain skills carry the Feedback line and the Bash r
       assert.ok(t.indexOf('**Next step (mandatory).**') < t.indexOf(line), `${s}: after the Next step paragraph`);
     } else {
       assert.ok(!t.includes('**Feedback.**'), `${s}: no Feedback line`);
-      if (s !== 'feedback') assert.doesNotMatch(f, /feedback\.mjs/, s);
+      if (!['feedback', 'evolve'].includes(s)) assert.doesNotMatch(f, /feedback\.mjs/, s);
     }
   }
 });

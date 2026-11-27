@@ -11,6 +11,7 @@ const planText = (status = 'implementing', tasks = '- [x] 1. schema\n- [x] 2. jo
 const files: Record<string, string> = {}
 let usd: number | undefined
 let sid = 'sess-1'
+const mt: Record<string, number> = {} // mtimeMs by path; 1 when unset
 const rel = (p: string) => String(p).split('\\').join('/').replace(/^.*?(?=docs\/keystone)/, '')
 const stub = (on: any, store: Record<string, unknown> = {}, commands: string[] = [], sent: string[] = []) => {
   for (const k of Object.keys(files)) delete files[k]
@@ -19,7 +20,8 @@ const stub = (on: any, store: Record<string, unknown> = {}, commands: string[] =
   sid = 'sess-1'
   on('fs.exists', ($: any, e: any) => { const p = rel(e.path); return { value: p in files || Object.keys(files).some((f) => f.startsWith(p + '/')) } })
   on('fs.list', () => ({ value: [{ name: '2026-10-12-reminders', kind: 'dir', size: 0 }] }))
-  on('fs.stat', () => ({ value: { kind: 'file', size: 1, mtimeMs: 1, isLink: false } }))
+  for (const k of Object.keys(mt)) delete mt[k]
+  on('fs.stat', ($: any, e: any) => ({ value: { kind: 'file', size: 1, mtimeMs: mt[rel(e.path)] ?? 1, isLink: false } }))
   on('fs.read', ($: any, e: any) => ({ value: files[rel(e.path)] }))
   on('session.start', ($: any, e: any) => e)
   on('command.register', ($: any, e: any) => { commands.push(e.name); return { value: true } })
@@ -106,7 +108,7 @@ test('own block: plan, checks, cost with this turn in it', RU, async ($, on) => 
   const store = stub(on, bound())
   const w = world(on)
   const clock = mock.clock(on)
-  files[`${DIR}/verify.md`] = 'Verdict: FAIL\nVerdict: PASS-UNPROVEN\nSecurity gate: warn\n'
+  files[`${DIR}/verify.md`] = 'Verdict: PASS-UNPROVEN\nVerdict: FAIL\nSecurity gate: warn\n'
   usd = 1
   await $.session.start(START)
   await clock.settle()
@@ -138,16 +140,21 @@ test('own wait and the next command: every case, security first on L with threat
   world(on)
   const clock = mock.clock(on)
   const all = '- [x] 1. a\n- [x] 2. b'
-  const cases: [string, string, string | null, string | null][] = [ // plan, verify.md, reason, button
+  const cases: [string, string, string | null, string | null, number?][] = [ // plan, verify.md, reason, button, plan mtime
     [planText('draft'), '', 'план ждёт Approve', 'plan'],
+    [planText('implementing', all), 'Verdict: FAIL', null, 'fix'], // a fresh FAIL waits for the agent: fix verify
+    [planText('implementing', all), 'Verdict: FAIL', null, 'verify', 5], // the plan changed after the FAIL: verify again
+    [planText('implementing', all), 'Verdict: PASS-UNPROVEN', 'не доказано: нужен accept', 'verify', 5],
+    [planText('implementing', '- [x] 1. a\n- [ ] 2. b'), 'Verdict: FAIL', null, 'implement'],
     [planText('verified', all, '\n## Release\n- [ ] R1. push\n- [ ] R2. zip\n'), '', 'шаги релиза: 2', 'implement'],
     [planText('implementing', all), 'Verdict: PASS-UNPROVEN', 'не доказано: нужен accept', 'verify'],
     [planText('implementing', '- [x] 1. a\n- [ ] 2. b BLOCKED: db'), '', 'BLOCKED: 1', null],
     [planText('implementing'), 'Verdict: PASS', null, 'implement'],
     [planText('implementing', `${all}\n\n## Risks\nThreats:\n- x\n`), '', null, 'security'],
   ]
-  for (const [plan, verify, why, button] of cases) {
+  for (const [plan, verify, why, button, planM] of cases) {
     files[PLAN_FILE] = plan
+    mt[PLAN_FILE] = planM ?? 1
     files[`${DIR}/verify.md`] = verify
     await $.session.start(START)
     await clock.settle()
@@ -158,6 +165,16 @@ test('own wait and the next command: every case, security first on L with threat
     if (why?.includes('accept')) expect(t).toContain(`  /keystone:verify accept ${PLAN_FILE}`)
     await ui.unmount()
   }
+  // the answer's Next: is the panel's button too
+  files[PLAN_FILE] = planText()
+  files[`${DIR}/verify.md`] = ''
+  mt[PLAN_FILE] = 1
+  await $.prompt.submit({ text: `/keystone:implement ${PLAN_FILE}` } as any)
+  await $.turn.complete({ ...TURN, answer: 'Next: /x now' })
+  await clock.settle()
+  const ui = await mountPane($)
+  expect(((await ui.find({ key: 'panel-next' })) as any)?.props?.label).toBe('/x now')
+  await ui.unmount()
 })
 
 test('the family goes to the script: parents, details once, a starting session is not cached', async ($, on) => {

@@ -30,6 +30,6 @@ export type PanelData = { rows: PanelRow[] | null; own: PanelOwn; at: number; st
 
 declare module 'claude-code' {
   interface PluginState {
-    keystone: { buttons: string[]; base: string; plan: string; bound: string[]; unbound: string; progress: Progress | null; panel: PanelData | null; panelClosed: { closed: boolean; names: string[] }; handoff: Handoff; lang: 'en' | 'ru' | 'de' | 'fr' | 'es' }
+    keystone: { buttons: string[]; base: string; plan: string; bound: string[]; unbound: string; progress: Progress | null; panel: PanelData | null; panelClosed: { closed: boolean; names: string[] }; handoff: Handoff; answerNext: { cmd: string | null } | null; panelOpen: boolean; lang: 'en' | 'ru' | 'de' | 'fr' | 'es' }
   }
 }

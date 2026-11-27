@@ -100,6 +100,7 @@ const T = rows({
   stIdle: { en: 'idle', ru: 'не работает', de: 'ruht', fr: 'au repos', es: 'inactiva' },
   stUnknown: { en: 'unknown', ru: 'неизвестно', de: 'unbekannt', fr: 'inconnu', es: 'desconocido' },
   stReady: { en: 'done', ru: 'готово', de: 'fertig', fr: 'terminée', es: 'terminada' },
+  panelChip: { en: 'panel', ru: 'панель', de: 'Panel', fr: 'panneau', es: 'panel' },
   panelOpened: { en: 'Keystone panel opened.', ru: 'Панель Keystone открыта.', de: 'Keystone-Panel geöffnet.', fr: 'Panneau Keystone ouvert.', es: 'Panel de Keystone abierto.' },
   panelWaits: { en: (reason: string) => `Keystone panel is not drawn yet: ${reason}`, ru: (reason: string) => `Панель Keystone пока не видна: ${reason}`, de: (reason: string) => `Keystone-Panel noch nicht sichtbar: ${reason}`, fr: (reason: string) => `Panneau Keystone pas encore affiché : ${reason}`, es: (reason: string) => `El panel de Keystone aún no se ve: ${reason}` },
   r_answer: { en: 'waits for your answer', ru: 'ждёт вашего ответа', de: 'wartet auf deine Antwort', fr: 'attend votre réponse', es: 'espera tu respuesta' },
