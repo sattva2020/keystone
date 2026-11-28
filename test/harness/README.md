@@ -20,7 +20,7 @@ No scenarios ship with the repo. Put yours in `test/harness/scenarios/` (git-ign
 | `cwd` | a **fresh clone** of your project (one clone per scenario) |
 | `persona` | who the simulated user is, one sentence |
 | `hidden` | the decisions the simulated user holds; the agent does not know them |
-| `steps[]` | `prompt` (first message, e.g. `/keystone:plan ...`), `newSession`, `maxRounds` (default 8), `noUser` (do not simulate answers), `done` (regex that ends the step) |
+| `steps[]` | `prompt` (first message, e.g. `/sattva:plan ...`), `newSession`, `maxRounds` (default 8), `noUser` (do not simulate answers), `done` (regex that ends the step) |
 | `model` | executor model, default `opus` |
 | `plugin` | `false` to run without the plugin under test |
 | `isolate` | `true` for any scenario that implements code (see lesson 4) |
@@ -29,7 +29,7 @@ No scenarios ship with the repo. Put yours in `test/harness/scenarios/` (git-ign
 | `env` | extra environment variables for the executor |
 | `noSys` | omit the harness system prompt (to test autonomous behavior) |
 
-The plugin under test is loaded with `--plugin-dir` from this repository; an installed `keystone@keystone` is switched
+The plugin under test is loaded with `--plugin-dir` from this repository; an installed `sattva@sattva` is switched
 off for the run through a generated settings file, so only the working tree is used.
 
 ## Example scenario
@@ -41,10 +41,10 @@ off for the run through a generated settings file, so only the working tree is u
   "persona": "a backend developer who wants a small, safe change",
   "hidden": "Wants the new filter on the list endpoint only. Pagination stays as is. No schema change. Done means the existing list test still passes and a new test covers the filter.",
   "steps": [
-    { "prompt": "/keystone:plan add a status filter to the invoices list endpoint", "maxRounds": 4 },
+    { "prompt": "/sattva:plan add a status filter to the invoices list endpoint", "maxRounds": 4 },
     { "prompt": "Approve plan", "noUser": true },
-    { "prompt": "/keystone:implement", "newSession": true, "maxRounds": 3 },
-    { "prompt": "/keystone:verify", "newSession": true, "noUser": true }
+    { "prompt": "/sattva:implement", "newSession": true, "maxRounds": 3 },
+    { "prompt": "/sattva:verify", "newSession": true, "noUser": true }
   ],
   "isolate": true
 }
