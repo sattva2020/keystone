@@ -1,7 +1,7 @@
-// Keystone gates (Claude Code hooks). One script for PreToolUse and Stop; reads the hook JSON on stdin.
+// Sattva gates (Claude Code hooks). One script for PreToolUse and Stop; reads the hook JSON on stdin.
 // Blocks only while an *active* plan exists (Status draft|approved|implementing) and, except for push, only the session
-// that works with it — ran /keystone:<stage> on it or edited its task folder (read from transcript_path).
-// Off switch: KEYSTONE_GATES=off in Claude Code's environment (set before it starts).
+// that works with it — ran /sattva:<stage> on it or edited its task folder (read from transcript_path).
+// Off switch: SATTVA_GATES=off in Claude Code's environment (set before it starts).
 // Push gate: only a push that ships commits touching the active plan's task folder is closed.
 // Cloud session (CLAUDE_CODE_REMOTE=true): its VM is thrown away, so the work branch must reach the remote — the cloud's
 // own Stop hook asks for that push. There a push to a non-default branch passes; the default branch and a PR stay closed.
@@ -19,28 +19,28 @@ const NOT_TEST = /(^|\/)(fixtures?|__snapshots__)\//i; // fixtures and snapshots
 // ponytail: no shell parsing — a quoted "git push" inside e.g. a commit message also matches; fine for a reminder gate.
 const PUSH = /\bgit(\s+(-C\s+("[^"]*"|'[^']*'|\S+)|-c\s+\S+|--[\w-]+(=\S+)?))*\s+push\b(?![^|;&]*--dry-run)|\bgh\s+pr\s+create\b/;
 const BACKGROUND_MAX_MS = 2 * 60 * 60 * 1000;
-const HOW_LOCAL = 'To lift it: finish the step above, set `Status: abandoned` in the plan header, or start Claude Code with KEYSTONE_GATES=off (the hook reads its own environment; a prefix on one command does not reach it).';
-const HOW_CLOUD = 'To lift it: finish the step above, set `Status: abandoned` in the plan header, or add KEYSTONE_GATES=off to the variables of this cloud environment and start a new session (a prefix on one command does not reach the hook).';
+const HOW_LOCAL = 'To lift it: finish the step above, set `Status: abandoned` in the plan header, or start Claude Code with SATTVA_GATES=off (the hook reads its own environment; a prefix on one command does not reach it).';
+const HOW_CLOUD = 'To lift it: finish the step above, set `Status: abandoned` in the plan header, or add SATTVA_GATES=off to the variables of this cloud environment and start a new session (a prefix on one command does not reach the hook).';
 
 const slash = (p) => p.replace(/\\/g, '/');
 const isCloud = (env) => String(env.CLAUDE_CODE_REMOTE).toLowerCase() === 'true';
 
 function projectRoot(start) {
   for (let d = resolve(start); ; d = dirname(d)) {
-    if (existsSync(join(d, '.git')) || existsSync(join(d, 'docs', 'keystone'))) return d;
+    if (existsSync(join(d, '.git')) || existsSync(join(d, 'docs', 'sattva'))) return d;
     if (dirname(d) === d) return resolve(start);
   }
 }
 
-// Folders that hold task folders: only docs/keystone — Keystone never reads another planner's folders.
+// Folders that hold task folders: only docs/sattva — Sattva never reads another planner's folders.
 function planRoots() {
-  return ['docs/keystone'];
+  return ['docs/sattva'];
 }
 
 // Task folders with a plan.md that is in view, newest first: newest = latest date prefix of the folder name, same day →
 // latest plan.md modification time. In view = an active status, or verified with open `- [ ] R<n>.` steps in ## Release
 // (the mod shows that release mode). A folder without plan.md (intent written, plan not yet) never hides another plan.
-// Same rule as activePlan/sessionPlan in keystone.ts.
+// Same rule as activePlan/sessionPlan in sattva.ts.
 function plans(root) {
   const out = [];
   for (const r of planRoots(root)) {
@@ -77,7 +77,7 @@ export function activePlan(root, isBound) {
   return p && ACTIVE.has(p.status) ? p : null;
 }
 
-// What the session did with plans, from its transcript: the `/keystone:<stage> <args>` commands it ran and the files its
+// What the session did with plans, from its transcript: the `/sattva:<stage> <args>` commands it ran and the files its
 // Edit/Write/MultiEdit/NotebookEdit calls touched. No transcript_path (an old client) → null: every plan counts as bound.
 function sessionTrail(transcript) {
   if (!transcript) return null;
@@ -94,12 +94,12 @@ function sessionTrail(transcript) {
       } catch { /* a torn last line */ }
     }
     if (line.includes('<task-notification>')) for (const m of line.matchAll(/<tool-use-id>(\w+)<\/tool-use-id>/g)) trail.finished.add(m[1]);
-    if (!line.includes('keystone') && !line.includes('"tool_use"') && !line.includes('Async agent launched')) continue;
+    if (!line.includes('sattva') && !line.includes('"tool_use"') && !line.includes('Async agent launched')) continue;
     let row;
     try { row = JSON.parse(line); } catch { continue; }
     const content = row?.message?.content;
     if (row.type === 'user' && typeof content === 'string') {
-      const m = content.match(/<command-name>\/keystone:([a-z-]+)<\/command-name>/);
+      const m = content.match(/<command-name>\/sattva:([a-z-]+)<\/command-name>/);
       if (m) trail.commands.push({ stage: m[1], args: content.match(/<command-args>([\s\S]*?)<\/command-args>/)?.[1] ?? '' });
     } else if (row.type === 'user' && Array.isArray(content)) {
       for (const b of content)
@@ -119,7 +119,7 @@ function waitingForBackground(trail, now = Date.now()) {
   return !!trail && [...trail.background].some(([id, at]) => !trail.finished.has(id) && now - at < BACKGROUND_MAX_MS);
 }
 
-// A session works with a plan once it ran `/keystone:<stage>` naming the plan's folder (implement/verify with no
+// A session works with a plan once it ran `/sattva:<stage>` naming the plan's folder (implement/verify with no
 // argument take the newest plan in view, as their skills do) or edited a file in that folder.
 // ponytail: an argument-less implement/verify binds to the newest plan *now*, not the one that was newest when it ran.
 export function boundTo(trail) {
@@ -241,7 +241,7 @@ const tracked = (root, rel) => spawnSync('git', ['-C', root, 'cat-file', '-e', `
 const deny = (reason) => ({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } });
 
 export function decide(input, env = process.env) {
-  if (String(env.KEYSTONE_GATES).toLowerCase() === 'off') return null;
+  if (String(env.SATTVA_GATES).toLowerCase() === 'off') return null;
   const event = input.hook_event_name;
   const ti = input.tool_input || {};
   const target = ti.file_path || ti.notebook_path;
@@ -263,12 +263,12 @@ export function decide(input, env = process.env) {
     if (waitingForBackground(trail)) return null;
     if (!open.length) {
       // every task ticked, plan not verified: the answer must point at verify, not call the work done.
-      // A session that ran verify (FAIL → Next: /keystone:fix, rush) passes; no answer text → cannot tell → pass.
+      // A session that ran verify (FAIL → Next: /sattva:fix, rush) passes; no answer text → cannot tell → pass.
       const last = input.last_assistant_message ?? trail?.lastText;
-      if (!last || last.includes('/keystone:verify') || trail?.commands.some((c) => c.stage === 'verify')) return null;
-      return { decision: 'block', reason: `Keystone: every task of ${plan.file} is ticked, but the plan is still implementing — not verified, so the work is not done yet. Do not call it done. Your answer stays as written: do not repeat or replace it, add only \`Next: /clear, then /keystone:verify ${plan.file}\` (or \`Next: nothing now — waiting for <what>\` if you are waiting for the user) and end the turn. ${HOW}` };
+      if (!last || last.includes('/sattva:verify') || trail?.commands.some((c) => c.stage === 'verify')) return null;
+      return { decision: 'block', reason: `Sattva: every task of ${plan.file} is ticked, but the plan is still implementing — not verified, so the work is not done yet. Do not call it done. Your answer stays as written: do not repeat or replace it, add only \`Next: /clear, then /sattva:verify ${plan.file}\` (or \`Next: nothing now — waiting for <what>\` if you are waiting for the user) and end the turn. ${HOW}` };
     }
-    return { decision: 'block', reason: `Keystone: ${plan.file} is implementing and ${open.length} task(s) are still [ ] without BLOCKED:. If you are implementing: continue them, or append \`BLOCKED: <reason>\` to the task line of one that cannot run, then give the line-by-line report. If you are waiting for the user's answer, the user asked to pause, or you just answered a question — your answer stays as written: do not repeat or replace it, add only \`Next: nothing now — waiting for <what>\` (or the one next step) and end the turn. ${HOW}` };
+    return { decision: 'block', reason: `Sattva: ${plan.file} is implementing and ${open.length} task(s) are still [ ] without BLOCKED:. If you are implementing: continue them, or append \`BLOCKED: <reason>\` to the task line of one that cannot run, then give the line-by-line report. If you are waiting for the user's answer, the user asked to pause, or you just answered a question — your answer stays as written: do not repeat or replace it, add only \`Next: nothing now — waiting for <what>\` (or the one next step) and end the turn. ${HOW}` };
   }
 
   if (event !== 'PreToolUse') return null;
@@ -277,19 +277,19 @@ export function decide(input, env = process.env) {
   if (push?.direct !== undefined) {
     const b = push.direct.replace(/^refs\/heads\//, ''); // no branch = the repository's default branch on GitHub
     if (b && b !== defaultBranch(push.dir) && b !== 'main' && b !== 'master') return null;
-    return deny(`Keystone: ${tool} writes straight to the default branch on GitHub, and that is closed while ${plan.file} is ${plan.status} — run /keystone:verify first (PASS, or /keystone:verify accept for PASS-UNPROVEN). ${HOW}`);
+    return deny(`Sattva: ${tool} writes straight to the default branch on GitHub, and that is closed while ${plan.file} is ${plan.status} — run /sattva:verify first (PASS, or /sattva:verify accept for PASS-UNPROVEN). ${HOW}`);
   }
 
   if (tool === 'Bash' || tool === 'PowerShell' || push) {
     if (push) {
       if (isCloud(env) && workBranchPush(push)) return null;
       const check = pushCheck(push, plan.file);
-      if (check.error) return deny(`Keystone: could not tell what this push ships, so it stays closed while ${plan.file} is ${plan.status} — \`git log\` in ${slash(push.dir)} failed: ${check.error}. The plan may have nothing to do with it: run the push with a literal \`git -C <repo> push <remote> <branch>\`. ${HOW}`);
+      if (check.error) return deny(`Sattva: could not tell what this push ships, so it stays closed while ${plan.file} is ${plan.status} — \`git log\` in ${slash(push.dir)} failed: ${check.error}. The plan may have nothing to do with it: run the push with a literal \`git -C <repo> push <remote> <branch>\`. ${HOW}`);
       // name what is closed: "push/PR is closed" read as "every push" while the cloud work-branch push passed (0.9.33, 0.9.35)
       const folder = slash(dirname(plan.file));
       const what = push.pr ? `a PR carrying commits of ${folder} is closed` : `this push carries commits of ${folder} and is closed`;
       const open = isCloud(env) ? ' (a push of the work branch itself stays open in a cloud session)' : '';
-      if (check.carries) return deny(`Keystone: ${what} while ${plan.file} is ${plan.status}${open} — run /keystone:verify first (PASS, or /keystone:verify accept for PASS-UNPROVEN). ${HOW}`);
+      if (check.carries) return deny(`Sattva: ${what} while ${plan.file} is ${plan.status}${open} — run /sattva:verify first (PASS, or /sattva:verify accept for PASS-UNPROVEN). ${HOW}`);
     }
     return null;
   }
@@ -301,9 +301,9 @@ export function decide(input, env = process.env) {
   const inPlans = [...planRoots(root), 'docs/notes'].some((r) => rel === r || rel.startsWith(r + '/'));
 
   if (plan.status === 'draft' && !inPlans)
-    return deny(`Keystone: ${plan.file} is still draft — no code edits until it is approved (/keystone:plan <plan path> → Approve). Edits under the plan folder and docs/notes are allowed. ${HOW}`);
+    return deny(`Sattva: ${plan.file} is still draft — no code edits until it is approved (/sattva:plan <plan path> → Approve). Edits under the plan folder and docs/notes are allowed. ${HOW}`);
   if (plan.mode === 'fix' && plan.status === 'implementing' && TEST_FILE.test(rel) && !NOT_TEST.test(rel) && tracked(root, rel))
-    return deny(`Keystone: during a fix, committed test files are not edited (${rel}) — write the regression test as a new file; if this test itself is wrong, stop and ask the human. ${HOW}`);
+    return deny(`Sattva: during a fix, committed test files are not edited (${rel}) — write the regression test as a new file; if this test itself is wrong, stop and ask the human. ${HOW}`);
   return null;
 }
 
@@ -312,7 +312,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   process.stdin.on('data', (c) => (raw += c));
   process.stdin.on('end', () => {
     let out = null;
-    try { out = decide(JSON.parse(raw || '{}')); } catch (e) { process.stderr.write(`keystone gate: ${e.message}\n`); }
+    try { out = decide(JSON.parse(raw || '{}')); } catch (e) { process.stderr.write(`sattva gate: ${e.message}\n`); }
     if (out) process.stdout.write(JSON.stringify(out));
     process.exit(0);
   });

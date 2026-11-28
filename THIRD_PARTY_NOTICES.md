@@ -2,14 +2,14 @@
 
 ## AI Factory 2.19.0
 
-Portions of Keystone are derived from **AI Factory** (https://github.com/lee-to/ai-factory), npm package
+Portions of Sattva are derived from **AI Factory** (https://github.com/lee-to/ai-factory), npm package
 `ai-factory@2.19.0`, licensed under the MIT License as declared in its `package.json` (`"license": "MIT"`).
 The upstream package and repository ship no LICENSE file and no copyright line (checked 2026-10-12); the
 attribution below names the project and version. If upstream adds a copyright line, it is copied here verbatim.
 
-Derived files (upstream path → Keystone path):
+Derived files (upstream path → Sattva path):
 
-| Upstream (`skills/…` in ai-factory@2.19.0) | Keystone |
+| Upstream (`skills/…` in ai-factory@2.19.0) | Sattva |
 |---|---|
 | `aif-plan/SKILL.md`, `aif-plan/references/TASK-FORMAT.md`, `aif-plan/references/ULTRA-FORMAT.md` (Required Detail Gate) | `skills/plan/SKILL.md`, `skills/plan/references/PLAN-FORMAT.md` |
 | `aif-improve/SKILL.md`, `aif-improve/references/CHECK-MODE.md`, `aif-improve/references/VALIDATOR.md` | `skills/check/SKILL.md`, `skills/check/references/ANALYZE.md`, `skills/check/references/VALIDATOR.md`, `agents/analyzer.md`, `agents/validator.md` |

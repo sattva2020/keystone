@@ -2,7 +2,7 @@
 import { test, expect } from 'claude-code/testing'
 import { bench, files } from '../test/panel-bench.ts'
 
-const PLAN = 'docs/keystone/2026-10-12-reminders/plan.md'
+const PLAN = 'docs/sattva/2026-10-12-reminders/plan.md'
 const after = async (first: any, second: any) => {
   const b = bench({}, { ...first, now: 1 })
   await b.start()

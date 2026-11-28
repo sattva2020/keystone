@@ -1,6 +1,6 @@
 ---
 name: docs
-description: "Keystone: generate and maintain project documentation — a lean README landing page plus topic pages in docs/, with navigation, consolidation of scattered *.md files (only with your yes, nothing deleted automatically) and a review against a checklist. `update [files|topics]` refreshes only the pages a change touched (called by /keystone:implement when Settings say docs — yes). Use for 'create docs', 'write documentation', 'update docs', 'generate readme', 'document project'."
+description: "Sattva: generate and maintain project documentation — a lean README landing page plus topic pages in docs/, with navigation, consolidation of scattered *.md files (only with your yes, nothing deleted automatically) and a review against a checklist. `update [files|topics]` refreshes only the pages a change touched (called by /sattva:implement when Settings say docs — yes). Use for 'create docs', 'write documentation', 'update docs', 'generate readme', 'document project'."
 argument-hint: "[update <files|topics>] [--web]"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) Bash(mkdir *) AskUserQuestion
 model: sonnet
@@ -20,7 +20,7 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -29,7 +29,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -42,7 +42,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -66,7 +66,7 @@ the existing README wins; no invented features).
 Explore the code: `package.json`, `composer.json`, `requirements.txt`, `go.mod`, `Cargo.toml`, the `src/` layout,
 existing docs, comments, API endpoints, CLI commands. Detect real facts; never invent them.
 
-Glob the project root for `*.md` (not `node_modules/`, `.git/`, `.claude/`, `docs/keystone/`): `CHANGELOG.md`,
+Glob the project root for `*.md` (not `node_modules/`, `.git/`, `.claude/`, `docs/sattva/`): `CHANGELOG.md`,
 `CONTRIBUTING.md`, `ARCHITECTURE.md`, `DEPLOYMENT.md`, `SECURITY.md`, `API.md`, `SETUP.md`, `DEVELOPMENT.md`,
 `TESTING.md`… Record each file, its size and a one-line summary — used in Step 2.
 
@@ -136,7 +136,7 @@ neither has such a list, do nothing. This skill does not generate `AGENTS.md`.
 
 ## Step 5 — `update <files|topics>`
 
-Used after a code change (by `/keystone:implement` when Settings say `docs — yes`, or by hand).
+Used after a code change (by `/sattva:implement` when Settings say `docs — yes`, or by hand).
 
 1. Map the argument to pages: grep `docs/` and README for the changed file names, symbols, commands, env vars and
    flags; pages that describe a topic named in the argument.
@@ -162,7 +162,7 @@ Used after a code change (by `/keystone:implement` when Settings say `docs — y
 4. **Use the project's language** — a Russian README gets Russian docs.
 5. **Preserve existing badges and logos.**
 6. Ownership: `README.md`, `docs/*` and the documentation pointers in `AGENTS.md`/`CLAUDE.md` only. Never touch
-   `docs/keystone/`, rules, or code.
+   `docs/sattva/`, rules, or code.
 
 ## Report
 

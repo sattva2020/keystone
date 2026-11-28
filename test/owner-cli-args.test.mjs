@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = join(ROOT, 'skills', 'implement', 'scripts', 'owner.mjs');
-const X = 'docs/keystone/2026-11-01-x/plan.md';
-const ENV = { ...process.env, CLAUDE_CODE_REMOTE: '', KEYSTONE_GATES: '' };
+const X = 'docs/sattva/2026-11-01-x/plan.md';
+const ENV = { ...process.env, CLAUDE_CODE_REMOTE: '', SATTVA_GATES: '' };
 let root;
 after(() => { try { rmSync(root, { recursive: true, force: true }); } catch { /* Windows file locks */ } });
 const git = (cwd, ...a) => assert.equal(spawnSync('git', ['-C', cwd, '-c', 'user.name=t', '-c', 'user.email=t@t', ...a]).status, 0);

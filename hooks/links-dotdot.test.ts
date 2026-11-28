@@ -13,6 +13,6 @@ test('a path that leaves the session folder through an inner ".." is not linked 
 
 test('".." that stays inside the session folder resolves to a clean relative link', async () => {
   expect(inside('hooks/../docs/a.md', BASE)).toBe('docs/a.md')
-  expect(inside('E:/work/repo/hooks/./x/../keystone.ts', BASE)).toBe('hooks/keystone.ts')
+  expect(inside('E:/work/repo/hooks/./x/../sattva.ts', BASE)).toBe('hooks/sattva.ts')
   expect(await linkify('`hooks/../docs/a.md:3`', BASE, anyFile)).toBe('[`hooks/../docs/a.md:3`](docs/a.md:3)')
 })

@@ -9,8 +9,8 @@ import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { collect, findBase, git } from '../skills/verify/scripts/collect.mjs';
 
-const PLAN = 'docs/keystone/2026-10-18-x/plan.md';
-const VERIFY = 'docs/keystone/2026-10-18-x/verify.md';
+const PLAN = 'docs/sattva/2026-10-18-x/plan.md';
+const VERIFY = 'docs/sattva/2026-10-18-x/verify.md';
 const P = 'src/__tests__/a.test.js';
 const roots = [];
 after(() => { for (const r of roots) try { rmSync(r, { recursive: true, force: true }); } catch { /* Windows file locks */ } });
@@ -35,7 +35,7 @@ test('verify paths: every path collect composes for verify.md is in backticks', 
   assert.match(first, /^ {2}`src\/__tests__\/a\.test\.js`$/m, 'files: list');
   assert.match(first, /^Architecture gate: fail — .*`src\/__tests__\/a\.test\.js:1` /m, 'Architecture gate');
 
-  const report = `Keystone verify: ${PLAN}\n- Task 1 — ok — fine\nrule CLAUDE.md:3 — fail — ${P}:4\n`;
+  const report = `Sattva verify: ${PLAN}\n- Task 1 — ok — fine\nrule CLAUDE.md:3 — fail — ${P}:4\n`;
   const run = `# Verify: x\nDate: 2026-11-15 · Base: ${base} · Verdict: FAIL\n\n## Checks\n- base: ${base}\n\n## Carried\n\n## Report\n${report}\n## Verdict\nFAIL\n`;
   commit(root, { [VERIFY]: run }, 'docs(verify): x');
   commit(root, { [VERIFY]: `${run}Accepted violation by t 2026-11-15: rule CLAUDE.md:3 — ${P}:4\n` }, 'docs(verify): accept violation x');

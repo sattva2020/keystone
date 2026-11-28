@@ -1,7 +1,7 @@
 <!-- derived from ai-factory@2.19.0 skills/aif-review/references/SEVERITY.md, coverage-first and PR pinning from ai-factory@2.20.0 (MIT); see THIRD_PARTY_NOTICES.md -->
 # Review item severity levels
 
-The single source of truth for what counts as *critical*, *suggestion* or *unconfirmed* in `/keystone:review`. `SKILL.md`
+The single source of truth for what counts as *critical*, *suggestion* or *unconfirmed* in `/sattva:review`. `SKILL.md`
 and `VALIDATOR.md` defer to this file — do not redefine the levels elsewhere.
 
 ## Three levels

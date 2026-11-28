@@ -1,6 +1,6 @@
 ---
 name: qa
-description: "Keystone: QA workflow for testing a feature or task implementation — change summary, test plan and concrete manual test cases, written to [task folder]/qa/. Input is a Keystone plan path, a git ref, or nothing (staged/working diff). With a plan, cases cite intent IDs (I-n) and the plan's `Done means:`. Use for 'test this', 'write test plan', 'what should I test', 'QA this change'; run the cases with /keystone:qa-check."
+description: "Sattva: QA workflow for testing a feature or task implementation — change summary, test plan and concrete manual test cases, written to [task folder]/qa/. Input is a Sattva plan path, a git ref, or nothing (staged/working diff). With a plan, cases cite intent IDs (I-n) and the plan's `Done means:`. Use for 'test this', 'write test plan', 'what should I test', 'QA this change'; run the cases with /sattva:qa-check."
 argument-hint: "[--all] [change-summary | test-plan | test-cases] [<plan.md path | git ref>]"
 allowed-tools: Read Write Grep Glob Agent AskUserQuestion Bash(git *) Bash(mkdir *)
 model: opus
@@ -20,7 +20,7 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -29,7 +29,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -42,7 +42,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -77,15 +77,15 @@ Parse `$ARGUMENTS` fully before doing anything else:
    - a path to a `plan.md` (or its folder) → **plan input**: read the plan and the `intent.md` next to it;
    - a git ref (`git rev-parse --verify <arg>` succeeds) → **ref input**: the change is `git diff <ref>...HEAD`;
    - nothing → **working input**: the change is `git diff --cached`, or `git diff` when nothing is staged (say which);
-     if an active plan exists (the newest `docs/keystone/*/plan.md`
-     whose Status is draft, approved or implementing, or `verified` with an open `## Debt` line), read it and its intent too. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
+     if an active plan exists (the newest `docs/sattva/*/plan.md`
+     whose Status is draft, approved or implementing, or `verified` with an open `## Debt` line), read it and its intent too. A plan elsewhere (an older task folder outside docs/sattva) is used only when its path is given explicitly as the argument.
    - not a git work tree and no plan → manual change context (see `${CLAUDE_SKILL_DIR}/references/CHANGE-SUMMARY.md`).
 
 A plan input has no diff of its own: take the change from the commits that implement it (`git log` since the plan's
 baseline commit / the files named in its Tasks) and say how you scoped it.
 
-**Task folder and output folder.** `task_folder` = the folder of the plan used (a plan under `docs/keystone/`). `qa_dir = <task_folder>/qa/`. With no plan at all:
-`qa_dir = docs/keystone/qa/<YYYY-MM-DD>-<slug>/`, slug from the ref or from the change (3–5 words, lowercase, hyphens).
+**Task folder and output folder.** `task_folder` = the folder of the plan used (a plan under `docs/sattva/`). `qa_dir = <task_folder>/qa/`. With no plan at all:
+`qa_dir = docs/sattva/qa/<YYYY-MM-DD>-<slug>/`, slug from the ref or from the change (3–5 words, lowercase, hyphens).
 
 **If no mode was provided and `all_mode = false` — ask with AskUserQuestion:** which QA mode to run — change summary,
 test plan, test cases, or the full pipeline (`--all`).
@@ -126,7 +126,7 @@ When a plan exists, QA is judged against what was asked, not only against the di
 - the plan's `Done means:` line is turned into acceptance criteria of the test plan and into cases (each clause → a check);
 - an intent line with no way to test it manually is listed under "Not testable manually" with the reason — never dropped;
 - every open line of the plan's `## Debt` (`- D<k> · <row id> · open · … · prove by: …`) gets a case `Covers: D<k>, <row id>`
-  whose check is its `prove by:` — or goes to "Not testable manually" with the reason; `/keystone:qa-check` closes the
+  whose check is its `prove by:` — or goes to "Not testable manually" with the reason; `/sattva:qa-check` closes the
   line when that case passes;
 - a plan row or diff area with no intent line stays in the cases as `Covers: unrequested` and is flagged in the summary.
 
@@ -139,7 +139,7 @@ QA: <change-summary | test-plan | test-cases | all> · input: <plan | ref | stag
 Saved: <files written>
 Covers: <n> of <m> intent lines (I-n) · Done means: <n clauses covered of m | no plan> · Debt: <n of m open lines covered | none>
 Blocked on me: <missing change context, decisions only the user can take | none>
-Next: run the cases with `/keystone:qa-check human` or `/keystone:qa-check agent`. Context is heavy — suggest `/clear`.
+Next: run the cases with `/sattva:qa-check human` or `/sattva:qa-check agent`. Context is heavy — suggest `/clear`.
 ```
 
 ## Principles
@@ -180,7 +180,7 @@ You may mention existing automated checks only as supporting verification; the p
 - Artifacts are written in the language the user writes in; the templates define structure, not language. Keep test case IDs
   (`TC-001`), code identifiers, paths, commands and raw error messages unchanged.
 - An active draft plan blocks code edits; writing QA artifacts under `docs/` is not a code edit, so this skill runs under
-  any gate. To lift a gate set `Status: abandoned` or `KEYSTONE_GATES=off`.
+  any gate. To lift a gate set `Status: abandoned` or `SATTVA_GATES=off`.
 
 ## Critical Rules
 

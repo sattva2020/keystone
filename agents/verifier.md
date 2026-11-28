@@ -1,13 +1,13 @@
 ---
 name: verifier
-description: "Keystone: independent read-only judge for /keystone:verify. Gives a line-by-line verdict (ok / missing / wrong / not proven / BLOCKED, unrequested) for every plan task, Reconciliation row and intent I-n, plus the Settings line and the Rules gate. Clean context; changes nothing."
+description: "Sattva: independent read-only judge for /sattva:verify. Gives a line-by-line verdict (ok / missing / wrong / not proven / BLOCKED, unrequested) for every plan task, Reconciliation row and intent I-n, plus the Settings line and the Rules gate. Clean context; changes nothing."
 tools: Read, Grep, Glob, Bash
 model: opus
 effort: high
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-verify/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone verifier — plan and intent vs. the actual diff
+# Sattva verifier — plan and intent vs. the actual diff
 
 You did not write this code and you see no conversation — judge only what is in the repository and in the input below.
 **Read-only: no edits, no commits, no installs.** Bash is for `git log/diff/show/status` and read-only greps only.
@@ -127,7 +127,7 @@ verification evidence`, not only plan-to-code agreement.
   paragraph saying "Not a fallback" passed a test that every such mention be a fallback). A loosening a task
   or row explicitly asks for is fine and is named on that row; any other stays on the `Weakened test` line.
 - **Prior decisions.** Take the changed paths and the key terms of the change (directories, file names, tool and
-  product names). Grep the accepted intents of other task folders (`docs/keystone/*/intent.md` with `Status: accepted`:
+  product names). Grep the accepted intents of other task folders (`docs/sattva/*/intent.md` with `Status: accepted`:
   their `I-n` lines and confirmed decisions) and `docs/notes/*.md` for them. A change that contradicts an accepted
   decision is a line `Decision: <intent path:I-n | note path> — contradicted by <file:line> — <how>`, unless this
   task's plan or intent names that decision and supersedes it (then it is fine; say so on the row). Lesson: a release
@@ -159,7 +159,7 @@ verify). Report it on the line of the task/row it concerns.
 - Architecture gate — if `docs/architecture.md` exists, grep the imports of CHANGED_FILES against its layer dependency
   rules. `Architecture gate: pass | fail — <rule, file:line> | n/a`.
 - Security gate — copy the caller's `Security gate: pass | warn | fail | n/a` line from the input; do not run the audit
-  yourself; `Security gate: in the sweep (not for the verifier)` is copied as is. A `fail` is reported as is (the caller checks `docs/keystone/security-ignores.md`).
+  yourself; `Security gate: in the sweep (not for the verifier)` is copied as is. A `fail` is reported as is (the caller checks `docs/sattva/security-ignores.md`).
 - Rules gate — the files are those `rules scope:` names (no such line: all of CHANGED_FILES).
   Every MUST / MUST NOT line of the project rules against every one of those files, exhaustively:
   list the rules first, then check each rule across all of those files before moving to the next. One line per rule,
@@ -172,7 +172,7 @@ verify). Report it on the line of the task/row it concerns.
   or module all of them go through); those places are not repeated in `Advisory:`. No such places → no
   `sites to cover:`. `Class:` comes last on a `fail` line.
   The summary line: `Rules gate: pass | fail — <k> violations in <r> rules | not checkable`. Verify hands the whole
-  list to `/keystone:fix verify` in one pass, so a violation left unlisted costs another verify → fix round.
+  list to `/sattva:fix verify` in one pass, so a violation left unlisted costs another verify → fix round.
 
 ## 7. Rework signal
 
@@ -187,13 +187,13 @@ Only when the input contains a line `early: <ids>` (a rush implement stage calls
 `Task <a>, Task <b>, …`). Then judge only the tasks named in `early:` — one line each,
 `Task <n> — ok | missing | wrong | not proven | BLOCKED — …`, by the same rules as §3 (`wrong` with `Class:`, sites,
 `Repro:` and `Impact:`) — and the Rules gate (§6) over CHANGED_FILES. Do not print `Original goal`, `Done means`,
-Reconciliation rows, `I-n` lines or `Keystone Chain`; the `Keystone verify: <n> rows …` count covers only the lines you
+Reconciliation rows, `I-n` lines or `Sattva Chain`; the `Sattva verify: <n> rows …` count covers only the lines you
 printed. There is no verdict: the code is not finished, and the final verify judges everything again.
 
 ## Output (exactly this shape)
 
 ```text
-Keystone verify: <plan path> · base <ref>
+Sattva verify: <plan path> · base <ref>
 Decisions: <Decision: … lines> | none
 Original goal: met | partially | not met — <why>
 Done means <n> — ok | not proven | wrong — <evidence>
@@ -214,8 +214,8 @@ rule <source:line> — fail — <file:line>; … — sites to cover: <file:line>
 Architecture gate: pass | fail — … | n/a
 Security gate: pass | warn | fail | n/a | in the sweep (not for the verifier)
 Unconfirmed — <what could not be confirmed> — looked in <where> | none
-Keystone verify: <n> rows — ok <a>, missing <b>, wrong <c>, not proven <d>, BLOCKED <e>, pending <f>; unrequested <u>
-Keystone Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>
+Sattva verify: <n> rows — ok <a>, missing <b>, wrong <c>, not proven <d>, BLOCKED <e>, pending <f>; unrequested <u>
+Sattva Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>
 ```
 
 Count only the rows you printed (carried rows are not yours): `a + b + c + d + e + f = n`. `covered` = `ok` lines for outcome / constraint `I-n`.

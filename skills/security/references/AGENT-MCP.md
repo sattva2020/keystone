@@ -1,4 +1,4 @@
-<!-- original Keystone file (MIT) -->
+<!-- original Sattva file (MIT) -->
 
 # Agent and MCP configuration (category `agent`)
 

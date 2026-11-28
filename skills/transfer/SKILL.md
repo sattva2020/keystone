@@ -1,6 +1,6 @@
 ---
 name: transfer
-description: "Keystone: reuse the lessons of another of your projects. Reads (never writes) its .claude/rules, evolve log, fix-plan Prevention sections and stack line, keeps only what fits this project's stack, marks every proposal with its source, and writes the accepted ones into .claude/rules/ after you see the diff and say yes. Use when starting a project similar to an older one, or to avoid mistakes already paid for elsewhere."
+description: "Sattva: reuse the lessons of another of your projects. Reads (never writes) its .claude/rules, evolve log, fix-plan Prevention sections and stack line, keeps only what fits this project's stack, marks every proposal with its source, and writes the accepted ones into .claude/rules/ after you see the diff and say yes. Use when starting a project similar to an older one, or to avoid mistakes already paid for elsewhere."
 argument-hint: "<path to another project> [all | plan | implement | fix | verify | <rules topic>]"
 allowed-tools: Read Write Edit Glob Grep Bash(realpath *) Bash(git *) AskUserQuestion
 model: opus
@@ -9,7 +9,7 @@ disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-transfer/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone · transfer — reuse experience from another project
+# Sattva · transfer — reuse experience from another project
 
 Read the lessons another project already learned, keep only those that fit this one, and write the accepted ones as
 project rules, with the human's yes.
@@ -20,7 +20,7 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -29,7 +29,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -42,7 +42,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -53,12 +53,12 @@ other project (read-only): .claude/rules, evolve log, fix plans' Prevention, CLA
     ↓ relevance gate (this project's stack and code)
 candidate rules, each marked with its source
     ↓ diff + explicit yes
-this project: .claude/rules/ + docs/keystone/evolve-log.md
+this project: .claude/rules/ + docs/sattva/evolve-log.md
 ```
 
-Keystone has no per-skill override layer, so lessons land where Claude Code loads them natively: `.claude/rules/`
+Sattva has no per-skill override layer, so lessons land where Claude Code loads them natively: `.claude/rules/`
 (with `paths:` for file-specific lessons; stage lessons under `## plan`, `## implement`, `## fix`, `## verify` in
-`.claude/rules/keystone.md`). Same targets as `/keystone:evolve`.
+`.claude/rules/sattva.md`). Same targets as `/sattva:evolve`.
 
 ## Non-negotiable boundaries
 
@@ -69,8 +69,8 @@ Keystone has no per-skill override layer, so lessons land where Claude Code load
 - **Allowlist of source reads (exhaustive):**
   - `CLAUDE.md` or `.claude/CLAUDE.md` — only the stack line (language, framework, runtime, test tool) and nothing else
   - `.claude/rules/**/*.md`
-  - `docs/keystone/evolve-log.md`
-  - `docs/keystone/*/plan.md` with `Mode: fix` — only `## Root cause` and `## Prevention`
+  - `docs/sattva/evolve-log.md`
+  - `docs/sattva/*/plan.md` with `Mode: fix` — only `## Root cause` and `## Prevention`
 - Nothing from the source is copied wholesale. No secrets, tokens, URLs with credentials, customer or user data, or
   internal hostnames ever reach this project's files: if a lesson contains one, rewrite it without it or drop it.
 - Never persist the source's absolute path. A source marker names the project folder and the file inside it
@@ -78,20 +78,20 @@ Keystone has no per-skill override layer, so lessons land where Claude Code load
 
 ## Step 0: parse arguments and load this project
 
-Usage: `/keystone:transfer <path> [target]`. Quote paths with spaces.
+Usage: `/sattva:transfer <path> [target]`. Quote paths with spaces.
 
 1. `source` = the first argument, resolved to a canonical absolute path (`realpath`). `target` = the optional second
-   argument, default `all` (stage or rules-topic filter, as in `/keystone:evolve`).
+   argument, default `all` (stage or rules-topic filter, as in `/sattva:evolve`).
 2. Stop with a one-line error if the source is missing, is not a directory, or resolves to this project — for this
-   project recommend `/keystone:evolve`.
+   project recommend `/sattva:evolve`.
 3. Require at least one allowlisted file in the source. If none exists, say `no transferable lessons found` and stop
    without writing anything.
 4. Load **this** project's context, in this order, whatever exists: `CLAUDE.md`, `.claude/CLAUDE.md`,
    `docs/architecture.md`, `.claude/rules/**/*.md` (note `paths:`), `AGENTS.md`; dependency manifests (`package.json`,
    `pyproject.toml`, `go.mod`, `Cargo.toml`, `composer.json`, …).
-5. Read `docs/keystone/evolve-log.md` if present: a `transfer from <project>` entry shows what was already taken.
+5. Read `docs/sattva/evolve-log.md` if present: a `transfer from <project>` entry shows what was already taken.
 6. If this project has no stack evidence at all (no CLAUDE.md, no manifest, no code), stop: tell the user to run
-   `/keystone:setup` first — the relevance gate needs the stack.
+   `/sattva:setup` first — the relevance gate needs the stack.
 
 ## Step 1: read the source safely
 
@@ -111,7 +111,7 @@ row):
 | # | Source marker | Lesson (specific action) | Preconditions (language / framework / library / runtime) | Target |
 |---|---------------|--------------------------|-----------------------------------------------------------|--------|
 | 1 | acme-api: .claude/rules/db.md | Guard optional relations before nested reads | Prisma / any ORM with optional relations | .claude/rules/db.md |
-| 2 | acme-api: docs/keystone/…/plan.md Prevention | Run migrations in a transaction | PostgreSQL | keystone.md ## implement |
+| 2 | acme-api: docs/sattva/…/plan.md Prevention | Run migrations in a transaction | PostgreSQL | sattva.md ## implement |
 ```
 
 A source file with 5 lessons produces 5 rows, not 1. Drop timestamps, commit ids and business entities (tables,
@@ -145,7 +145,7 @@ For every kept lesson:
   ambiguous;
 - keep framework and library names only if this project independently uses them;
 - choose the target: a `paths:` rules file for file-specific lessons, `.claude/rules/<topic>.md` for project-wide
-  ones, `.claude/rules/keystone.md` under the stage heading for workflow lessons;
+  ones, `.claude/rules/sattva.md` under the stage heading for workflow lessons;
 - phrase it as one short imperative line in English, with the trailing comment
   `<!-- transfer: <source marker> -->`.
 
@@ -169,11 +169,11 @@ rule is never rewritten silently: a strengthening is a diff with its own yes. No
 ## Step 6: write and log
 
 1. Write the chosen rules (create `.claude/rules/` if needed; valid YAML `paths:` frontmatter).
-2. Append to `docs/keystone/evolve-log.md` (create with `# Evolve log` if missing; never edit earlier entries):
+2. Append to `docs/sattva/evolve-log.md` (create with `# Evolve log` if missing; never edit earlier entries):
 
 ```markdown
 ## 2026-10-12 — transfer from acme-api
-Sources: .claude/rules/db.md, docs/keystone/2026-08-02-x/plan.md (Prevention) (<n>)
+Sources: .claude/rules/db.md, docs/sattva/2026-08-02-x/plan.md (Prevention) (<n>)
 Added: .claude/rules/db.md — "guard optional relations" (source: acme-api: .claude/rules/db.md)
 Rejected: "<lesson>" — <why: stack mismatch / already covered / not verifiable here>
 ```
@@ -196,4 +196,4 @@ counts, accepted rule names and this project's output paths.
 3. **Every proposal carries its source marker**; every write needs the human's yes after the diff.
 4. **Minimal** — short rules, no copied documents, no rewrite of existing rules.
 5. **No hallucination** — a lesson not present in the source files is never invented.
-6. **Ownership** — transfer writes only `.claude/rules/**` and `docs/keystone/evolve-log.md`.
+6. **Ownership** — transfer writes only `.claude/rules/**` and `docs/sattva/evolve-log.md`.

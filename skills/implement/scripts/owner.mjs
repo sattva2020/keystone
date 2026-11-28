@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Keystone · owner — one session per plan. The owner record of a plan lives on the service branch
-// `keystone/owners` (one `<plan folder>.json` per plan); the work tree and HEAD are never touched (plumbing only).
+// Sattva · owner — one session per plan. The owner record of a plan lives on the service branch
+// `sattva/owners` (one `<plan folder>.json` per plan); the work tree and HEAD are never touched (plumbing only).
 // CLI:  owner.mjs take|beat|release|show <plan.md> [--stage implement|fix] [--force] [--any]
 //       → one JSON line; exit 0 = may work, 3 = may not, 1 = error.
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
@@ -11,8 +11,8 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
 export const STALE_MS = 2 * 60 * 60 * 1000;
-const REF = 'refs/heads/keystone/owners';
-const RREF = 'refs/remotes/origin/keystone/owners';
+const REF = 'refs/heads/sattva/owners';
+const RREF = 'refs/remotes/origin/sattva/owners';
 const STAGES = ['implement', 'fix'];
 
 function ctx(plan, opts = {}) {
@@ -23,7 +23,7 @@ function ctx(plan, opts = {}) {
   let cwd = dir; // the repo root once known: index paths (update-index) are relative to the cwd
   const genv = {
     ...env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0',
-    GIT_AUTHOR_NAME: 'keystone', GIT_AUTHOR_EMAIL: 'keystone@invalid', GIT_COMMITTER_NAME: 'keystone', GIT_COMMITTER_EMAIL: 'keystone@invalid',
+    GIT_AUTHOR_NAME: 'sattva', GIT_AUTHOR_EMAIL: 'sattva@invalid', GIT_COMMITTER_NAME: 'sattva', GIT_COMMITTER_EMAIL: 'sattva@invalid',
   };
   const git = (args, extra = {}) => {
     const r = spawnSync('git', ['-C', cwd, ...args], { encoding: 'utf8', env: { ...genv, ...(extra.env ?? {}) }, input: extra.input, timeout: 60000 });
@@ -96,7 +96,7 @@ function run(c, opts, decide) {
     const d = decide(cur);
     if (!('write' in d) || opts.offline) return d.result;
     opts.beforeWrite?.(); // test hook: another session writes between the decision and the CAS
-    const msg = `keystone: ${d.write ? 'own' : 'release'} ${c.key}`;
+    const msg = `sattva: ${d.write ? 'own' : 'release'} ${c.key}`;
     let warning;
     if (c.origin) {
       const base = fetched ? seenR : seen ?? seenR;
@@ -115,12 +115,12 @@ function run(c, opts, decide) {
     const next = commitOn(c, seen ?? seenR, d.write, msg);
     const u = c.git(['update-ref', REF, next, seen ?? '']);
     if (u.code === 0) return { ...d.result, remote: 'local', warning };
-    if (++lost >= 3) throw new Error(`keystone/owners: the local branch keeps moving (${u.err.split('\n')[0]})`);
+    if (++lost >= 3) throw new Error(`sattva/owners: the local branch keeps moving (${u.err.split('\n')[0]})`);
     // lost: decide again on the new tip
   }
 }
 
-const off = (opts) => (opts.env ?? process.env).KEYSTONE_GATES === 'off';
+const off = (opts) => (opts.env ?? process.env).SATTVA_GATES === 'off';
 const live = (c, rec) => !!rec && c.now - Date.parse(rec.beat) <= STALE_MS;
 const mine = (c, rec) => !!rec && rec.place === c.place && rec.branch === c.branch;
 const record = (c, stage, prev) => {

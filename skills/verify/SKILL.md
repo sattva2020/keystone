@@ -1,6 +1,6 @@
 ---
 name: verify
-description: "Keystone: verify finished work against its plan and intent — runs build/test/lint, then an independent verifier agent in a clean context gives every plan task, Reconciliation row and intent line ok / missing / wrong / not proven / BLOCKED, flags unrequested work, and returns PASS, PASS-UNPROVEN or FAIL. A checked box is not evidence. Writes verify.md; on PASS sets Status verified. Use after implementation on M and L changes, or for 'verify', 'did we miss anything', 'is it really done'. `/keystone:verify accept` records a human decision on unproven rows."
+description: "Sattva: verify finished work against its plan and intent — runs build/test/lint, then an independent verifier agent in a clean context gives every plan task, Reconciliation row and intent line ok / missing / wrong / not proven / BLOCKED, flags unrequested work, and returns PASS, PASS-UNPROVEN or FAIL. A checked box is not evidence. Writes verify.md; on PASS sets Status verified. Use after implementation on M and L changes, or for 'verify', 'did we miss anything', 'is it really done'. `/sattva:verify accept` records a human decision on unproven rows."
 argument-hint: "[<plan path> [base git ref]] [--strict] [--full] | accept | accept [<plan path>] D<k> <proof text>"
 allowed-tools: Read Glob Grep Bash Agent AskUserQuestion Write Edit Skill Bash(node *feedback.mjs*)
 model: sonnet
@@ -8,15 +8,15 @@ effort: high
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-verify/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone · verify — plan and intent vs. the actual diff
+# Sattva · verify — plan and intent vs. the actual diff
 
-Judgment is delegated to the `keystone:verifier` agent, which did not write the code and sees no conversation. This
+Judgment is delegated to the `sattva:verifier` agent, which did not write the code and sees no conversation. This
 skill runs the commands, collects the verdict, and writes the record. **Write/Edit are allowed for exactly two things:**
 `<plan folder>/verify.md` and the `Status:` value in the plan header (plus `Accepted unproven by …` / `Accepted violation by …` /
-`Accepted finding by …` in verify.md, and the plan's `## Debt` lines, for `accept` and Decide at the ceiling — `references/ACCEPT.md`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/keystone:fix` or
-`/keystone:implement`, not this skill — `Fix directly here` in Step 6 hands the turn to the fix skill's rules.
+`Accepted finding by …` in verify.md, and the plan's `## Debt` lines, for `accept` and Decide at the ceiling — `references/ACCEPT.md`). Never edit code, the intent, the rest of the plan, or tests. Fixing what verify finds is `/sattva:fix` or
+`/sattva:implement`, not this skill — `Fix directly here` in Step 6 hands the turn to the fix skill's rules.
 
-**Roles.** The `keystone:verifier` agent is the judge (the strongest model); this skill is the orchestrator (a mid
+**Roles.** The `sattva:verifier` agent is the judge (the strongest model); this skill is the orchestrator (a mid
 model); the fixed mechanical steps — the diff base, this task's files, build / test / lint — run as a script
 (`scripts/collect.mjs`), with no model.
 
@@ -26,18 +26,18 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
-**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `verify`).
+**Feedback.** If the context has a `Sattva feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `verify`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -50,14 +50,14 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
 text, without backticks. Link only a file you checked exists.
 
 **No decisions through verify.** If the user asks to put a decision or change into the intent or the plan, do not edit
-anything: answer that this is `/keystone:intent <path>` (intent) or `/keystone:plan <plan path>` (plan), and that verify
+anything: answer that this is `/sattva:intent <path>` (intent) or `/sattva:plan <plan path>` (plan), and that verify
 must be run again afterwards. Never attribute to the user an edit the agent made.
 
 Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only with the plan path: judge every row again), or `accept`, or `accept [<plan path>] D<k> <proof text>`, or empty (= the active plan).
@@ -65,7 +65,7 @@ Arguments: `$ARGUMENTS` — `<plan path> [base ref] [--full]` (`--full` only wit
 ## Step 0 — find the plan, intent, rules
 
 - `accept …` → read `${CLAUDE_SKILL_DIR}/references/ACCEPT.md` first and follow it; it finds the plan itself.
-- Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere is used only when its path is given as the argument. If none: ask for the path, or stop with `no plan to verify`. Plan outside docs/keystone/ → say once: the gates never saw it.
+- Active plan = the plan.md of the newest task folder under docs/sattva/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere is used only when its path is given as the argument. If none: ask for the path, or stop with `no plan to verify`. Plan outside docs/sattva/ → say once: the gates never saw it.
 - A plan with `Status: draft` was never approved: stop and say so — verify measures an implementation, not a draft.
 - Read the plan header (`Level`, `Mode`, `Status`, `Authority`, `Settings`), the intent named in `Authority:` (or
   `intent.md` next to the plan), and the project rules (those that exist): `CLAUDE.md`, `.claude/CLAUDE.md`,
@@ -84,9 +84,9 @@ local/staging URL in the plan) may run as a second command.
 Two gates join the same lines:
 - **Architecture gate.** The script runs each `MUST NOT:` `check: <grep>` of `docs/architecture.md` on the changed
   files and prints `Architecture gate: pass | fail — <rule, file:line> | n/a`; `check: review` lines go to the verifier.
-- **Security gate.** On L whose plan has the `Threats:` block or a `/keystone:security` task (security/auth/payments/PII),
-  `/keystone:security` must have been run for this diff: take its `Security gate: pass | warn | fail` line from that
-  run in this session, or run it now with the Skill tool (`/keystone:security <plan path>`) and read the line from its answer. `fail` without a matching entry in `docs/keystone/security-ignores.md` → verdict FAIL; none run →
+- **Security gate.** On L whose plan has the `Threats:` block or a `/sattva:security` task (security/auth/payments/PII),
+  `/sattva:security` must have been run for this diff: take its `Security gate: pass | warn | fail` line from that
+  run in this session, or run it now with the Skill tool (`/sattva:security <plan path>`) and read the line from its answer. `fail` without a matching entry in `docs/sattva/security-ignores.md` → verdict FAIL; none run →
   `not proven`. The same applies when the plan has no `Threats:` block but the diff itself changes RLS policies,
   grants or roles, auth or session code, or permission checks: that is a security change, so no audit run →
   `Security gate: not proven — <files>`, never `n/a`. Not a security change → `n/a`. Strictness: **L is strict by default** (`--strict` for M) — then a
@@ -97,15 +97,15 @@ lint warning, an unfinished-work marker (TODO / FIXME / HACK) or an undocumented
 
 `sweep: due — …` (L only) → read `references/SWEEP.md` and launch by it: the verifier and
 the review finder in one message, security beside them. Otherwise:
-call the agent (Agent tool, `subagent_type: "keystone:verifier"`). Its prompt contains **only** facts, no opinion:
+call the agent (Agent tool, `subagent_type: "sattva:verifier"`). Its prompt contains **only** facts, no opinion:
 plan path, intent path, base ref, the Step-1 lines above the record-only marker (incl. the gate lines; never the
 evidence of carried rows), and the project-rules file list. It returns one line per task, Reconciliation row and `I-n`
 not carried, then `Unrequested`, `Settings`, `Rules gate` with one `rule …` line per project rule
-(every violating `file:line` on it), the count line and the `Keystone Chain` line.
+(every violating `file:line` on it), the count line and the `Sattva Chain` line.
 Its first line is `Decisions:`, then `Original goal: met | partially | not met` — the user's verbatim goal against the diff, independent of
 the intent; `partially`/`not met` without a confirmed `Goal check:` in the intent is `wrong` (PASS is impossible). Then
 `Done means:` — every outcome there gets ok / not proven / wrong.
-**Cost.** Take the `Keystone cost meter` line from this prompt's context: `cost: verify+fix $<verify + fix>` (a part
+**Cost.** Take the `Sattva cost meter` line from this prompt's context: `cost: verify+fix $<verify + fix>` (a part
 missing counts as 0.00); no line or `not measured yet` → `cost: verify+fix n/a`. It is the cost before this run.
 **Write `verify.md` once**, in the Step 5 layout: the Step-1 lines (one per line) and `cost:` as `## Checks`, the `carried:` lines as
 they are as `## Carried`, the verifier's output exactly as it came as `## Report` — never retyped or summarised. Then **cross-check every `ok` and `wrong` line** against the cited
@@ -132,7 +132,7 @@ Rules you enforce when reading the output (the verifier knows them, you check th
 - Do not shorten the plan or hide rows: every task, Reconciliation row and `I-n` has a line in `## Report` (judged)
   or in `## Carried`; none drops out of both (ids in `left the plan:` excepted).
 - Do not re-run the verifier hoping for a milder verdict: `delta: since <sha7> — 0 files changed`, run <sha7> FAIL
-  → do not call it; Next `/keystone:fix verify` (`references/LOOP.md`).
+  → do not call it; Next `/sattva:fix verify` (`references/LOOP.md`).
 - A Rules gate `fail` with a single `rule` line while the project has more MUST / MUST NOT lines is incomplete: the
   verifier must give one line per rule. Send it back once with the missing rules named.
 - A missing or unreadable intent: say so, verify against the plan alone, and report the outcome / constraint counts
@@ -179,19 +179,19 @@ variables in the changed files, Rules gate `pass`. Anything short of that is `wr
    ## Verdict
    <verdict> — <one line: what is open>
    Late: <id> (advisory | critical), … | none
-   <ok + … = n and Keystone Chain, recomputed with carried rows>
+   <ok + … = n and Sattva Chain, recomputed with carried rows>
    ```
 2. **PASS** → set `Status: verified` in the plan header (nothing else in the plan), then commit **only** `verify.md`
    and the plan: `git add <plan folder>/verify.md <plan>` and `git commit -m "docs(verify): <slug>"`;
    `git diff --cached --stat` lists exactly those two. Then the owner `release --any` (`ACCEPT.md`). Push opens now.
 3. **PASS-UNPROVEN** → status unchanged, `git push` stays closed. Commit `verify.md` alone (`docs(verify): <slug>`);
    Step 6: prove now or accept.
-4. **FAIL** → status unchanged; commit `verify.md` alone. Recommend `/keystone:fix verify` — every finding of this
-   `verify.md` in one pass, so verify runs once more, not once per finding — or `/keystone:implement` (a task never finished). The push gate stays closed (lifting it: ACCEPT.md — never as a way around a FAIL).
+4. **FAIL** → status unchanged; commit `verify.md` alone. Recommend `/sattva:fix verify` — every finding of this
+   `verify.md` in one pass, so verify runs once more, not once per finding — or `/sattva:implement` (a task never finished). The push gate stays closed (lifting it: ACCEPT.md — never as a way around a FAIL).
 
 **Commit scope.** Every commit here: if the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
 `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
-if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(verify)`).
+if the rule allows it; never a scope the hook rejects. No scope list → keep the Sattva scope (`docs(verify)`).
 
 Each run overwrites `verify.md` in its own commit; add files by path, never `-A`; nothing to commit → `verify.md unchanged`.
 
@@ -222,7 +222,7 @@ Late advisory: <k>
 Pending: <Row n → R<k>, I-n → R<k>> | none
 Debt: <k> open — <D<k> row id, …> (the plan's `## Debt`, after Step 5) | none
 Advisory: <a> · Minor: <m>
-Keystone Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>
+Sattva Chain: outcomes <covered>/<total>, constraints <covered>/<total>; BLOCKED rows <n>; unrequested <n>; rework signals: <none | list | not measurable>
 Open: <the not proven / BLOCKED / failed rows, one line each> | none
 Unconfirmed: <what could not be confirmed — looked in <where>, one line each | none>
 Context drift: <file — what is stale, owning command> | none
@@ -232,24 +232,24 @@ Status: <verified | unchanged (reason)> · verify.md: <path> · commit: <sha> do
 The heading `Unconfirmed:` is mandatory verbatim in the chat answer (not only in verify.md); a list or `none`.
 Run the correctness review below **before** printing the final report.
 
-The `Keystone Chain` line is mandatory, recomputed with carried rows, even when everything passes. `rework signals`: the intent
+The `Sattva Chain` line is mandatory, recomputed with carried rows, even when everything passes. `rework signals`: the intent
 changed after the plan's first commit → name it; intent and plan first committed together → `not measurable`.
 
 **Correctness review — only when the plan had no sweep** (M, a plan before the sweep, `Sweep: not run`): run the built-in
-`/code-review`; on L also recommend `/keystone:review` (its validator always runs) before `git push`. After a sweep
-neither runs (a manual `/keystone:review` / `/keystone:security` stays possible — one line). Security gate `warn` or
-`Needs verification` items → recommend `/keystone:pentest <your staging or local URL>`.
+`/code-review`; on L also recommend `/sattva:review` (its validator always runs) before `git push`. After a sweep
+neither runs (a manual `/sattva:review` / `/sattva:security` stays possible — one line). Security gate `warn` or
+`Needs verification` items → recommend `/sattva:pentest <your staging or local URL>`.
 
 **Roadmap and lessons (one line each, in `Found:` / `Blocked on me:`).** If the intent has `Roadmap: M-<n>` and the verdict is
-PASS (or `accept` was just recorded), offer: `Milestone M-<n> done? Tick it with /keystone:roadmap` — verify never edits
-`docs/roadmap.md`. After a `Mode: fix` plan, or a FAIL that was later fixed, recommend `/keystone:evolve` to turn the lesson
+PASS (or `accept` was just recorded), offer: `Milestone M-<n> done? Tick it with /sattva:roadmap` — verify never edits
+`docs/roadmap.md`. After a `Mode: fix` plan, or a FAIL that was later fixed, recommend `/sattva:evolve` to turn the lesson
 into a project rule.
 
 End the report with a fixed three-heading summary, short, after the Final report (the line-by-line report stays in `verify.md`, not in the chat). It is
-followed only by the `Next:` line: PASS with open `## Release` steps → `Next: /keystone:implement <plan path>` (release
-mode; on L without a sweep `/keystone:review` first); PASS without them → `Next: push and open the PR` (same); PASS-UNPROVEN → the option chosen in Step 6 (a
-`Prove now` check before `/keystone:verify accept <plan path>`); FAIL and PASS → the option chosen in Step 6 (FAIL default
-`/keystone:fix verify`, all findings in one pass); after a fix plan or a fixed FAIL, `/keystone:evolve` may follow later.
+followed only by the `Next:` line: PASS with open `## Release` steps → `Next: /sattva:implement <plan path>` (release
+mode; on L without a sweep `/sattva:review` first); PASS without them → `Next: push and open the PR` (same); PASS-UNPROVEN → the option chosen in Step 6 (a
+`Prove now` check before `/sattva:verify accept <plan path>`); FAIL and PASS → the option chosen in Step 6 (FAIL default
+`/sattva:fix verify`, all findings in one pass); after a fix plan or a fixed FAIL, `/sattva:evolve` may follow later.
 
 ```text
 Blocked on me: <what needs a human decision, incl. recommended next step | none>

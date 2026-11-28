@@ -1,6 +1,6 @@
 ---
 name: qa-check
-description: "Keystone: executes the test cases written by /keystone:qa — human-guided (asks the user case by case) or agent mode (browser via the built-in browser tools or Playwright MCP, CLI, tests, API, file checks) — and records pass / fail / blocked per case with evidence in [task folder]/qa/qa-check.md. A case without evidence is not pass. Reusable browser replay = Playwright test scripts in [task folder]/qa/replay/. Use for 'run the QA', 'walk through the test cases', 'verify the cases', 'rerun QA'."
+description: "Sattva: executes the test cases written by /sattva:qa — human-guided (asks the user case by case) or agent mode (browser via the built-in browser tools or Playwright MCP, CLI, tests, API, file checks) — and records pass / fail / blocked per case with evidence in [task folder]/qa/qa-check.md. A case without evidence is not pass. Reusable browser replay = Playwright test scripts in [task folder]/qa/replay/. Use for 'run the QA', 'walk through the test cases', 'verify the cases', 'rerun QA'."
 argument-hint: "[human | agent] [<plan.md path | qa folder | branch>]"
 allowed-tools: Read Write Grep Glob Bash AskUserQuestion mcp__Claude_Browser__* mcp__playwright__*
 model: sonnet
@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 # QA Check — Execute Test Cases
 
-Runs the `test-cases.md` artifact produced by `/keystone:qa` and records execution status in `qa-check.md`.
+Runs the `test-cases.md` artifact produced by `/sattva:qa` and records execution status in `qa-check.md`.
 For browser/UI cases, agent mode saves executable replay scripts (Playwright tests) under `<qa_dir>/replay/`; later runs
 execute those scripts first, so fixes are retested and prior behavior gets regression coverage without regenerating the
 browser automation.
@@ -22,7 +22,7 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -31,7 +31,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -44,7 +44,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -78,12 +78,12 @@ Parse `$ARGUMENTS`: the first word `human` or `agent` is the mode (remove it); t
 folder. Resolve `qa_dir`:
 
 1. a given plan path → `<plan folder>/qa/`; a given folder containing `test-cases.md` → that folder; a branch or git ref →
-   the folder `/keystone:qa <ref>` created for it (`docs/keystone/qa/*-<ref slug>/`), or the qa folder of the plan whose
+   the folder `/sattva:qa <ref>` created for it (`docs/sattva/qa/*-<ref slug>/`), or the qa folder of the plan whose
    commits are on that branch;
-2. else the active plan — the newest `docs/keystone/*/plan.md` whose Status is draft, approved or implementing, or `verified` with an open `## Debt` line → `<its folder>/qa/`; A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
-3. else the newest `docs/keystone/qa/*/` that has `test-cases.md`.
+2. else the active plan — the newest `docs/sattva/*/plan.md` whose Status is draft, approved or implementing, or `verified` with an open `## Debt` line → `<its folder>/qa/`; A plan elsewhere (an older task folder outside docs/sattva) is used only when its path is given explicitly as the argument.
+3. else the newest `docs/sattva/qa/*/` that has `test-cases.md`.
 
-Check for `<qa_dir>/test-cases.md`. If it is missing, STOP and ask: run `/keystone:qa test-cases` first / cancel.
+Check for `<qa_dir>/test-cases.md`. If it is missing, STOP and ask: run `/sattva:qa test-cases` first / cancel.
 Read it; extract test cases by ID (`TC-001`…), title, priority, type, execution surface, `Covers:`, preconditions, steps,
 expected result and test data, in order. Also read `change-summary.md` and `test-plan.md` when present.
 
@@ -218,7 +218,7 @@ Failed: <TC-… one line each | none> · Blocked: <TC-… and why | none>
 Debt: closed <D-ids> · open <D-ids> | none
 Files: <qa-check.md> · <replay/ files created or run | none>
 Blocked on me: <authorizations, credentials, decisions | none>
-Next: <failed → fix and rerun /keystone:qa-check <mode>; blocked human-verifiable → /keystone:qa-check human; all passed → /keystone:verify>
+Next: <failed → fix and rerun /sattva:qa-check <mode>; blocked human-verifiable → /sattva:qa-check human; all passed → /sattva:verify>
 ```
 
 After an agent run with `Blocked` cases that a person can check (`human`, `browser-ui`, `hybrid` with observable steps,
@@ -231,7 +231,7 @@ providing the missing command, fixture or service instead.
 Writes only: `qa-check.md`, `replay/TC-NNN.spec.js`, `replay/history/*`, and the `## Debt` lines of the plan
 (closing only). Never rewrites `test-cases.md`, `test-plan.md` or
 `change-summary.md` and never touches code or context files. Replay scripts under `docs/` are not code edits, so the
-draft-plan gate does not block this skill; lift a gate with `Status: abandoned` or `KEYSTONE_GATES=off`.
+draft-plan gate does not block this skill; lift a gate with `Status: abandoned` or `SATTVA_GATES=off`.
 
 ## Critical Rules
 

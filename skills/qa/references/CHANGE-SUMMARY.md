@@ -102,4 +102,4 @@ Save the result to `<qa_dir>/change-summary.md`.
 
 **If `all_mode = true`** — do NOT show the prompt. Proceed directly to `${CLAUDE_SKILL_DIR}/references/TEST-PLAN.md`.
 
-**Otherwise:** AskUserQuestion: the change summary was saved — proceed to the test plan (`/keystone:qa test-plan`) or stop here.
+**Otherwise:** AskUserQuestion: the change summary was saved — proceed to the test plan (`/sattva:qa test-plan`) or stop here.

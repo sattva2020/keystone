@@ -2,13 +2,13 @@
 
 # Reference Examples
 
-Practical examples of `/keystone:reference` usage and expected output.
+Practical examples of `/sattva:reference` usage and expected output.
 
 ## Example 1: Single URL — a service with prices and limits
 
 **Input:**
 ```
-/keystone:reference https://stripe.com/docs/rate-limits --name stripe-limits
+/sattva:reference https://stripe.com/docs/rate-limits --name stripe-limits
 ```
 
 **Result:** `docs/references/stripe-limits.md`
@@ -45,7 +45,7 @@ Note what is absent: no method signatures, no usage snippets from the library do
 
 **Input:**
 ```
-/keystone:reference zod --name zod-validation
+/sattva:reference zod --name zod-validation
 ```
 
 The skill resolves the library in Context7, reads the version from `package.json`, and writes a short reference: which schemas the
@@ -56,7 +56,7 @@ exists to record, it says so and writes nothing.
 
 **Input:**
 ```
-/keystone:reference ./docs/api-spec.yaml --name internal-api
+/sattva:reference ./docs/api-spec.yaml --name internal-api
 ```
 
 **Result:** `docs/references/internal-api.md` — the endpoints the project actually calls, their limits and error cases, and the
@@ -66,7 +66,7 @@ mismatches found between the spec and the running service (with dates).
 
 **Input:**
 ```
-/keystone:reference --update --name stripe-limits
+/sattva:reference --update --name stripe-limits
 ```
 
 Re-runs the live checks, re-fetches the header sources, asks Context7 again for the library part, shows a diff of only the changed
@@ -76,7 +76,7 @@ numbers (with new dates), and keeps `Created:`.
 
 **Input:**
 ```
-/keystone:reference
+/sattva:reference
 ```
 
 The skill asks which topic or technology, whether the user has URLs or files or wants a search, and which aspects matter for the

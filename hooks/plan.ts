@@ -1,5 +1,5 @@
 // The session's plan: reading plan.md files and the plan this session is bound to.
-// Shared by keystone.ts (status, buttons, handoff, cost) and panel.tsx (the side panel).
+// Shared by sattva.ts (status, buttons, handoff, cost) and panel.tsx (the side panel).
 import type { EngineInterface } from 'claude-code'
 
 const ACTIVE = new Set(['draft', 'approved', 'implementing'])
@@ -13,16 +13,16 @@ export type Plan = {
   total: number
   blocked: number
   release: number // open `- [ ] R<n>.` steps in ## Release (run after verify)
-  security: boolean // a Threats: block without a ticked /keystone:security task: verify needs its gate line
+  security: boolean // a Threats: block without a ticked /sattva:security task: verify needs its gate line
   doneMeans?: string
 }
 export type Ledger = Record<string, number> // stage → USD
 
 export const slash = (p: string) => p.replace(/\\/g, '/')
 
-// Keystone keeps its task folders only in docs/keystone; it never reads another planner's folders.
+// Sattva keeps its task folders only in docs/sattva; it never reads another planner's folders.
 export async function planRoots(_$: EngineInterface): Promise<string[]> {
-  return ['docs/keystone']
+  return ['docs/sattva']
 }
 
 // Same rule as gate.mjs: task folders whose plan.md is in view (parsePlan), newest first — date prefix of the folder
@@ -42,15 +42,15 @@ export async function plans($: EngineInterface): Promise<Plan[]> {
   return out.map((x) => x.plan)
 }
 
-// The repo's newest plan in view, whoever works with it (/keystone-status names it to an unbound session).
+// The repo's newest plan in view, whoever works with it (/sattva-status names it to an unbound session).
 export async function activePlan($: EngineInterface): Promise<Plan | null> {
   return (await plans($))[0] ?? null
 }
 
-// A plan is this session's once it ran `/keystone:<stage>` naming the plan's folder (implement/verify with no argument
+// A plan is this session's once it ran `/sattva:<stage>` naming the plan's folder (implement/verify with no argument
 // take the newest plan, as their skills do) or edited a file in that folder; gate.mjs reads the same from the transcript.
 export const folder = (file: string) => file.replace(/\/[^/]*$/, '').replace(/^.*\//, '')
-const BOUND = { plugin: 'keystone', key: 'bound' } as const
+const BOUND = { plugin: 'sattva', key: 'bound' } as const
 
 // The plan this session works with: the newest plan in view it is bound to; none → no status, buttons, handoff or cost.
 export async function sessionPlan($: EngineInterface): Promise<Plan | null> {
@@ -63,10 +63,10 @@ export async function sessionPlan($: EngineInterface): Promise<Plan | null> {
 
 // The command the plan's state asks for next, with the plan path filled in (Tab takes it from the prompt box).
 export function statusNext(p: Plan): string | null {
-  if (p.status === 'verified') return `/keystone:implement ${p.file}`
-  if (p.status === 'draft') return `/keystone:plan ${p.file}`
-  if (p.status === 'approved') return `/keystone:implement ${p.file}`
-  if (p.status === 'implementing') return `/keystone:${p.total - p.done - p.blocked > 0 ? 'implement' : 'verify'} ${p.file}`
+  if (p.status === 'verified') return `/sattva:implement ${p.file}`
+  if (p.status === 'draft') return `/sattva:plan ${p.file}`
+  if (p.status === 'approved') return `/sattva:implement ${p.file}`
+  if (p.status === 'implementing') return `/sattva:${p.total - p.done - p.blocked > 0 ? 'implement' : 'verify'} ${p.file}`
   return null
 }
 
@@ -98,7 +98,7 @@ const CMD = /^\/[A-Za-z][\w:.-]*$/
 const PUNCT = /[,;:.]+$/
 // ponytail: a fixed list of words that end a command's arguments in prose; extend it when a skill's Next: line needs
 const STOP = new Set(['then', 'after', 'before', 'and', 'or', 'once', 'when', 'if', 'to', 'in', 'so', 'again', 'later', 'first', 'with', 'for', 'on', 'at', 'from', 'by', 'of', 'the', 'a', '—', '–', '-'])
-const SESSION_STEP = new Set(['/clear', '/compact']) // "/clear, then /keystone:verify …": the step after it is the next one
+const SESSION_STEP = new Set(['/clear', '/compact']) // "/clear, then /sattva:verify …": the step after it is the next one
 
 // The slash command in the Next: line itself: in backticks up to the closing one; otherwise its name and the argument
 // words up to punctuation, a dash, a joining word or another command.
@@ -147,8 +147,8 @@ export async function verdictOf($: EngineInterface, p: Plan): Promise<Verdict | 
 // No `Next:` in the answer: all tasks ticked → the verdict decides; otherwise the status.
 export function fallbackNext(p: Plan, v: Verdict | null): string | null {
   if (p.status === 'implementing' && p.total - p.done - p.blocked === 0) {
-    if (v?.verdict === 'FAIL') return v.stale ? `/keystone:verify ${p.file}` : '/keystone:fix verify'
-    if (v?.verdict === 'PASS-UNPROVEN') return `/keystone:verify accept ${p.file}`
+    if (v?.verdict === 'FAIL') return v.stale ? `/sattva:verify ${p.file}` : '/sattva:fix verify'
+    if (v?.verdict === 'PASS-UNPROVEN') return `/sattva:verify accept ${p.file}`
     if (p.blocked > 0) return null
   }
   return statusNext(p)
@@ -159,9 +159,9 @@ export function pickNext(p: Plan | null, v: Verdict | null, a: AnswerNext): stri
   return a ? a.cmd : fallbackNext(p, v)
 }
 
-const ANSWER = { plugin: 'keystone', key: 'answerNext' } as const
+const ANSWER = { plugin: 'sattva', key: 'answerNext' } as const
 
-// The one next step of this session's plan, for the band, the suggestion, /keystone-status, /clear and the panel.
+// The one next step of this session's plan, for the band, the suggestion, /sattva-status, /clear and the panel.
 export async function nextOf($: EngineInterface, p: Plan | null): Promise<string | null> {
   if (!p) return null
   let a: AnswerNext = null
@@ -182,7 +182,7 @@ export function parsePlan(file: string, raw: string): Plan | null {
     if (/^## /.test(l)) { inTasks = /^## Tasks\b/.test(l); inRelease = /^## Release\b/.test(l); continue }
     if (inRelease && /^\s*- \[ \]/.test(l)) release++
     if (!inTasks) continue
-    if (/^\s*- \[x\]/i.test(l)) { done++; total++; if (l.includes('/keystone:security')) secDone = true }
+    if (/^\s*- \[x\]/i.test(l)) { done++; total++; if (l.includes('/sattva:security')) secDone = true }
     else if (/^\s*- \[ \]/.test(l)) { total++; if (l.includes('BLOCKED:')) blocked++ }
   }
   // a verified plan stays in view only while its ## Release steps are open (release mode)

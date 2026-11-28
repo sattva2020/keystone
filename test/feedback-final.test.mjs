@@ -47,7 +47,7 @@ test('A: the window never leaves a stump of a token, whatever the padding', () =
   assert.ok(!/ghp_|eyJa/.test(fb.redact(big)), 'a huge token before another one');
   const f = join(tmp(), 't.jsonl');
   const row = (o) => JSON.stringify(o);
-  writeFileSync(f, [row({ type: 'user', message: { role: 'user', content: '<command-name>/keystone:implement</command-name>' } }),
+  writeFileSync(f, [row({ type: 'user', message: { role: 'user', content: '<command-name>/sattva:implement</command-name>' } }),
     row({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'a', name: 'Bash', input: { command: 'x', body: `retry${BS}n${K}` } }] } }),
     row({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'a', content: JSON.stringify({ detail: 'got\n' + K }), is_error: true }] } }),
     row({ type: 'assistant', message: { content: [{ type: 'tool_use', id: 'b', name: 'Bash', input: { command: 'x', body: `retry${BS}n${K}` } }] } })].join('\n') + '\n');
@@ -73,11 +73,11 @@ test('B: the time of `add` does not depend on the blanks a model writes — a li
   const p = fb.parseSelf(`unclear | plan § A${' '.repeat(80000)}z | x`);
   assert.deepEqual([p.items.length, p.items[0].section], [1, 'A z'], 'the blanks are flattened, the report is still read');
   const store = tmp();
-  const e = { ...process.env, KEYSTONE_FEEDBACK_DIR: store }; delete e.KEYSTONE_FEEDBACK;
+  const e = { ...process.env, SATTVA_FEEDBACK_DIR: store }; delete e.SATTVA_FEEDBACK;
   const a = Date.now();
   const r = spawnSync(process.execPath, [SCRIPT, 'add', '--skill', 'plan', '--task', 'x'], { input: `unclear | plan § A${' '.repeat(400000)}z | x`, env: e, encoding: 'utf8' });
   assert.equal(r.status, 0);
-  assert.match(r.stdout, /^Keystone feedback: 1 notes/);
+  assert.match(r.stdout, /^Sattva feedback: 1 notes/);
   assert.ok(Date.now() - a < 5000, `add took ${Date.now() - a} ms`);
   assert.ok(existsSync(store) && readdirSync(store).length === 1);
   assert.ok(readFileSync(join(store, readdirSync(store)[0], 'feedback.jsonl'), 'utf8').length < 2000);
@@ -99,7 +99,7 @@ test('A2: padding that redact() later deletes cannot pull the stump of a cut tok
   }
   // through the CLI: the record on disk
   const store = tmp();
-  const e = { ...process.env, KEYSTONE_FEEDBACK_DIR: store }; delete e.KEYSTONE_FEEDBACK;
+  const e = { ...process.env, SATTVA_FEEDBACK_DIR: store }; delete e.SATTVA_FEEDBACK;
   const r = spawnSync(process.execPath, [SCRIPT, 'add', '--skill', 'plan', '--task', 'probe'], { input: 'unclear | plan § A | ' + String.fromCharCode(160).repeat(3959) + 'ghp_' + 'Z'.repeat(36), env: e, encoding: 'utf8' });
   assert.equal(r.status, 0);
   const rec = readFileSync(join(store, readdirSync(store)[0], 'feedback.jsonl'), 'utf8');

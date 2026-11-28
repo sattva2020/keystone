@@ -5,6 +5,34 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-11-28
+
+### Changed
+
+- **Renamed: Keystone → Sattva (breaking).** The plugin is now `sattva@sattva` (marketplace `sattva`), commands are
+  `/sattva:*`, the mod commands are `/sattva-status` and `/sattva-panel`, environment variables are `SATTVA_*`, task
+  folders live in `docs/sattva/`, plan owners in the branch `sattva/owners`, agent feedback in
+  `~/.claude/sattva-feedback`. The repositories are `sattva2020/sattva-plugin` (public) and `sattva2020/sattva-private`;
+  GitHub redirects the old addresses. The old names are not read any more.
+
+  Moving an existing setup:
+  1. Remove the old plugin: `claude plugin uninstall keystone@keystone`, then `claude plugin marketplace remove keystone`.
+  2. Add the new one: `claude plugin marketplace add sattva2020/sattva-plugin` (or the path of your local checkout), then
+     `claude plugin install sattva@sattva`. Set the plugin options `language`, `feedback` and `panel` again: they belong
+     to the plugin id and start from their defaults.
+  3. In each project: `git mv docs/keystone docs/sattva`; `git mv .claude/rules/keystone.md .claude/rules/sattva.md` if
+     the file exists (evolve and transfer write stage lessons there); copy the owners branch —
+     `git fetch origin keystone/owners` and `git branch sattva/owners origin/keystone/owners` (no remote:
+     `git branch sattva/owners keystone/owners`) — and publish `sattva/owners` to the remote if the old one was there.
+  4. Rename the variables in your Claude Code settings: `KEYSTONE_GATES`, `KEYSTONE_FEEDBACK`, `KEYSTONE_SESSIONS`,
+     `KEYSTONE_FEEDBACK_DIR`, `KEYSTONE_CHECK_TIMEOUT_MS` → `SATTVA_GATES`, `SATTVA_FEEDBACK`, `SATTVA_SESSIONS`,
+     `SATTVA_FEEDBACK_DIR`, `SATTVA_CHECK_TIMEOUT_MS`.
+  5. Move the feedback store: `~/.claude/keystone-feedback` → `~/.claude/sattva-feedback`.
+  6. Type the new commands: `/keystone:*` → `/sattva:*`, `/keystone-status` → `/sattva-status`, `/keystone-panel` →
+     `/sattva-panel`.
+  7. AI Factory adapter users: `ai-factory extension remove keystone-aif`, then add the adapter again from
+     `adapters/ai-factory` of the new checkout — otherwise the old `keystone-aif` blocks stay in the AI Factory skills.
+
 ## [0.9.48] — 2026-11-27
 
 ### Changed

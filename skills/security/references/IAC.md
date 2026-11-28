@@ -1,4 +1,4 @@
-<!-- original Keystone file (MIT) -->
+<!-- original Sattva file (MIT) -->
 
 # Infrastructure as code (category `iac`)
 

@@ -1,4 +1,4 @@
-// Keystone mod: /keystone-status (no model turn), a status line, and the real cost of each stage.
+// Sattva mod: /sattva-status (no model turn), a status line, and the real cost of each stage.
 // Works next to the settings hooks in hooks.json (gate.mjs); this module only observes and reports.
 import type { EngineInterface, Register } from 'claude-code'
 import { register as registerNext, langOf } from './next.tsx'
@@ -10,12 +10,12 @@ import { COLD_MS, MARKER, isCold } from './handoff.ts'
 
 export { activePlan, parsePlan, sessionPlan, type Ledger, type Plan }
 
-const STAGE = /^\s*\/keystone:([a-z]+)/
+const STAGE = /^\s*\/sattva:([a-z]+)/
 const EDITS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 
 const NO_ARG = new Set(['implement', 'verify'])
 
-const BOUND = { plugin: 'keystone', key: 'bound' } as const // the engine wants the reference in the file that uses it
+const BOUND = { plugin: 'sattva', key: 'bound' } as const // the engine wants the reference in the file that uses it
 
 // $.state does not outlive the app's restart; the store does, so the binding is kept there too, by session id.
 // ponytail: one store key per session id, never pruned (as turn:last)
@@ -39,7 +39,7 @@ async function restoreBound($: EngineInterface) {
 
 // The answer's Next: (plan.ts answerNext) lives until the next real answer; the store keeps it over an app restart.
 // ponytail: one store key per session id, never pruned (as bound:)
-const ANSWER = { plugin: 'keystone', key: 'answerNext' } as const
+const ANSWER = { plugin: 'sattva', key: 'answerNext' } as const
 const answerKey = async ($: EngineInterface) => `next:${await $.session.id()}`
 
 // only a finished answer counts: an aborted turn, an error, an empty answer or the handoff's marker keep the last one
@@ -76,17 +76,17 @@ async function bindEdit($: EngineInterface, path: string) {
 
 export function gatesFor(p: Plan): string[] {
   if (p.status === 'verified') return [`release mode: ${p.release} step(s) in ## Release, each merge / push / deploy after your yes`]
-  const g = ['push/PR closed until /keystone:verify']
+  const g = ['push/PR closed until /sattva:verify']
   if (p.status === 'draft') g.unshift('code edits closed until Approve')
   if (p.mode === 'fix' && p.status === 'implementing') g.push('committed tests locked (fix)')
-  if (p.status === 'implementing') g.push(p.total - p.done - p.blocked > 0 ? 'Stop reminds about open tasks' : 'Stop reminds to run /keystone:verify')
+  if (p.status === 'implementing') g.push(p.total - p.done - p.blocked > 0 ? 'Stop reminds about open tasks' : 'Stop reminds to run /sattva:verify')
   return g
 }
 
 // The command the plan's status alone asks for (plan.ts statusNext); the answer and verify.md come in through nextOf.
 export function nextCommand(p: Plan) { return statusNext(p) }
 
-// The buttons above the prompt: the plan's next command, /keystone-status, and a third one only where Keystone itself
+// The buttons above the prompt: the plan's next command, /sattva-status, and a third one only where Sattva itself
 // asks for an extra step (check before Approve on L with an intent, review before push on L). No model call.
 // `main` (nextOf: the answer's Next:, else verify.md, else the status) goes first when it differs from the status's own;
 // null = no main button (the answer named no command), the extra steps and the status stay.
@@ -97,12 +97,12 @@ export function nextButtons(p: Plan | null, hasIntent: boolean, main?: string | 
   const b: string[] = []
   if (first) {
     // L with threats: the security gate line comes before verify (skills/verify/SKILL.md, Security gate)
-    b.push(...(p.level === 'L' && p.security && first.startsWith('/keystone:verify') ? [`/keystone:security ${p.file}`, first] : [first]))
-    if (p.status === 'draft' && p.level === 'L' && hasIntent) b.push(`/keystone:check ${dir}/intent.md ${p.file}`)
-    if (p.status === 'implementing' && p.level === 'L' && first.startsWith('/keystone:verify')) b.push('/keystone:review')
+    b.push(...(p.level === 'L' && p.security && first.startsWith('/sattva:verify') ? [`/sattva:security ${p.file}`, first] : [first]))
+    if (p.status === 'draft' && p.level === 'L' && hasIntent) b.push(`/sattva:check ${dir}/intent.md ${p.file}`)
+    if (p.status === 'implementing' && p.level === 'L' && first.startsWith('/sattva:verify')) b.push('/sattva:review')
   }
   const list = main === undefined || main === first ? b : [...(main ? [main] : []), ...b.filter((c) => c !== first && c !== main)]
-  return [...list, '/keystone-status']
+  return [...list, '/sattva-status']
 }
 
 const usd = (n: number) => `$${n.toFixed(2)}`
@@ -121,20 +121,20 @@ export async function publishButtons($: EngineInterface, show: boolean) {
       const intent = p ? `${p.file.replace(/\/[^/]*$/, '')}/intent.md` : ''
       list = nextButtons(p, !!p && p.status === 'draft' && p.level === 'L' && (await $.fs.exists(intent)), p ? await nextOf($, p) : undefined)
     }
-    await $.state.set({ plugin: 'keystone', key: 'buttons' }, list)
-    if (!show) await $.state.set({ plugin: 'keystone', key: 'unbound' }, '') // the start-of-session hint leaves with the first prompt
+    await $.state.set({ plugin: 'sattva', key: 'buttons' }, list)
+    if (!show) await $.state.set({ plugin: 'sattva', key: 'unbound' }, '') // the start-of-session hint leaves with the first prompt
   } catch {
     // the band is optional
   }
 }
 
 export function statusText(p: Plan | null, l: Ledger, next: string | null = null): string {
-  if (!p) return 'No active Keystone plan — no gates.\nNext: /keystone:start <task> (not sure which command? see docs/scenarios.md)'
+  if (!p) return 'No active Sattva plan — no gates.\nNext: /sattva:start <task> (not sure which command? see docs/scenarios.md)'
   return [
-    `Keystone plan: ${p.file}`,
+    `Sattva plan: ${p.file}`,
     `Level ${p.level} · Mode ${p.mode} · Status ${p.status} · tasks ${p.done}/${p.total}${p.blocked ? ` · BLOCKED ${p.blocked}` : ''}`,
     `Done means: ${p.doneMeans ?? '— (missing in the header)'}`,
-    `Gates: ${gatesFor(p).join('; ')}. Lift: Status: abandoned or KEYSTONE_GATES=off.`,
+    `Gates: ${gatesFor(p).join('; ')}. Lift: Status: abandoned or SATTVA_GATES=off.`,
     `Cost by stage (this machine): ${costLine(l)}`,
     `Next: ${next ?? noCommandText(p)}`,
   ].join('\n')
@@ -144,36 +144,36 @@ export function statusText(p: Plan | null, l: Ledger, next: string | null = null
 export function noCommandText(p: Plan): string {
   return ['draft', 'approved', 'implementing', 'verified'].includes(p.status)
     ? 'none now — the last answer named no command, or only BLOCKED tasks are left'
-    : 'nothing in this plan — /keystone:start <task> for the next one'
+    : 'nothing in this plan — /sattva:start <task> for the next one'
 }
 
 export const ledgerKey = (p: Plan) => `cost:${p.file}`
 
 async function refresh($: EngineInterface) {
   const p = await sessionPlan($)
-  await $.state.set({ plugin: 'keystone', key: 'plan' }, p?.file ?? '').catch(() => undefined) // next.tsx offers a handoff only with a plan
+  await $.state.set({ plugin: 'sattva', key: 'plan' }, p?.file ?? '').catch(() => undefined) // next.tsx offers a handoff only with a plan
   const l = p ? (((await $.store.get(ledgerKey(p)).catch(() => undefined)) ?? {}) as Ledger) : {} // the bar does not depend on the ledger
   const total = Object.values(l).reduce((a, b) => a + b, 0)
   const progress = p && { level: p.level, status: p.status, done: p.done, total: p.total, blocked: p.blocked, next: await nextOf($, p), cost: total }
-  await $.state.set({ plugin: 'keystone', key: 'progress' }, progress).catch(() => undefined) // the plan bar in next.tsx
+  await $.state.set({ plugin: 'sattva', key: 'progress' }, progress).catch(() => undefined) // the plan bar in next.tsx
   if (!p) return $.ui.status(undefined)
-  $.ui.status(`Keystone · ${p.level} · ${p.status} · ${p.done}/${p.total}${p.blocked ? ` · ${p.blocked} blocked` : ''}${total ? ` · ${usd(total)}` : ''}`)
+  $.ui.status(`Sattva · ${p.level} · ${p.status} · ${p.done}/${p.total}${p.blocked ? ` · ${p.blocked} blocked` : ''}${total ? ` · ${usd(total)}` : ''}`)
 }
 
 // The agent was asked (next.tsx) to bring plan.md up to date. /clear runs only on its marker and only if the plan file
 // really changed; otherwise the handoff is called off and the context stays.
 async function checkHandoff($: EngineInterface, answer: string) {
   try {
-    const { value: h } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
+    const { value: h } = await $.state.get({ plugin: 'sattva', key: 'handoff' })
     if (!h?.pending) return
     const t = strings(await langOf($))
     const { file, mtime } = h.pending
-    await $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...h, pending: null })
+    await $.state.set({ plugin: 'sattva', key: 'handoff' }, { ...h, pending: null })
     const changed = (await $.fs.stat(file)).mtimeMs > mtime
     if (!answer.includes(MARKER) || !changed) return $.ui.toast(t.handoffNotDone)
     const p = await sessionPlan($)
     // an answer that named no command leaves the box empty after /clear, never a guess
-    const cmd = p ? await nextOf($, p) : `/keystone:verify ${file}`
+    const cmd = p ? await nextOf($, p) : `/sattva:verify ${file}`
     if (cmd) await $.store.set('handoff:next', cmd)
     else await $.store.delete('handoff:next').catch(() => undefined)
     $.clock.after(0, () =>
@@ -190,8 +190,8 @@ const lastKey = async ($: EngineInterface) => `turn:last:${await $.session.id()}
 let coldTimer: { cancel: () => void } | undefined
 
 async function setCold($: EngineInterface, cold: number | null) {
-  const { value: h = { level: 0, tokens: 0, window: 0, shown: 0, pending: null, cold: null } } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
-  if (h.cold !== cold) await $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...h, cold })
+  const { value: h = { level: 0, tokens: 0, window: 0, shown: 0, pending: null, cold: null } } = await $.state.get({ plugin: 'sattva', key: 'handoff' })
+  if (h.cold !== cold) await $.state.set({ plugin: 'sattva', key: 'handoff' }, { ...h, cold })
 }
 
 function stopTimer() {
@@ -227,7 +227,7 @@ export const register: Register = (on, options) => {
   let lastUsd: number | undefined
   let early: Ledger = {}
   let lastPlan: Plan | null = null // verify ends a plan (Status: verified); its own turn is still billed to it
-  let suggestion: string | null = null // next Keystone command, offered as the dim suggestion after a Keystone turn
+  let suggestion: string | null = null // next Sattva command, offered as the dim suggestion after a Sattva turn
 
   on('session.start', async ($, e, next) => {
     // the band's language: the plugin option, else Claude Code's `language` setting, else English
@@ -237,9 +237,9 @@ export const register: Register = (on, options) => {
     } catch {
       // no settings noun (the test kit): the option or English
     }
-    await $.state.set({ plugin: 'keystone', key: 'lang' }, pickLang(options.language, setting)).catch(() => undefined)
-    await $.command.register({ name: 'keystone-status', description: 'Keystone: active plan, gates and cost by stage (no model call)' })
-    await $.command.register({ name: 'keystone-handoff', description: 'Keystone: update the plan, clear the session, put the next command in the box' })
+    await $.state.set({ plugin: 'sattva', key: 'lang' }, pickLang(options.language, setting)).catch(() => undefined)
+    await $.command.register({ name: 'sattva-status', description: 'Sattva: active plan, gates and cost by stage (no model call)' })
+    await $.command.register({ name: 'sattva-handoff', description: 'Sattva: update the plan, clear the session, put the next command in the box' })
     lastUsd = (await $.session.usage()).cost?.usd
     await restoreBound($).catch(() => undefined)
     await restoreAnswer($).catch(() => undefined)
@@ -247,10 +247,10 @@ export const register: Register = (on, options) => {
     await publishButtons($, true) // back to an unfinished task: its next step is one click away
     // no plan of its own, but the repo has one in view: say so once, with its next command (silence looks like a broken mod)
     const other = (await sessionPlan($)) ? null : await activePlan($)
-    await $.state.set({ plugin: 'keystone', key: 'unbound' }, (other && fallbackNext(other, await verdictOf($, other))) ?? '').catch(() => undefined)
+    await $.state.set({ plugin: 'sattva', key: 'unbound' }, (other && fallbackNext(other, await verdictOf($, other))) ?? '').catch(() => undefined)
     // links resolve from the folder the session started in; a hot reload fires session.start again with a moved cwd
-    const base = await $.state.get({ plugin: 'keystone', key: 'base' }).catch(() => ({ value: undefined }))
-    if (!base.value) await $.state.set({ plugin: 'keystone', key: 'base' }, normalize(e.cwd)).catch(() => undefined)
+    const base = await $.state.get({ plugin: 'sattva', key: 'base' }).catch(() => ({ value: undefined }))
+    if (!base.value) await $.state.set({ plugin: 'sattva', key: 'base' }, normalize(e.cwd)).catch(() => undefined)
     try {
       const last = (await $.store.get(await lastKey($))) as number | undefined
       if (last !== undefined) await watchCold($, last)
@@ -272,12 +272,12 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  on('command.run', { command: 'keystone-status' }, async ($) => {
+  on('command.run', { command: 'sattva-status' }, async ($) => {
     const p = await sessionPlan($)
     const other = p ? null : await activePlan($)
     if (other) {
       const cmd = fallbackNext(other, await verdictOf($, other))
-      return { text: `Keystone plan ${other.file} (${other.status}) is not this session's: no gates, status or cost here.\nNext: ${cmd ? `${cmd} to work on it in this session` : noCommandText(other)}` }
+      return { text: `Sattva plan ${other.file} (${other.status}) is not this session's: no gates, status or cost here.\nNext: ${cmd ? `${cmd} to work on it in this session` : noCommandText(other)}` }
     }
     const l = p ? (((await $.store.get(ledgerKey(p))) ?? {}) as Ledger) : {}
     return { text: statusText(p, l, await nextOf($, p)) }
@@ -288,14 +288,14 @@ export const register: Register = (on, options) => {
     await publishButtons($, false)
     await warm($).catch(() => undefined) // whatever is sent, the cache warms up again
     const m = e.text.match(STAGE)
-    stage = m ? m[1] : 'other' // a plain prompt is not a Keystone stage: no suggestion in the box after it, its cost is `other`
+    stage = m ? m[1] : 'other' // a plain prompt is not a Sattva stage: no suggestion in the box after it, its cost is `other`
     if (m) await bindCommand($, m[1], e.text.slice(m[0].length)).then(() => refresh($)).catch(() => undefined)
     costStage = m ? m[1] : (await sessionPlan($).catch(() => null)) ? costStage : 'other'
     if (m && (m[1] === 'implement' || m[1] === 'verify')) {
       const p = await sessionPlan($)
       if (p) {
         const l = ((await $.store.get(ledgerKey(p))) ?? {}) as Ledger
-        return next({ ...e, context: [...(e.context ?? []), `Keystone cost meter (measured by the keystone mod, use it in the cost line): ${costLine(l)}`] })
+        return next({ ...e, context: [...(e.context ?? []), `Sattva cost meter (measured by the sattva mod, use it in the cost line): ${costLine(l)}`] })
       }
     }
     return next(e)
@@ -309,7 +309,7 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e)) // an observer: a failure never blocks the tool
 
-  // attribute the cost of every main-loop turn to the current stage of this session's plan; Keystone stages run before
+  // attribute the cost of every main-loop turn to the current stage of this session's plan; Sattva stages run before
   // the session has a plan (start, intent, plan before plan.md exists) wait in `early` and land with the first plan
   // ponytail: `early` is a module variable — a hot reload drops it
   on('turn.complete', async ($, e, next) => {
@@ -343,7 +343,7 @@ export const register: Register = (on, options) => {
       }
       await refresh($)
       const active = await sessionPlan($)
-      // the answer's Next: after any turn; without one, the plan's next step only after a Keystone turn
+      // the answer's Next: after any turn; without one, the plan's next step only after a Sattva turn
       suggestion = said ? said.cmd : stage !== 'other' && active ? await nextOf($, active) : null
       if (suggestion) void $.prompt.suggest({ text: suggestion })
       return out
@@ -356,7 +356,7 @@ export const register: Register = (on, options) => {
     }
   }).catch(($, e, next) => next(e))
 
-  // the engine's own guess after a Keystone turn gives way to the plan's next command
+  // the engine's own guess after a Sattva turn gives way to the plan's next command
   on('prompt.suggest', { origin: { kind: 'suggestion' } }, async ($, e, nxt) => nxt(suggestion ? { ...e, text: suggestion } : e))
     .catch(($, e, nxt) => nxt(e))
 }

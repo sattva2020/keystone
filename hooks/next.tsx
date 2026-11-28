@@ -1,5 +1,5 @@
-// Keystone band above the prompt: the plan's next commands as buttons, and the offer to move the task to a clean
-// session when the context has grown. A button only fills the box; you send it. keystone.ts publishes the buttons
+// Sattva band above the prompt: the plan's next commands as buttons, and the offer to move the task to a clean
+// session when the context has grown. A button only fills the box; you send it. sattva.ts publishes the buttons
 // and the active plan into $.state and checks the agent's handoff answer; this file draws and starts things.
 import type { EngineInterface, Register } from 'claude-code'
 import { coldText, handoffPrompt, kTokens, levelFor, thresholdsFor } from './handoff.ts'
@@ -12,7 +12,7 @@ const BUSY = new Set(['pending', 'running', 'waiting'])
 // The band's look, pure: a chip names the stage (the full command with its plan path goes into the box), bars fill
 // by fraction — Svg on the desktop, block glyphs in the terminal — and the context bar warms up with the handoff level.
 type Tone = 'success' | 'suggestion' | 'warning' | 'error'
-export const chip = (cmd: string, status = 'status') => (cmd === '/keystone-status' ? status : cmd.match(/^\/keystone:([a-z]+)/)?.[1] ?? cmd)
+export const chip = (cmd: string, status = 'status') => (cmd === '/sattva-status' ? status : cmd.match(/^\/sattva:([a-z]+)/)?.[1] ?? cmd)
 export const pct = (f: number) => `${Math.round(Math.max(0, Math.min(1, f)) * 100)}%`
 export const toneFor = (level: number): Tone => (level >= 2 ? 'error' : level === 1 ? 'warning' : 'suggestion')
 export const barText = (f: number, cells: number) => {
@@ -25,29 +25,29 @@ export const barSvg = (f: number, tone: Tone, w: number) =>
   `<rect width="${w}" height="8" rx="4" fill="#8888884d"/>` +
   `<rect width="${Math.round(Math.max(0, Math.min(1, f)) * w)}" height="8" rx="4" fill="${HEX[tone]}"/></svg>`
 
-// the language keystone.ts settled on at session.start; English until then
+// the language sattva.ts settled on at session.start; English until then
 export async function langOf($: EngineInterface): Promise<Lang> {
-  return (await $.state.get({ plugin: 'keystone', key: 'lang' }).catch(() => ({ value: undefined }))).value ?? 'en'
+  return (await $.state.get({ plugin: 'sattva', key: 'lang' }).catch(() => ({ value: undefined }))).value ?? 'en'
 }
 
-const clear = ($: EngineInterface) => $.state.set({ plugin: 'keystone', key: 'buttons' }, [])
+const clear = ($: EngineInterface) => $.state.set({ plugin: 'sattva', key: 'buttons' }, [])
 
 export async function pick($: EngineInterface, cmd: string) {
   const box = await $.prompt.read()
   const filled = await $.prompt.fill({ text: box.text === '' ? cmd : ` ${cmd}`, mode: 'append' })
   if (filled.isFilled) await clear($)
-  else $.ui.toast(`Keystone: ${cmd}`) // no box or a dialog holds it: show the command instead of running a model turn
+  else $.ui.toast(`Sattva: ${cmd}`) // no box or a dialog holds it: show the command instead of running a model turn
 }
 
-// Asks the agent to bring plan.md up to date; keystone.ts's turn.complete runs /clear once it answers the marker.
+// Asks the agent to bring plan.md up to date; sattva.ts's turn.complete runs /clear once it answers the marker.
 async function startHandoff($: EngineInterface): Promise<string> {
   const t = strings(await langOf($))
-  const { value: file = '' } = await $.state.get({ plugin: 'keystone', key: 'plan' })
+  const { value: file = '' } = await $.state.get({ plugin: 'sattva', key: 'plan' })
   if (!file) return t.noPlan
   if ((await $.agent.list()).some((a) => BUSY.has(a.status))) return t.waitAgents
   const mtime = (await $.fs.stat(file)).mtimeMs
-  const { value: ho = IDLE } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
-  await $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, shown: ho.level, pending: { file, mtime } })
+  const { value: ho = IDLE } = await $.state.get({ plugin: 'sattva', key: 'handoff' })
+  await $.state.set({ plugin: 'sattva', key: 'handoff' }, { ...ho, shown: ho.level, pending: { file, mtime } })
   // a prompt cannot be sent while a command's own dispatch runs: send it once that has finished
   $.clock.after(0, () => void $.prompt.submit({ text: handoffPrompt(file) }).catch(() => undefined))
   return t.handoffStarted
@@ -57,7 +57,7 @@ async function startHandoff($: EngineInterface): Promise<string> {
 // SessionStart hook below puts the plan's next command into the box, as after a handoff.
 async function startClean($: EngineInterface) {
   const t = strings(await langOf($))
-  const { value: pr = null } = await $.state.get({ plugin: 'keystone', key: 'progress' })
+  const { value: pr = null } = await $.state.get({ plugin: 'sattva', key: 'progress' })
   if (!pr?.next) return $.ui.toast(t.noNext)
   await $.store.set('handoff:next', pr.next)
   $.clock.after(0, () =>
@@ -65,7 +65,7 @@ async function startClean($: EngineInterface) {
   )
 }
 
-// The band's panel button: what /keystone-panel does, no model turn; its answer only when it is news.
+// The band's panel button: what /sattva-panel does, no model turn; its answer only when it is news.
 async function openPanel($: EngineInterface) {
   const t = strings(await langOf($))
   const text = await openPane($)
@@ -77,16 +77,16 @@ export const register: Register = (on, options) => {
     try {
       const { tokens, window } = e.context
       const level = levelFor(tokens, thresholdsFor(window))
-      const { value: ho = IDLE } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
+      const { value: ho = IDLE } = await $.state.get({ plugin: 'sattva', key: 'handoff' })
       if (ho.level !== level || ho.tokens !== (tokens ?? 0) || ho.window !== window)
-        await $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, level, tokens: tokens ?? 0, window, shown: Math.min(ho.shown, level) })
+        await $.state.set({ plugin: 'sattva', key: 'handoff' }, { ...ho, level, tokens: tokens ?? 0, window, shown: Math.min(ho.shown, level) })
     } catch {
       // the offer is optional
     }
     return next(e)
   })
 
-  on('command.run', { command: 'keystone-handoff' }, async ($) => ({ text: await startHandoff($) }))
+  on('command.run', { command: 'sattva-handoff' }, async ($) => ({ text: await startHandoff($) }))
 
   // after the handoff's /clear: the plan's next command waits in the box, the buttons are back
   on('classic.SessionStart', async ($, e, next) => {
@@ -94,11 +94,11 @@ export const register: Register = (on, options) => {
       const cmd = (await $.store.get('handoff:next').catch(() => undefined)) as string | undefined
       if (cmd) {
         await $.store.delete('handoff:next').catch(() => undefined)
-        await $.state.set({ plugin: 'keystone', key: 'handoff' }, IDLE).catch(() => undefined)
-        await $.state.set({ plugin: 'keystone', key: 'buttons' }, [cmd, '/keystone-status']).catch(() => undefined)
+        await $.state.set({ plugin: 'sattva', key: 'handoff' }, IDLE).catch(() => undefined)
+        await $.state.set({ plugin: 'sattva', key: 'buttons' }, [cmd, '/sattva-status']).catch(() => undefined)
         $.clock.after(0, async () => {
           const filled = await $.prompt.fill({ text: cmd, mode: 'append' }).catch(() => ({ isFilled: false }))
-          if (!filled.isFilled) $.ui.toast(`Keystone: ${cmd}`)
+          if (!filled.isFilled) $.ui.toast(`Sattva: ${cmd}`)
         })
       }
     }
@@ -107,11 +107,11 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.isWorking || e.props.hasSurvey) return next(e)
-    const { value: buttons = [] } = await $.state.get({ plugin: 'keystone', key: 'buttons' })
-    const { value: ho = IDLE } = await $.state.get({ plugin: 'keystone', key: 'handoff' })
-    const { value: plan = '' } = await $.state.get({ plugin: 'keystone', key: 'plan' })
-    const { value: pr = null } = await $.state.get({ plugin: 'keystone', key: 'progress' })
-    const { value: paneUp = false } = await $.state.get({ plugin: 'keystone', key: 'panelOpen' })
+    const { value: buttons = [] } = await $.state.get({ plugin: 'sattva', key: 'buttons' })
+    const { value: ho = IDLE } = await $.state.get({ plugin: 'sattva', key: 'handoff' })
+    const { value: plan = '' } = await $.state.get({ plugin: 'sattva', key: 'plan' })
+    const { value: pr = null } = await $.state.get({ plugin: 'sattva', key: 'progress' })
+    const { value: paneUp = false } = await $.state.get({ plugin: 'sattva', key: 'panelOpen' })
     const cold = plan !== '' && ho.pending === null && ho.cold !== null && !!pr?.next
     // «Записать и начать» is the same handoff: one offer at a time
     const offer = plan !== '' && ho.pending === null && ho.level > ho.shown && !cold
@@ -120,9 +120,9 @@ export const register: Register = (on, options) => {
     const t = strings(lang)
     if (buttons.length === 0 && !offer && !cold) {
       // a fresh session in a repo with a plan it has not worked with: one dim row, gone with the first prompt
-      const { value: unbound = '' } = await $.state.get({ plugin: 'keystone', key: 'unbound' })
+      const { value: unbound = '' } = await $.state.get({ plugin: 'sattva', key: 'unbound' })
       if (!unbound) return next(e)
-      const drop = () => $.state.set({ plugin: 'keystone', key: 'unbound' }, '')
+      const drop = () => $.state.set({ plugin: 'sattva', key: 'unbound' }, '')
       const name = unbound.match(/([^/\s]+)\/plan\.md$/)?.[1] ?? unbound
       const rest = await next(e)
       return (
@@ -162,10 +162,10 @@ export const register: Register = (on, options) => {
         bar('ctx-bar', t.context.padEnd(w), ho.tokens / ho.window, toneFor(ho.level), wide ? `${pct(ho.tokens / ho.window)} · ${kTokens(ho.tokens)}/${kTokens(ho.window)}` : pct(ho.tokens / ho.window),
           offer ? [
             <Button key="handoff-go" label={t.handoff} variant="primary" onPress={async () => $.ui.toast(await startHandoff($))} />,
-            <Button key="handoff-later" label={t.later} dimColor onPress={() => $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, shown: ho.level })} />,
+            <Button key="handoff-later" label={t.later} dimColor onPress={() => $.state.set({ plugin: 'sattva', key: 'handoff' }, { ...ho, shown: ho.level })} />,
           ] : undefined),
       )
-    const title = pr ? `Keystone · ${pr.level} · ${pr.status}${(pr.cost ?? 0) > 0.005 ? ` · $${pr.cost.toFixed(2)}` : ''}` : 'Keystone'
+    const title = pr ? `Sattva · ${pr.level} · ${pr.status}${(pr.cost ?? 0) > 0.005 ? ` · $${pr.cost.toFixed(2)}` : ''}` : 'Sattva'
     const rows = []
     rows.push(
       wide ? (
@@ -181,7 +181,7 @@ export const register: Register = (on, options) => {
       ),
     )
     if (cold) {
-      const dropCold = () => $.state.set({ plugin: 'keystone', key: 'handoff' }, { ...ho, cold: null })
+      const dropCold = () => $.state.set({ plugin: 'sattva', key: 'handoff' }, { ...ho, cold: null })
       rows.push(
         // text on its own line, buttons on the next: in one wrapping row they pushed × onto a line of its own
         <Box key="cold" flexDirection="column">

@@ -40,4 +40,4 @@
 
 ## Follow-Up Suggestions
 
-Offer, in one line: `/keystone:docs` to document the Docker setup, `/keystone:ci` for the pipeline. Do not invoke them.
+Offer, in one line: `/sattva:docs` to document the Docker setup, `/sattva:ci` for the pipeline. Do not invoke them.

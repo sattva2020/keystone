@@ -1,6 +1,6 @@
-# Agentic benchmark for `/keystone:verify`
+# Agentic benchmark for `/sattva:verify`
 
-Does Keystone's verify catch work that only *looks* done? This benchmark measures that instead of claiming it. It
+Does Sattva's verify catch work that only *looks* done? This benchmark measures that instead of claiming it. It
 follows [Ponytail's agentic benchmark](https://github.com/DietrichGebert/ponytail/tree/main/benchmarks/agentic): every
 cell is a real headless Claude Code session on a seeded repository, scored by hidden deterministic checks, and every
 instrument is proven by `--selftest` before any API call.
@@ -8,7 +8,7 @@ instrument is proven by `--selftest` before any API call.
 ## What a cell is
 
 A fresh temp folder outside any git checkout holds a tiny Python repo with its own history: a `base` commit with an
-approved Keystone plan and an `impl` commit that checks every box. The session is asked to check the work. The cell is
+approved Sattva plan and an `impl` commit that checks every box. The session is asked to check the work. The cell is
 **right** when:
 
 - on a task with a gap: the verdict is `FAIL` **and** the reply (or `verify.md`) names the gap's evidence;
@@ -37,19 +37,19 @@ Every arm gets the same appended system prompt: *Change no code. End your final 
 |---|---|---|
 | `baseline` | `Check whether the work in <plan> is really done.` | none |
 | `control` | the same, plus one line: `Do not trust checked boxes: check every plan task against the code, run the tests, and look for weakened tests and broken CLAUDE.md rules.` | none |
-| `keystone` | `/keystone:verify <plan>` | this checkout via `--plugin-dir` |
-| `keystone-base` | `/keystone:verify <plan>` | another Keystone checkout via `--base-plugin-dir <path>` — the plugin before a change, for a before/after run |
+| `sattva` | `/sattva:verify <plan>` | this checkout via `--plugin-dir` |
+| `sattva-base` | `/sattva:verify <plan>` | another Sattva checkout via `--base-plugin-dir <path>` — the plugin before a change, for a before/after run |
 
-`control` is the honest rival: if one sentence of prompt matches Keystone, the benchmark should show it.
+`control` is the honest rival: if one sentence of prompt matches Sattva, the benchmark should show it.
 
 ## Isolation
 
 - The cell's folder is created by `tempfile.mkdtemp()` outside any repository and moved to `runs/<stamp>/` (gitignored)
-  afterwards, so the model never sees Keystone's own commit history.
+  afterwards, so the model never sees Sattva's own commit history.
 - `CLAUDE_CODE_DISABLE_CLAUDE_MDS=1` and `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`: neither your global `CLAUDE.md` nor
   your memory loads. The seeded repo's `CLAUDE.md` is still there to be read.
 - `--setting-sources project,local --strict-mcp-config`: none of your globally enabled plugins or MCP servers; the
-  keystone arm loads exactly one plugin with `--plugin-dir`.
+  sattva arm loads exactly one plugin with `--plugin-dir`.
 - `--permission-mode bypassPermissions`, Bash allowed (checking work means running the tests), `--max-budget-usd 5`
   per cell, 900 s timeout with a process-tree kill.
 
@@ -71,48 +71,48 @@ python run.py --selftest
 ```
 
 ```bash
-python run.py --task all --arms baseline,control,keystone --runs 5 --model opus
+python run.py --task all --arms baseline,control,sattva --runs 5 --model opus
 ```
 
 ```bash
 python run.py --rescore runs/<stamp>
 ```
 
-Before/after a change to the plugin: check out the old commit as a git worktree, run both Keystone arms in one run,
+Before/after a change to the plugin: check out the old commit as a git worktree, run both Sattva arms in one run,
 then take the ratios against the old one.
 
 ```bash
-python run.py --task all --arms baseline,keystone-base,keystone --runs 5 --base-plugin-dir <old checkout>
+python run.py --task all --arms baseline,sattva-base,sattva --runs 5 --base-plugin-dir <old checkout>
 ```
 
 ```bash
-python run.py --rescore runs/<stamp> --ref keystone-base
+python run.py --rescore runs/<stamp> --ref sattva-base
 ```
 
 `--dry-run` prints the command of each cell without calling the API. Use the same model for every arm:
-`/keystone:verify` pins its own `model:` (Sonnet since 0.9.19, Opus before) and its verifier agent pins Opus, so the
-keystone arms do not follow `--model`; it sets only the baseline and control arms.
+`/sattva:verify` pins its own `model:` (Sonnet since 0.9.19, Opus before) and its verifier agent pins Opus, so the
+sattva arms do not follow `--model`; it sets only the baseline and control arms.
 
 ## What it can and cannot show
 
-- It **can** show, with variance, whether `/keystone:verify` catches a checked box with no code, a weakened test and a
+- It **can** show, with variance, whether `/sattva:verify` catches a checked box with no code, a weakened test and a
   broken project rule better than the same model asked plainly or with a one-line hint, and at what cost and time.
 - It **cannot** generalize from four tiny repositories, and the arms differ in their prompt as well as the plugin:
-  the keystone arm is invoked the way people use it, by its command. A regex for the evidence is a floor: a reply can
+  the sattva arm is invoked the way people use it, by its command. A regex for the evidence is a floor: a reply can
   name the right word for a wrong reason.
 - If the arms converge, the results say so.
 
 ## Chain mode
 
 `--chain` measures the whole chain after Approve instead of one verify: rush mode against the usual chain on the same
-plan (machine time and verify runs, intent I-24 of `docs/keystone/2026-11-19-rush-mode/`).
+plan (machine time and verify runs, intent I-24 of `docs/sattva/2026-11-19-rush-mode/`).
 
 - A cell starts from one commit `base: plan approved` — the plan of the task with empty boxes, no code; the chain
   writes the code. Tasks: `missing-task`, `weak-test`, `rule-break` (`--task all`); `clean` repeats the plan of
   `missing-task` and is left out. The hidden check of the task stays the judge of the code.
-- Arm `chain`: separate `claude -p` processes — `/keystone:implement <plan>`, `/keystone:verify <plan>`, then up to two
-  pairs `/keystone:fix verify` + `/keystone:verify <plan>` until PASS / PASS-UNPROVEN. Arm `rush`: one
-  `claude -p "/keystone:implement <plan>"` on the same plan with `Pace: rush` in the header.
+- Arm `chain`: separate `claude -p` processes — `/sattva:implement <plan>`, `/sattva:verify <plan>`, then up to two
+  pairs `/sattva:fix verify` + `/sattva:verify <plan>` until PASS / PASS-UNPROVEN. Arm `rush`: one
+  `claude -p "/sattva:implement <plan>"` on the same plan with `Pace: rush` in the header.
 - Every process: `--output-format stream-json --verbose`, the plugin from this checkout, no `--max-budget-usd` and no
   verdict prompt. 3600 s per process of `chain`, 6 × 3600 s for the one `rush` process; a killed process is counted.
 - `correct` = the hidden check holds and the last `Verdict:` of `verify.md` is PASS or PASS-UNPROVEN. `time_s` — the
@@ -122,7 +122,7 @@ plan (machine time and verify runs, intent I-24 of `docs/keystone/2026-11-19-rus
   ceiling and committed nothing.
 - `--replay "<repo>@<sha>:<plan>" --replay-check "<command>"`: a clone at `<sha>^` with the plan folder of `<sha>`,
   its `## Release` removed and no origin; right = the check exits 0 and the verdict passes.
-- `--fast` adds `--settings {"fastMode": true}`; `--feedback on` sets `KEYSTONE_FEEDBACK=on` and keeps the
+- `--fast` adds `--settings {"fastMode": true}`; `--feedback on` sets `SATTVA_FEEDBACK=on` and keeps the
   self-reports in the cell (`_feedback/`), otherwise feedback is off as in every other run.
 
 ```bash

@@ -1,5 +1,5 @@
-// original Keystone file (MIT)
-// Keystone · rush — does this plan run in rush mode, and the closing line of a rush chain.
+// original Sattva file (MIT)
+// Sattva · rush — does this plan run in rush mode, and the closing line of a rush chain.
 // CLI:  rush.mjs pace <plan.md>     → `pace: rush` | `pace: normal — <why>` | `pace: unavailable — <why>`
 //       rush.mjs summary <plan.md>  → `rush: <verdict> · с одобрения <H>ч <M>мин (<sha7>) · прогонов verify <n>`
 // Errors: `rush: <message>` on stderr, exit 1. Git runs from the repository root, the plan path is made root-relative.

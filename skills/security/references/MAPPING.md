@@ -1,4 +1,4 @@
-<!-- original Keystone file (MIT) -->
+<!-- original Sattva file (MIT) -->
 
 # Standards mapping (use for the `Refs:` line of a finding)
 

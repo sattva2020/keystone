@@ -1,6 +1,6 @@
 ---
 name: ask
-description: "Keystone: answer a question only on evidence — 100/100 confidence from files, command output, docs or verified sources, otherwise INSUFFICIENT INFORMATION with exactly what is missing. No guessing, no code changes. Use for 'be 100% sure', 'no hallucinations', 'only if verified', versions, prices, 'does X support Y now', security-adjacent questions."
+description: "Sattva: answer a question only on evidence — 100/100 confidence from files, command output, docs or verified sources, otherwise INSUFFICIENT INFORMATION with exactly what is missing. No guessing, no code changes. Use for 'be 100% sure', 'no hallucinations', 'only if verified', versions, prices, 'does X support Y now', security-adjacent questions."
 argument-hint: "<question>"
 allowed-tools: Read Glob Grep Bash(git *) Bash(ls *) Agent WebFetch WebSearch mcp__memlab__search_decisions mcp__memlab__search_code AskUserQuestion
 model: opus
@@ -9,7 +9,7 @@ disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-grounded/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone · ask — grounded answer (no guessing)
+# Sattva · ask — grounded answer (no guessing)
 
 **Only provide the final answer if confidence is 100/100 based on evidence available.**
 If confidence is not 100, **do not guess**. Output a short "what's missing" checklist instead. Question: `$ARGUMENTS`.
@@ -20,7 +20,7 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -29,7 +29,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -42,13 +42,13 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
 text, without backticks. Link only a file you checked exists.
 
-This skill is read-only: it never edits files. A question that turns into a change goes to `/keystone:start <task>`.
+This skill is read-only: it never edits files. A question that turns into a change goes to `/sattva:start <task>`.
 
 ## Step 1: Classify the request
 

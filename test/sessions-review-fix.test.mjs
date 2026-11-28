@@ -1,4 +1,4 @@
-// Regression checks for the /keystone:review findings (2026-11-05) on skills/sessions/scripts/triage.mjs
+// Regression checks for the /sattva:review findings (2026-11-05) on skills/sessions/scripts/triage.mjs
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
@@ -36,7 +36,7 @@ test('review 1: a sibling plan merged into main is not the shared-folder session
   const root = repo();
   const wt = join(tmp(), 's');
   git(root, {}, 'worktree', 'add', '-q', '-b', 'claude/s', wt);
-  commit(wt, { 'docs/keystone/2026-11-05-s/plan.md': plan('verified', '- [ ] R2. live run') }, 'sibling plan');
+  commit(wt, { 'docs/sattva/2026-11-05-s/plan.md': plan('verified', '- [ ] R2. live run') }, 'sibling plan');
   git(root, {}, 'merge', '-q', '--ff-only', 'claude/s');
   const sessions = [
     { sessionId: 'c', parentSessionId: 'root', state: 'idle', worktreePath: root, originCwd: root, branch: 'main', sourceBranch: 'main' },
@@ -51,7 +51,7 @@ test('review 1: main merged into the own branch brings no plans of others', () =
   const wt = join(tmp(), 'c');
   git(root, {}, 'worktree', 'add', '-q', '-b', 'claude/c', wt);
   commit(wt, { 'src/a.js': '1' }, 'own work');
-  commit(root, { 'docs/keystone/2026-11-05-other/plan.md': plan('implementing') }, 'other plan on main');
+  commit(root, { 'docs/sattva/2026-11-05-other/plan.md': plan('implementing') }, 'other plan on main');
   git(wt, {}, '-c', 'user.name=t', '-c', 'user.email=t@t', 'merge', '-q', '--no-edit', 'main');
   const f = facts({ sessionId: 'c', worktreePath: wt, originCwd: root, branch: 'claude/c', sourceBranch: 'main' });
   assert.deepEqual(f.plans.map((p) => p.name), []);
@@ -74,11 +74,11 @@ test('review 3: renamed and non-ASCII paths come out plain; the new plan folder 
   const root = repo();
   const wt = join(tmp(), 'c');
   git(root, {}, 'worktree', 'add', '-q', '-b', 'claude/c', wt);
-  commit(wt, { 'docs/keystone/2026-11-05-a/plan.md': plan('implementing') }, 'plan a', OLD);
-  git(wt, {}, 'mv', 'docs/keystone/2026-11-05-a', 'docs/keystone/2026-11-05-b');
+  commit(wt, { 'docs/sattva/2026-11-05-a/plan.md': plan('implementing') }, 'plan a', OLD);
+  git(wt, {}, 'mv', 'docs/sattva/2026-11-05-a', 'docs/sattva/2026-11-05-b');
   put(wt, { 'файл с пробелом.js': '1' });
   const f = facts({ sessionId: 'c', worktreePath: wt, originCwd: root, branch: 'claude/c', sourceBranch: 'main' });
-  assert.deepEqual(f.files.sort(), ['docs/keystone/2026-11-05-b/plan.md', 'файл с пробелом.js']);
+  assert.deepEqual(f.files.sort(), ['docs/sattva/2026-11-05-b/plan.md', 'файл с пробелом.js']);
   assert.deepEqual(f.plans.map((p) => p.name), ['2026-11-05-b']);
 });
 

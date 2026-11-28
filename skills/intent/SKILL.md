@@ -1,13 +1,13 @@
 ---
 name: intent
-description: "Capture a change as intent.md — what and why, in the originator's words, decisions confirmed via /keystone:grill, every line with an ID (I-1…) — and have the human sign it off. The first file of the Keystone chain intent → plan → code → verify (Anthropic's AI-native SDLC playbook, adapted: the plan is the spec). Use for 'intent', 'capture the idea', 'what exactly do we want', or before planning an L-level change."
+description: "Capture a change as intent.md — what and why, in the originator's words, decisions confirmed via /sattva:grill, every line with an ID (I-1…) — and have the human sign it off. The first file of the Sattva chain intent → plan → code → verify (Anthropic's AI-native SDLC playbook, adapted: the plan is the spec). Use for 'intent', 'capture the idea', 'what exactly do we want', or before planning an L-level change."
 argument-hint: "[--rush] [idea text] | accept <path to intent.md or its folder>"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) Bash(mkdir *) AskUserQuestion Task Bash(node *feedback.mjs*)
 model: opus
 effort: high
 ---
 
-# Keystone · intent — the first file of the chain
+# Sattva · intent — the first file of the chain
 
 Source: Anthropic, "The AI-native SDLC playbook" (claude.com/blog, 2026-08-21), adapted.
 Rule of the chain: **every stage ends with a committed file, and the next stage starts by reading it — not the chat.**
@@ -18,18 +18,18 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
-**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `intent`).
+**Feedback.** If the context has a `Sattva feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `intent`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -42,7 +42,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -53,12 +53,12 @@ This skill captures only *what and why*; *how* belongs to the plan.
 
 Two subcommands:
 
-- `/keystone:intent [idea]` — interview, then write `intent.md`
-- `/keystone:intent accept <intent>` — flip `Status:` to `accepted` after the human has read and corrected it
+- `/sattva:intent [idea]` — interview, then write `intent.md`
+- `/sattva:intent accept <intent>` — flip `Status:` to `accepted` after the human has read and corrected it
 
 ## Step 0: Context
 
-- **Where it lives.** `docs/keystone/`. Intent home: `docs/keystone/<YYYY-MM-DD>-<slug>/intent.md` — one folder
+- **Where it lives.** `docs/sattva/`. Intent home: `docs/sattva/<YYYY-MM-DD>-<slug>/intent.md` — one folder
   per change; `slug` = kebab-case of the idea, ≤ 6 words, ASCII. In plain Claude Code the plan goes next to it as
   `plan.md`.
 - **Research (L, optional).** If the "how" is unclear — a new integration, an unfamiliar library, several architectural
@@ -71,20 +71,20 @@ Two subcommands:
   Nothing to take → ask for the idea in one line and stop.
 - **Plan already exists** for this change (a plan file in the folder or one the user names): this intent is
   **retrospective**. Write it all the same, add `Written after plan: <plan path>` to the header, and tell the user
-  that `/keystone:check` must reconcile intent and plan before implementation continues.
+  that `/sattva:check` must reconcile intent and plan before implementation continues.
 
-## `/keystone:intent [idea]` — intent.md
+## `/sattva:intent [idea]` — intent.md
 
-1. **Interview by the `/keystone:grill` contract** (read its SKILL.md and follow it here — explicitly, not as a
+1. **Interview by the `/sattva:grill` contract** (read its SKILL.md and follow it here — explicitly, not as a
    one-line hand-off). Seed the tree with the intent sections as root nodes: scope (in / out) → affected users and
    systems → constraints ("must not break", security, data, deadlines) → **what success looks like** (observable,
    testable later). Facts from code/docs you look up yourself.
-   **Reusing an earlier interview.** A `/keystone:grill` confirmed in this conversation → reuse its `D#` list.
+   **Reusing an earlier interview.** A `/sattva:grill` confirmed in this conversation → reuse its `D#` list.
    An interview by another grilling skill (any Q&A rounds the user answered) → first normalize it to a `D#` list,
    show it, and get one explicit confirmation; "ok to all" given to the raw rounds is not that confirmation.
    **Scope decisions first:** any decision that changes how much work this is belongs to the first rounds — never
    leave it as an Open question.
-   **`--rush` in the argument** (rush mode, `/keystone:start --rush`): the interview goes as one batch — the round
+   **`--rush` in the argument** (rush mode, `/sattva:start --rush`): the interview goes as one batch — the round
    holds the whole frontier (no ~8-question cap) together with the questions of the mandatory edge-case pass and of
    the final sweep over the eleven areas (`../grill/SKILL.md` § 4), in the same batch; a next round only for questions
    whose answer depends on ones already asked. The `Goal check` confirmation is the only separate question before
@@ -132,7 +132,7 @@ Goal check: <matches | narrowed — confirmed <date>: "<user's words>" | replace
 ```
 
    `Roadmap: M-<n>` is optional: add it only when `docs/roadmap.md` exists and the task belongs to that milestone
-   (ask in one line if unclear); `/keystone:verify` then offers to tick the milestone via `/keystone:roadmap`.
+   (ask in one line if unclear); `/sattva:verify` then offers to tick the milestone via `/sattva:roadmap`.
    The template is mandatory: Status, Goal check, Original goal, Problem, Desired outcome, Affected users and systems,
    Constraints, Open questions, Decisions log.
 
@@ -154,17 +154,17 @@ Goal check: <matches | narrowed — confirmed <date>: "<user's words>" | replace
    by the project's commit convention (e.g. `docs(intent): <slug>`).
    **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
    `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
-   if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(intent)`).
+   if the rule allows it; never a scope the hook rejects. No scope list → keep the Sattva scope (`docs(intent)`).
 7. **If another command interrupts** before step 6 is done, the file stays `Status: draft`; finish step 6 as soon as
-   that command ends. Every `/keystone:*` skill that finds a `draft` or uncommitted intent for the change it works on
+   that command ends. Every `/sattva:*` skill that finds a `draft` or uncommitted intent for the change it works on
    says so in one line first.
-8. Next: `/keystone:intent accept <path>`, then `/keystone:plan <path>/intent.md` (it runs `/keystone:check` before Approve).
-   With `Pace: rush` the `Next:` after accept is the same `/keystone:plan <path>/intent.md` — the flag is already in the
+8. Next: `/sattva:intent accept <path>`, then `/sattva:plan <path>/intent.md` (it runs `/sattva:check` before Approve).
+   With `Pace: rush` the `Next:` after accept is the same `/sattva:plan <path>/intent.md` — the flag is already in the
    intent, plan carries it into the plan header.
 
-## `/keystone:intent accept <path>`
+## `/sattva:intent accept <path>`
 
-Set `Status: accepted` on the given intent.md. `/keystone:intent accept <path>` typed by the human **is** the explicit
+Set `Status: accepted` on the given intent.md. `/sattva:intent accept <path>` typed by the human **is** the explicit
 confirmation — do not ask again. If accept was invoked by another skill or agent rather than the human, ask first. If Open questions still contain an item that changes
 the scope (what is in or out), refuse and list it. If `Goal check:` is `narrowed` or `replaced` without a confirmed
 answer in the user's words, refuse and ask that question first.
@@ -178,7 +178,7 @@ answer in the user's words, refuse and ask that question first.
 
 ## Project memory (memlab, optional)
 
-With memlab available, the interview starts from `search_decisions` on the idea (see `/keystone:grill`). Earlier
-intents, plans and verdicts under `docs/keystone/` are part of the memory once indexed: cite them in
+With memlab available, the interview starts from `search_decisions` on the idea (see `/sattva:grill`). Earlier
+intents, plans and verdicts under `docs/sattva/` are part of the memory once indexed: cite them in
 Problem or Affected when they explain the current state; list a decision this intent replaces in the Decisions log as
 `supersedes <path>`.

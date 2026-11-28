@@ -6,13 +6,13 @@ import { homedir, tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PLUGIN = resolve(dirname(fileURLToPath(import.meta.url)), '../..').replace(/\\/g, '/'); // Keystone plugin root
+const PLUGIN = resolve(dirname(fileURLToPath(import.meta.url)), '../..').replace(/\\/g, '/'); // Sattva plugin root
 
 const sc = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const out = join(dirname(process.argv[2]), 'runs', sc.id);
 mkdirSync(out, { recursive: true });
 const SETTINGS = resolve(out, 'settings.json').replace(/\\/g, '/');
-writeFileSync(SETTINGS, JSON.stringify({ enabledPlugins: { 'keystone@keystone': false } }));
+writeFileSync(SETTINGS, JSON.stringify({ enabledPlugins: { 'sattva@sattva': false } }));
 const log = join(out, 'transcript.md');
 writeFileSync(log, `# ${sc.id}\n\n`);
 
@@ -21,7 +21,7 @@ const EXEC_SYS = `Это автоматический тест скиллов. �
 Не выдумывай ответы за пользователя. Не делай git push, не трогай сеть, кроме чтения файлов репозитория.`;
 
 const SECRET = /^(SUPABASE|DOKPLOY|RAILWAY|PG|DATABASE|ANTHROPIC_API|OPENAI|OPENROUTER|STRIPE|RESEND|GITHUB_TOKEN|GH_TOKEN|AWS|B2_|SENTRY_AUTH)/i;
-function cleanEnv(extra) { const e = { ...process.env }; if (sc.isolate) for (const k of Object.keys(e)) if (SECRET.test(k)) delete e[k]; return { ...e, KEYSTONE_FEEDBACK: 'off', ...extra }; }
+function cleanEnv(extra) { const e = { ...process.env }; if (sc.isolate) for (const k of Object.keys(e)) if (SECRET.test(k)) delete e[k]; return { ...e, SATTVA_FEEDBACK: 'off', ...extra }; }
 function claude(args, input, env = {}, cwd = sc.cwd) {
   const r = spawnSync('claude', args, { cwd, input, encoding: 'utf8', maxBuffer: 64 << 20,
     env: cleanEnv(env), timeout: 40 * 60 * 1000, shell: true });
@@ -31,7 +31,7 @@ function claude(args, input, env = {}, cwd = sc.cwd) {
 
 function exec(prompt, sessionId) {
   const args = ['-p', '--model', sc.model || 'opus', '--output-format', 'json', '--permission-mode', 'acceptEdits',
-    // the plugin under test via --plugin-dir; the installed keystone@keystone is switched off so only this copy loads
+    // the plugin under test via --plugin-dir; the installed sattva@sattva is switched off so only this copy loads
     ...(sc.plugin === false ? [] : ['--plugin-dir', JSON.stringify(PLUGIN), '--settings', JSON.stringify(SETTINGS)]),
     '--allowedTools', '"Read Write Edit Glob Grep Task Skill Bash(git:*) Bash(mkdir:*) Bash(ls:*) Bash(node:*) Bash(shasum:*) Bash(sha256sum:*) Bash(printenv:*) mcp__memlab__search_decisions mcp__memlab__search_code mcp__memlab__explain"',
     ...(sc.noSys ? [] : ['--append-system-prompt', JSON.stringify(EXEC_SYS + (sc.extraSys ? "\n" + sc.extraSys : ''))]),

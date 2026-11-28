@@ -2,7 +2,7 @@
 
 # Output Structure
 
-Use this structure for skills created by `/keystone:distill`.
+Use this structure for skills created by `/sattva:distill`.
 
 ## Target Package
 
@@ -118,7 +118,7 @@ Required validation before any write:
 
 - Accept only names matching `^[a-z0-9]+(?:-[a-z0-9]+)*$`.
 - Reject empty names, overlong names, `.`, `..`, dots, path separators (`/` or `\`), absolute paths, Windows drive paths, and hidden names.
-- Reject names that start with `keystone-` and names that shadow an existing skill in the output root.
+- Reject names that start with `sattva-` and names that shadow an existing skill in the output root.
 
 Good:
 
@@ -137,14 +137,14 @@ Avoid:
 - full book titles
 - version/date suffixes unless required for compatibility
 - vague names like `notes`, `reference`, or `book-summary`
-- reserved or unsafe names like `keystone-review`, `../foo`, `.hidden`, `C:\temp\skill`, or `clean/code`
+- reserved or unsafe names like `sattva-review`, `../foo`, `.hidden`, `C:\temp\skill`, or `clean/code`
 
 In split mode, generate a name list before writing and check it as a set:
 
 - every name must start with the same resolved namespace prefix plus `-`
 - every name must pass the same validation rules
 - no name may collide with another generated child
-- no generated child may shadow an existing skill or a `keystone-*` name
+- no generated child may shadow an existing skill or a `sattva-*` name
 - the suffix after the prefix should describe the user goal and expected action, not provenance
 - avoid double-prefixing names when a candidate suffix already contains the prefix
 - avoid abstract source-theme suffixes such as `principles`, `philosophy`,

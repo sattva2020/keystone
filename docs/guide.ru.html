@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Keystone — intent-first workflow for Claude Code</title>
+<title>Sattva — intent-first workflow for Claude Code</title>
 <style>
 :root{
   --bg:#f7f6f2;--panel:#ffffff;--ink:#1d1c1a;--sub:#5f5d58;--faint:#8b8982;--line:rgba(0,0,0,.10);
@@ -116,55 +116,55 @@ footer{color:var(--faint);font-size:13px;padding:30px 0 50px;border-top:1px soli
 </div></header>
 
 <main class="wrap">
-<h1>Keystone — intent-first workflow for Claude Code</h1>
-<p class="lead">Keystone — самостоятельный плагин Claude Code. Он начинался как расширение AI Factory (<a href="https://github.com/lee-to/ai-factory" target="_blank" rel="noopener">lee-to/ai-factory</a>), теперь развивается отдельно: скиллы plan, check, implement, fix и verify портированы из AI Factory 2.19.0 (MIT, см. <code>THIRD_PARTY_NOTICES.md</code>) и доработаны. Адаптер AI Factory заморожен. Основа — <a href="https://claude.com/blog/the-ai-native-sdlc-playbook" target="_blank" rel="noopener">The AI-native SDLC playbook</a> (Anthropic, 21.08.2026) и <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Claude Code best practices</a>.</p>
+<h1>Sattva — intent-first workflow for Claude Code</h1>
+<p class="lead">Sattva — самостоятельный плагин Claude Code. Он начинался как расширение AI Factory (<a href="https://github.com/lee-to/ai-factory" target="_blank" rel="noopener">lee-to/ai-factory</a>), теперь развивается отдельно: скиллы plan, check, implement, fix и verify портированы из AI Factory 2.19.0 (MIT, см. <code>THIRD_PARTY_NOTICES.md</code>) и доработаны. Адаптер AI Factory заморожен. Основа — <a href="https://claude.com/blog/the-ai-native-sdlc-playbook" target="_blank" rel="noopener">The AI-native SDLC playbook</a> (Anthropic, 21.08.2026) и <a href="https://code.claude.com/docs/en/best-practices" target="_blank" rel="noopener">Claude Code best practices</a>.</p>
 <p class="lead">Идея: церемония соответствует размеру задачи. Мелочь делается сразу, понятная задача получает план с рисками, задача с открытыми решениями проходит цепочку <code>intent → план → проверка плана → код → проверка</code>. Каждый этап заканчивается файлом, следующий начинается с этого файла, а не с переписки. Жёсткие правила держат хуки, а не только текст.</p>
 <div class="note">Отдельного <code>spec.md</code> нет: <b>план = спека</b>. Требования и дизайн пишутся в плане; его таблица сверки ссылается прямо на строки intent (<code>I-1</code>, <code>I-2</code>…). AI Factory для работы не нужен.</div>
-<p class="muted">Версия 0.8.0 · самостоятельный плагин <code>keystone</code> (23 скилла <code>/keystone:*</code>); 21 скилл портирован из AI Factory 2.19.0 (MIT) и доработан.</p>
+<p class="muted">Версия 0.8.0 · самостоятельный плагин <code>sattva</code> (23 скилла <code>/sattva:*</code>); 21 скилл портирован из AI Factory 2.19.0 (MIT) и доработан.</p>
 
 <!-- ===================== PIPELINE ===================== -->
 <section id="pipeline">
 <h2>Конвейер для уровня L</h2>
-<p class="muted">Нажми на шаг, чтобы увидеть, что делать и что должно получиться. Пунктир — точка, где решаешь ты. Всё идёт командами <code>/keystone:*</code>. Уровни S и M короче — см. «Какая задача?».</p>
+<p class="muted">Нажми на шаг, чтобы увидеть, что делать и что должно получиться. Пунктир — точка, где решаешь ты. Всё идёт командами <code>/sattva:*</code>. Уровни S и M короче — см. «Какая задача?».</p>
 <div class="pipe" id="pipe">
-  <button class="step on" data-d="d1"><span class="n">1</span><span class="t">/keystone:start</span><span class="s">уровень S / M / L</span></button>
-  <button class="step" data-d="d2"><span class="n">2</span><span class="t">/keystone:intent</span><span class="s">grill до конца → intent.md с I-n</span></button>
+  <button class="step on" data-d="d1"><span class="n">1</span><span class="t">/sattva:start</span><span class="s">уровень S / M / L</span></button>
+  <button class="step" data-d="d2"><span class="n">2</span><span class="t">/sattva:intent</span><span class="s">grill до конца → intent.md с I-n</span></button>
   <button class="step gate" data-d="d3"><span class="n">3</span><span class="t">прочитать + accept</span><span class="s">твой accept = подтверждение</span></button>
-  <button class="step" data-d="d4"><span class="n">4</span><span class="t">/keystone:plan</span><span class="s">сверка, Rules check, Risks</span></button>
-  <button class="step" data-d="d5"><span class="n">5</span><span class="t">/keystone:check</span><span class="s">analyzer + validator, Coverage %</span></button>
+  <button class="step" data-d="d4"><span class="n">4</span><span class="t">/sattva:plan</span><span class="s">сверка, Rules check, Risks</span></button>
+  <button class="step" data-d="d5"><span class="n">5</span><span class="t">/sattva:check</span><span class="s">analyzer + validator, Coverage %</span></button>
   <button class="step gate" data-d="d6"><span class="n">6</span><span class="t">Approve + коммит</span><span class="s">Status approved; новая сессия</span></button>
-  <button class="step" data-d="d7"><span class="n">7</span><span class="t">/keystone:implement</span><span class="s">Sonnet, [x], отчёт по строкам</span></button>
-  <button class="step" data-d="d8"><span class="n">8</span><span class="t">/keystone:verify</span><span class="s">PASS / PASS-UNPROVEN / FAIL</span></button>
+  <button class="step" data-d="d7"><span class="n">7</span><span class="t">/sattva:implement</span><span class="s">Sonnet, [x], отчёт по строкам</span></button>
+  <button class="step" data-d="d8"><span class="n">8</span><span class="t">/sattva:verify</span><span class="s">PASS / PASS-UNPROVEN / FAIL</span></button>
 </div>
 
 <div class="card">
 <div class="detail on" id="d1">
-  <h3>1 · <code>/keystone:start &lt;задача&gt;</code></h3>
+  <h3>1 · <code>/sattva:start &lt;задача&gt;</code></h3>
   <p>Агент смотрит на задачу дёшево (текст, имена файлов, один-два поиска) и <b>предлагает</b> уровень: <code>Level: M — причина. OK / S / L?</code>. Ты подтверждаешь. Любой признак L делает задачу L; сомневаешься между двумя уровнями — берётся старший.</p>
-  <pre>/keystone:start Хочу, чтобы оператор в карточке лида видел, на какой из наших номеров WhatsApp написал клиент</pre>
+  <pre>/sattva:start Хочу, чтобы оператор в карточке лида видел, на какой из наших номеров WhatsApp написал клиент</pre>
   <ul><li>Если уже есть активный план другой задачи — спросит: продолжить его или поставить <code>Status: abandoned</code>. Его гейты действуют, пока ты не выбрал.</li>
   <li>Необратимые внешние действия (подача заявки, платежи, DNS, рассылки) — только после проверки предпосылок.</li></ul>
   <p><b>Получится:</b> принятый уровень (в шапке плана или в отчёте), бюджет поиска и модель на этап. Дальше — по маршруту уровня.</p>
 </div>
 <div class="detail" id="d2">
-  <h3>2 · <code>/keystone:intent &lt;идея своими словами&gt;</code></h3>
-  <p>Агент сам ищет факты в коде и git, а потом проводит <code>/keystone:grill</code> <b>до конца</b>: раундами по всему дереву решений (реализация, UX, крайние случаи, отказы, данные, безопасность, компромиссы), пока ни одна ветка не осталась неохваченной.</p>
+  <h3>2 · <code>/sattva:intent &lt;идея своими словами&gt;</code></h3>
+  <p>Агент сам ищет факты в коде и git, а потом проводит <code>/sattva:grill</code> <b>до конца</b>: раундами по всему дереву решений (реализация, UX, крайние случаи, отказы, данные, безопасность, компромиссы), пока ни одна ветка не осталась неохваченной.</p>
   <ul><li>В раунде — все вопросы, на которые уже можно ответить, пронумерованы, у каждого «Recommended…»; решения об объёме работы — в первых раундах.</li>
   <li>В конце — итог <code>D1…Dn</code> и просьба подтвердить; файл пишется только после подтверждения.</li></ul>
-  <p><b>Получится:</b> <code>docs/keystone/&lt;дата&gt;-&lt;slug&gt;/intent.md</code> (в проекте с AI Factory — в <code>paths.specs</code>), <code>Status: draft</code>. Каждая строка результата и ограничения имеет ID <code>I-1, I-2…</code> (ID не перенумеровываются), в <code>## Decisions log</code> записан каждый ответ: <code>дата Q → A (D#)</code>.</p>
+  <p><b>Получится:</b> <code>docs/sattva/&lt;дата&gt;-&lt;slug&gt;/intent.md</code> (в проекте с AI Factory — в <code>paths.specs</code>), <code>Status: draft</code>. Каждая строка результата и ограничения имеет ID <code>I-1, I-2…</code> (ID не перенумеровываются), в <code>## Decisions log</code> записан каждый ответ: <code>дата Q → A (D#)</code>.</p>
   <div class="note">Отвечай коротко: «Q1 a, Q2 по рекомендации». Если агент спрашивает факт о коде — это ошибка, он должен искать сам.</div>
 </div>
 <div class="detail" id="d3">
   <h3>3 · Прочитать intent и подписать</h3>
   <p>Главный ручной шаг плейбука: <b>прочитай intent целиком и исправь то, что Claude понял не так</b>. Потом:</p>
-  <pre>/keystone:intent accept docs/keystone/2026-10-12-my-feature/intent.md</pre>
+  <pre>/sattva:intent accept docs/sattva/2026-10-12-my-feature/intent.md</pre>
   <ul><li>Команда <code>accept</code>, набранная тобой, и есть подтверждение: агент не переспрашивает. Если accept вызвал другой скилл или агент, он спросит тебя.</li>
   <li>Каждый <i>Desired outcome</i> проверяемый («оператор видит X на экране Y»), а не «улучшить X».</li>
   <li>Одна задача — один intent; если внутри несколько независимых — агент предложит разделить.</li>
   <li>Open questions, меняющие объём, должны быть закрыты — иначе accept откажет со списком.</li></ul>
 </div>
 <div class="detail" id="d4">
-  <h3>4 · <code>/keystone:plan &lt;путь&gt;/intent.md</code></h3>
+  <h3>4 · <code>/sattva:plan &lt;путь&gt;/intent.md</code></h3>
   <p>План пишется в ту же папку, что и intent: <code>plan.md</code> со <code>Status: draft</code>. Скилл работает на Opus и сам ничего не спрашивает про тесты, логи и документацию.</p>
   <ul><li><b>Settings выводятся из репозитория</b>, не спрашиваются: строка <code>Settings: tests — … · logging — … · docs — …</code> в шапке. Поправить можно при Approve.</li>
   <li><code>Level: L</code> и <code>Authority: intent.md — путь (accepted дата)</code>. Intent не accepted → WARN и вопрос «Plan anyway» / «Stop».</li>
@@ -172,11 +172,11 @@ footer{color:var(--faint);font-size:13px;padding:30px 0 50px;border-top:1px soli
   <li><b>Project rules check</b> — одна строка: какие файлы правил прочитаны и <code>MUST violations: none | список</code>. Нарушение MUST — <b>блокер</b>, не риск.</li>
   <li><b><code>## Risks</code></b>: Could break · Riskiest step · Rejected alternatives.</li>
   <li>Зависимые решения — контракт grill, а не россыпь вопросов. Планка готовности: инженер, не видевший разговор, реализует по одному плану.</li></ul>
-  <p>Перед Approve на L план сам запускает <code>/keystone:check</code> (шаг 5).</p>
+  <p>Перед Approve на L план сам запускает <code>/sattva:check</code> (шаг 5).</p>
 </div>
 <div class="detail" id="d5">
-  <h3>5 · <code>/keystone:check &lt;intent&gt; &lt;план&gt;</code></h3>
-  <p>Порт aif-improve и +check плюс сверка с intent. Два агента в <b>чистых контекстах</b> (Opus): <code>keystone:analyzer</code> перечитывает код глубже планировщика, <code>keystone:validator</code> оставляет, правит или отбрасывает каждую находку. Валидатор обязателен.</p>
+  <h3>5 · <code>/sattva:check &lt;intent&gt; &lt;план&gt;</code></h3>
+  <p>Порт aif-improve и +check плюс сверка с intent. Два агента в <b>чистых контекстах</b> (Opus): <code>sattva:analyzer</code> перечитывает код глубже планировщика, <code>sattva:validator</code> оставляет, правит или отбрасывает каждую находку. Валидатор обязателен.</p>
   <ul><li><b>Feasibility sweep</b> по каждой задаче: версии библиотек, деплой и env, генерируемые файлы, privacy и экспорт данных, вычисления (часовые пояса, округления), платформы, устаревший текст плана, необратимые внешние действия.</li>
   <li>Группы находок: missing, improvements, dependency fixes, removals, out of scope, intent gaps, rule violations. Для каждого <code>I-n</code> — covered / partial / missing.</li></ul>
   <pre>I-1 covered — Task 2 · check: e2e chip visible
@@ -190,7 +190,7 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
   <p>Три ответа (что сломается, самый рискованный шаг, что отвергнуто), строка <code>Settings:</code> и coverage-строка check → <i>Approve plan</i> или <i>Adjust</i>. На Approve в шапке ставится <code>Status: approved</code> и делается <b>базовый коммит</b> intent и плана — цепочка в git и есть аудит-след, по нему verify увидит правки intent после плана. Потом реализация в новой сессии: <code>/clear</code>, <b>не <code>/compact</code></b>.</p>
 </div>
 <div class="detail" id="d7">
-  <h3>7 · <code>/keystone:implement &lt;план&gt;</code> (Sonnet)</h3>
+  <h3>7 · <code>/sattva:implement &lt;план&gt;</code> (Sonnet)</h3>
   <ul><li>Статус <code>approved</code> → ставит <code>implementing</code>. <code>draft</code> — остановка («сначала Approve»); <code>verified</code> / <code>abandoned</code> — остановка.</li>
   <li>Задачи по порядку, после каждой сразу <code>- [x]</code> в плане, коммит после задачи (или в точках Commit Plan). Прогресс — в галочках и git, поэтому после <code>/clear</code> скилл продолжает с первой <code>[ ]</code>.</li>
   <li>Перед задачей — проверка согласованности с требованиями: явный конфликт → <code>ERROR [requirement-conflict]</code> и остановка.</li>
@@ -200,18 +200,18 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
   <li>Verify сам не запускает; <code>git push</code> закрыт гейтом.</li></ul>
 </div>
 <div class="detail" id="d8">
-  <h3>8 · <code>/keystone:verify &lt;план&gt;</code> (новая сессия)</h3>
+  <h3>8 · <code>/sattva:verify &lt;план&gt;</code> (новая сессия)</h3>
   <ol class="flow"><li><b>Команды проверки:</b> сборка, тесты, линтер, проверка импортов (по <code>references/CHECKS.md</code>); зависимости скилл не ставит. На L режим строгий по умолчанию.</li>
-  <li><b>Агент <code>keystone:verifier</code></b> в чистом контексте: каждая задача, строка сверки и <code>I-n</code> получает ok / missing / wrong / not proven / BLOCKED с доказательством; изменения вне плана — unrequested. Включает <b>adversarial pass</b> — состязательный проход по изменённой логике.</li>
+  <li><b>Агент <code>sattva:verifier</code></b> в чистом контексте: каждая задача, строка сверки и <code>I-n</code> получает ok / missing / wrong / not proven / BLOCKED с доказательством; изменения вне плана — unrequested. Включает <b>adversarial pass</b> — состязательный проход по изменённой логике.</li>
   <li><b>Вердикт:</b> PASS · PASS-UNPROVEN · FAIL (см. таблицу ниже).</li>
   <li><b>Запись:</b> <code>verify.md</code> в папке задачи; на PASS — <code>Status: verified</code> и коммит только <code>verify.md</code> и плана.</li></ol>
   <div class="tbl"><table>
   <tr><th>Вердикт</th><th>Когда</th><th>Что дальше</th></tr>
   <tr><td><b>PASS</b></td><td>нет missing / wrong / unrequested / not proven, BLOCKED = 0, Settings ok</td><td><code>Status: verified</code>, push открыт</td></tr>
-  <tr><td><b>PASS-UNPROVEN</b></td><td>нет missing / wrong / unrequested, но есть not proven или BLOCKED</td><td>доказать строки и проверить снова, либо <code>/keystone:verify accept</code> (твоё явное «да») — тогда <code>verified</code></td></tr>
-  <tr><td><b>FAIL</b></td><td>есть missing, wrong или unrequested, нарушены Settings или правила</td><td><code>/keystone:fix</code> или <code>/keystone:implement</code>; push закрыт</td></tr>
+  <tr><td><b>PASS-UNPROVEN</b></td><td>нет missing / wrong / unrequested, но есть not proven или BLOCKED</td><td>доказать строки и проверить снова, либо <code>/sattva:verify accept</code> (твоё явное «да») — тогда <code>verified</code></td></tr>
+  <tr><td><b>FAIL</b></td><td>есть missing, wrong или unrequested, нарушены Settings или правила</td><td><code>/sattva:fix</code> или <code>/sattva:implement</code>; push закрыт</td></tr>
   </table></div>
-  <p><b>Галочка ≠ доказательство:</b> <code>[x]</code> и «pass» в плане ничего не доказывают; grep и чтение кода доказывают присутствие, не поведение → <code>not proven</code>. В конце отчёта всегда строка <code>Keystone Chain: …</code>. На L перед push стоит прогнать ещё и встроенный <code>/code-review</code>.</p>
+  <p><b>Галочка ≠ доказательство:</b> <code>[x]</code> и «pass» в плане ничего не доказывают; grep и чтение кода доказывают присутствие, не поведение → <code>not proven</code>. В конце отчёта всегда строка <code>Sattva Chain: …</code>. На L перед push стоит прогнать ещё и встроенный <code>/code-review</code>.</p>
 </div>
 </div>
 </section>
@@ -219,7 +219,7 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
 <!-- ===================== ROUTER ===================== -->
 <section id="router">
 <h2>Какая у меня задача?</h2>
-<p class="muted">Уровень предлагает агент (<code>/keystone:start</code>), подтверждает человек. <b>Любой признак L делает задачу L.</b> Выбери уровень и что не хватает — покажу маршрут.</p>
+<p class="muted">Уровень предлагает агент (<code>/sattva:start</code>), подтверждает человек. <b>Любой признак L делает задачу L.</b> Выбери уровень и что не хватает — покажу маршрут.</p>
 <div class="card">
   <div class="q"><b>1. Какой уровень?</b>
     <div class="opts" data-q="size">
@@ -235,11 +235,11 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
     </div></div>
   <div id="routes">
     <div class="route" data-r="hint"><p class="muted">Выбери оба ответа.</p></div>
-    <div class="route" data-r="s"><h3>Уровень S — просто сделать и проверить</h3><ol class="flow"><li>Правка напрямую, затем существующая проверка, затем отчёт.</li><li>Баг — <code>/keystone:fix</code> (S): план сразу в <code>implementing</code>, регрессия первой; после зелёной регрессии скилл сам ставит <code>Status: verified</code> перед единственным коммитом.</li><li>Ни intent, ни отдельного плана-согласования; запись — сообщение коммита.</li></ol><p class="muted">Поиск — не более 2 чтений/поисков; модель сессии, низкий effort.</p></div>
-    <div class="route" data-r="m"><h3>Уровень M — короткий план</h3><ol class="flow"><li><code>/keystone:plan &lt;задача&gt;</code>: новая папка, Settings из репо, Project rules check, <code>## Risks</code> в 3 строки.</li><li>Три вопроса себе (что сломается, самый рискованный шаг, что отвергнуто) → Approve → коммит.</li><li>Новая сессия: <code>/keystone:implement</code> (Sonnet) → <code>/keystone:verify</code>.</li><li>Баг на M: <code>/keystone:fix</code> (Plan first) пишет план <code>draft</code> и останавливается; одобрить его — <code>/keystone:plan &lt;путь к plan.md&gt;</code> → Approve, затем <code>/keystone:implement</code>.</li></ol><p class="muted">Intent и <code>/keystone:check</code> не нужны. Поиск — один проход Explore.</p></div>
-    <div class="route" data-r="l"><h3>Уровень L — полная цепочка</h3><ol class="flow"><li><code>/keystone:intent</code> (grill до конца) → прочитать → <code>accept</code></li><li><code>/keystone:plan &lt;intent&gt;</code>: сверка по <code>I-n</code>, Rules check, Risks, затем <code>/keystone:check</code></li><li>Approve/Adjust → базовый коммит</li><li>новая сессия → <code>/keystone:implement</code> (Sonnet) → <code>/keystone:verify</code></li></ol></div>
+    <div class="route" data-r="s"><h3>Уровень S — просто сделать и проверить</h3><ol class="flow"><li>Правка напрямую, затем существующая проверка, затем отчёт.</li><li>Баг — <code>/sattva:fix</code> (S): план сразу в <code>implementing</code>, регрессия первой; после зелёной регрессии скилл сам ставит <code>Status: verified</code> перед единственным коммитом.</li><li>Ни intent, ни отдельного плана-согласования; запись — сообщение коммита.</li></ol><p class="muted">Поиск — не более 2 чтений/поисков; модель сессии, низкий effort.</p></div>
+    <div class="route" data-r="m"><h3>Уровень M — короткий план</h3><ol class="flow"><li><code>/sattva:plan &lt;задача&gt;</code>: новая папка, Settings из репо, Project rules check, <code>## Risks</code> в 3 строки.</li><li>Три вопроса себе (что сломается, самый рискованный шаг, что отвергнуто) → Approve → коммит.</li><li>Новая сессия: <code>/sattva:implement</code> (Sonnet) → <code>/sattva:verify</code>.</li><li>Баг на M: <code>/sattva:fix</code> (Plan first) пишет план <code>draft</code> и останавливается; одобрить его — <code>/sattva:plan &lt;путь к plan.md&gt;</code> → Approve, затем <code>/sattva:implement</code>.</li></ol><p class="muted">Intent и <code>/sattva:check</code> не нужны. Поиск — один проход Explore.</p></div>
+    <div class="route" data-r="l"><h3>Уровень L — полная цепочка</h3><ol class="flow"><li><code>/sattva:intent</code> (grill до конца) → прочитать → <code>accept</code></li><li><code>/sattva:plan &lt;intent&gt;</code>: сверка по <code>I-n</code>, Rules check, Risks, затем <code>/sattva:check</code></li><li>Approve/Adjust → базовый коммит</li><li>новая сессия → <code>/sattva:implement</code> (Sonnet) → <code>/sattva:verify</code></li></ol></div>
     <div class="route" data-r="facts"><div class="note">Факты о системе агент собирает сам: Explore-субагентом на Haiku (только факты, без выводов). Это не вопрос к тебе.</div></div>
-    <div class="route" data-r="decisions"><div class="note">Сначала <code>/keystone:grill &lt;идея&gt;</code> — допрос без файлов, чтобы определиться. На L <code>/keystone:intent</code> проведёт тот же допрос сам.</div></div>
+    <div class="route" data-r="decisions"><div class="note">Сначала <code>/sattva:grill &lt;идея&gt;</code> — допрос без файлов, чтобы определиться. На L <code>/sattva:intent</code> проведёт тот же допрос сам.</div></div>
   </div>
 </div>
 
@@ -249,7 +249,7 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
 <tr><td>Поиск</td><td>≤ 2 поисков/чтений до действия</td><td>≤ 1 проход Explore</td><td>Explore по необходимости, только факты</td></tr>
 <tr><td>Модель</td><td>модель сессии, low effort</td><td>Opus — план, Sonnet — реализация</td><td>Opus — допрос, intent, план, check, verify · Sonnet — реализация · Haiku — поиск фактов</td></tr>
 <tr><td>Артефакты</td><td>нет — запись в коммите</td><td><code>plan.md</code></td><td><code>intent.md</code>, <code>plan.md</code>, <code>verify.md</code></td></tr>
-<tr><td>Проверка</td><td>результат проверки</td><td><code>/keystone:verify</code></td><td><code>/keystone:check</code> до Approve + <code>/keystone:verify</code></td></tr>
+<tr><td>Проверка</td><td>результат проверки</td><td><code>/sattva:verify</code></td><td><code>/sattva:check</code> до Approve + <code>/sattva:verify</code></td></tr>
 </table></div>
 <p class="muted">Превысить бюджет поиска можно, только сказав почему. Поднять уровень (S→M, M→L) нужно сразу, как появился признак старшего — и сказать об этом; молча понижать нельзя.</p>
 <div class="note ok"><b>Зачем S и M.</b> Стенд 11.10.2026: мелкая правка стоила $3.9–10.2, план по готовым требованиям — $6, полная цепочка с отдельной спекой — $30. Полная цепочка окупается только там, где решения ещё открыты.</div>
@@ -266,17 +266,17 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
 <tr><td>план в <code>draft</code></td><td>правки кода вне папки задачи, пока план не одобрен (внутри папки задачи править можно)</td></tr>
 <tr><td>fix в <code>implementing</code></td><td>правка тест-файлов, закоммиченных в HEAD (новый регрессионный тест писать можно)</td></tr>
 <tr><td>план в <code>implementing</code>, в <code>## Tasks</code> остались <code>[ ]</code> без <code>BLOCKED:</code></td><td>завершение хода: одно напоминание, вопросы человеку оно не блокирует</td></tr>
-<tr><td>любой активный план</td><td><code>git push</code>, <code>gh pr create</code> — до <code>/keystone:verify</code> с PASS или <code>/keystone:verify accept</code></td></tr>
+<tr><td>любой активный план</td><td><code>git push</code>, <code>gh pr create</code> — до <code>/sattva:verify</code> с PASS или <code>/sattva:verify accept</code></td></tr>
 </table></div>
 
 <h3>Что такое «активный план»</h3>
-<p>Это <code>plan.md</code> <b>самой свежей папки задачи</b> (в <code>docs/keystone/</code> или в <code>paths.specs</code> проекта с AI Factory), у которого статус <code>draft</code>, <code>approved</code> или <code>implementing</code>. «Свежая» — по дате в имени папки (<code>YYYY-MM-DD-…</code>); при равенстве даты — по времени изменения <code>plan.md</code>. Статус берётся из шапки <code>Level: … · Mode: … · Status: …</code>. Планы со статусом <code>verified</code> и <code>abandoned</code> гейтов не создают.</p>
+<p>Это <code>plan.md</code> <b>самой свежей папки задачи</b> (в <code>docs/sattva/</code> или в <code>paths.specs</code> проекта с AI Factory), у которого статус <code>draft</code>, <code>approved</code> или <code>implementing</code>. «Свежая» — по дате в имени папки (<code>YYYY-MM-DD-…</code>); при равенстве даты — по времени изменения <code>plan.md</code>. Статус берётся из шапки <code>Level: … · Mode: … · Status: …</code>. Планы со статусом <code>verified</code> и <code>abandoned</code> гейтов не создают.</p>
 
 <h3>Как снять гейт</h3>
 <ul><li>Поставить <code>Status: abandoned</code> в шапке плана (план брошен, гейты не действуют).</li>
-<li>Запустить Claude Code с переменной <code>KEYSTONE_GATES=off</code>.</li>
+<li>Запустить Claude Code с переменной <code>SATTVA_GATES=off</code>.</li>
 <li>Либо выполнить то, чего гейт ждёт: одобрить draft, пройти verify.</li></ul>
-<div class="note warn">Снимать гейт, чтобы обойти FAIL у verify, нельзя: <code>abandoned</code> и <code>KEYSTONE_GATES=off</code> не делают план verified, они только открывают дорогу. Обход гейта через Bash, переименование или копирование поверх файла — нарушение правил.</div>
+<div class="note warn">Снимать гейт, чтобы обойти FAIL у verify, нельзя: <code>abandoned</code> и <code>SATTVA_GATES=off</code> не делают план verified, они только открывают дорогу. Обход гейта через Bash, переименование или копирование поверх файла — нарушение правил.</div>
 </section>
 
 <!-- ===================== STATUS ===================== -->
@@ -285,10 +285,10 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
 <p class="muted">Шапка плана: <code>Level · Mode · Status</code>. Статус идёт так: <code>draft → approved → implementing → verified</code>, либо в любой момент <code>abandoned</code>.</p>
 <div class="card tbl"><table>
 <tr><th>Статус</th><th>Что значит</th><th>Кто ставит</th></tr>
-<tr><td><code>draft</code></td><td>план написан, не одобрен; правки кода заблокированы</td><td><code>/keystone:plan</code>; <code>/keystone:fix</code> в режиме «Plan first» (M)</td></tr>
-<tr><td><code>approved</code></td><td>ты нажал Approve, базовый коммит сделан</td><td><code>/keystone:plan</code> на твой Approve</td></tr>
-<tr><td><code>implementing</code></td><td>идёт реализация</td><td><code>/keystone:implement</code> при старте; <code>/keystone:fix</code> (S) создаёт план сразу в этом статусе</td></tr>
-<tr><td><code>verified</code></td><td>работа проверена, push открыт</td><td><code>/keystone:verify</code> на PASS или на <code>accept</code> (после твоего «да»); S-fix ставит сам после зелёной регрессии</td></tr>
+<tr><td><code>draft</code></td><td>план написан, не одобрен; правки кода заблокированы</td><td><code>/sattva:plan</code>; <code>/sattva:fix</code> в режиме «Plan first» (M)</td></tr>
+<tr><td><code>approved</code></td><td>ты нажал Approve, базовый коммит сделан</td><td><code>/sattva:plan</code> на твой Approve</td></tr>
+<tr><td><code>implementing</code></td><td>идёт реализация</td><td><code>/sattva:implement</code> при старте; <code>/sattva:fix</code> (S) создаёт план сразу в этом статусе</td></tr>
+<tr><td><code>verified</code></td><td>работа проверена, push открыт</td><td><code>/sattva:verify</code> на PASS или на <code>accept</code> (после твоего «да»); S-fix ставит сам после зелёной регрессии</td></tr>
 <tr><td><code>abandoned</code></td><td>план брошен, гейты сняты</td><td>только ты (правка шапки вручную)</td></tr>
 </table></div>
 </section>
@@ -296,20 +296,20 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
 <!-- ===================== SKILLS ===================== -->
 <section id="skills">
 <h2>Скиллы</h2>
-<p class="muted"><span class="pill new">плагин</span> — скилл <code>/keystone:*</code> · <span class="pill core">порт</span> — портирован из AI Factory 2.19.0 (MIT) и доработан</p>
+<p class="muted"><span class="pill new">плагин</span> — скилл <code>/sattva:*</code> · <span class="pill core">порт</span> — портирован из AI Factory 2.19.0 (MIT) и доработан</p>
 
-<details class="skill" open><summary><span class="pill new">плагин</span><span class="name">/keystone:start</span><span class="what">Определяет уровень S / M / L, задаёт бюджет и маршрут.</span></summary><div class="body">
+<details class="skill" open><summary><span class="pill new">плагин</span><span class="name">/sattva:start</span><span class="what">Определяет уровень S / M / L, задаёт бюджет и маршрут.</span></summary><div class="body">
 <div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
-<tr><td><code>/keystone:start &lt;задача&gt;</code></td><td>Предлагает уровень с причиной в одну строку, спрашивает подтверждение, называет бюджет (поиск, модель на этап) и маршрут. Проверяет, нет ли активного плана другой задачи. Необратимые внешние действия — только после проверки предпосылок. Итоговая строка <code>Level · checks · cost</code>.</td></tr></table></div>
+<tr><td><code>/sattva:start &lt;задача&gt;</code></td><td>Предлагает уровень с причиной в одну строку, спрашивает подтверждение, называет бюджет (поиск, модель на этап) и маршрут. Проверяет, нет ли активного плана другой задачи. Необратимые внешние действия — только после проверки предпосылок. Итоговая строка <code>Level · checks · cost</code>.</td></tr></table></div>
 <h3>Как проверить, что сработал</h3>
 <ul><li>Был вопрос «Level: … OK / S / L?», а не молчаливое решение; уровень записан в плане или отчёте.</li>
 <li>На S не появился план или intent; при выбранном M и признаке L — предложен старший уровень с причиной.</li>
 <li>Отчёт заканчивается строкой <code>Level · checks · cost</code>; без <code>/cost</code> там честное <code>not measured</code>.</li></ul>
 </div></details>
 
-<details class="skill"><summary><span class="pill new">плагин</span><span class="name">/keystone:grill</span><span class="what">Допрос раундами по всему дереву решений. Файлов не пишет — отдаёт итог вызвавшему.</span></summary><div class="body">
+<details class="skill"><summary><span class="pill new">плагин</span><span class="name">/sattva:grill</span><span class="what">Допрос раундами по всему дереву решений. Файлов не пишет — отдаёт итог вызвавшему.</span></summary><div class="body">
 <div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
-<tr><td><code>/keystone:grill &lt;идея, план или вопрос&gt;</code></td><td>Строит дерево решений (реализация, UX, крайние случаи, отказы, данные, безопасность, компромиссы), задаёт фронтир раундами, в конце — итог <code>D1…Dn</code> и подтверждение. Без аргумента берёт тему текущего разговора и говорит, что взял.</td></tr></table></div>
+<tr><td><code>/sattva:grill &lt;идея, план или вопрос&gt;</code></td><td>Строит дерево решений (реализация, UX, крайние случаи, отказы, данные, безопасность, компромиссы), задаёт фронтир раундами, в конце — итог <code>D1…Dn</code> и подтверждение. Без аргумента берёт тему текущего разговора и говорит, что взял.</td></tr></table></div>
 <h3>Как проверить, что сработал</h3>
 <ul><li>Факты о коде ищет сам (Explore на Haiku); у тебя спрашивает только решения.</li>
 <li>Раунд = все вопросы, чьи предпосылки закрыты; у каждого «Recommended» и причина со ссылкой на найденный факт.</li>
@@ -319,10 +319,10 @@ Coverage: 1.5/3 = 50% (partial counts 0.5) · verdict: FAIL</pre>
 <p class="muted">Контракт согласован в <a href="https://github.com/lee-to/ai-factory/issues/151" target="_blank" rel="noopener">lee-to/ai-factory#151</a>.</p>
 </div></details>
 
-<details class="skill"><summary><span class="pill new">плагин</span><span class="name">/keystone:intent</span><span class="what">Файл intent.md — «что и зачем» твоими словами; первое звено цепочки.</span></summary><div class="body">
+<details class="skill"><summary><span class="pill new">плагин</span><span class="name">/sattva:intent</span><span class="what">Файл intent.md — «что и зачем» твоими словами; первое звено цепочки.</span></summary><div class="body">
 <div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
-<tr><td><code>/keystone:intent &lt;идея&gt;</code></td><td>Допрос по контракту grill → <code>intent.md</code> (draft) словами автора; каждая строка с ID <code>I-n</code>, каждый ответ в Decisions log. Без решений, архитектуры и задач — это работа плана. Несколько независимых задач — предложит разделить. План уже есть → intent ретроспективный, в шапке <code>Written after plan:</code>, нужен <code>/keystone:check</code>.</td></tr>
-<tr><td><code>/keystone:intent accept &lt;путь&gt;</code></td><td><code>Status: accepted</code>. Твоя команда и есть подтверждение. Open question, меняющий объём, — отказ со списком.</td></tr></table></div>
+<tr><td><code>/sattva:intent &lt;идея&gt;</code></td><td>Допрос по контракту grill → <code>intent.md</code> (draft) словами автора; каждая строка с ID <code>I-n</code>, каждый ответ в Decisions log. Без решений, архитектуры и задач — это работа плана. Несколько независимых задач — предложит разделить. План уже есть → intent ретроспективный, в шапке <code>Written after plan:</code>, нужен <code>/sattva:check</code>.</td></tr>
+<tr><td><code>/sattva:intent accept &lt;путь&gt;</code></td><td><code>Status: accepted</code>. Твоя команда и есть подтверждение. Open question, меняющий объём, — отказ со списком.</td></tr></table></div>
 <h3>Как проверить, что сработал</h3>
 <ul><li>В файле есть все разделы, ID у каждого результата и ограничения, <code>Status: draft</code>, Decisions log с датами.</li>
 <li>Каждое утверждение в Problem и Affected восходит к твоим словам или проверенному факту; догадки ушли в Open questions.</li>
@@ -350,76 +350,76 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
 <p class="muted">ID не перенумеровываются и не переиспользуются; снятая строка остаётся зачёркнутой: <code>~~I-4 …~~ dropped дата: почему</code>. Правка intent после плана допустима — запись в Decisions log; check и verify считают её сигналом переделки.</p>
 </div></details>
 
-<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:plan</span><span class="what">План M и L в docs/keystone/&lt;дата&gt;-&lt;slug&gt;/plan.md; план = спека.</span></summary><div class="body">
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/sattva:plan</span><span class="what">План M и L в docs/sattva/&lt;дата&gt;-&lt;slug&gt;/plan.md; план = спека.</span></summary><div class="body">
 <div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
-<tr><td><code>/keystone:plan &lt;intent или задача&gt; [S|M|L]</code></td><td>Opus, только по явной команде. S — плана нет, скилл останавливается. M — новая папка, без intent и check. L — по <code>intent.md</code>, план в ту же папку. Разведка (Explore на Haiku), сверка требований, Project rules check, Risks, задачи с файлами и проверками, Commit Plan на 5+ задач.</td></tr>
-<tr><td><code>/keystone:plan &lt;путь к plan.md&gt;</code></td><td>Существующий draft: не переписывается, сразу к «Перед Approve» и Approve (так одобряется план от <code>/keystone:fix</code> M).</td></tr></table></div>
+<tr><td><code>/sattva:plan &lt;intent или задача&gt; [S|M|L]</code></td><td>Opus, только по явной команде. S — плана нет, скилл останавливается. M — новая папка, без intent и check. L — по <code>intent.md</code>, план в ту же папку. Разведка (Explore на Haiku), сверка требований, Project rules check, Risks, задачи с файлами и проверками, Commit Plan на 5+ задач.</td></tr>
+<tr><td><code>/sattva:plan &lt;путь к plan.md&gt;</code></td><td>Существующий draft: не переписывается, сразу к «Перед Approve» и Approve (так одобряется план от <code>/sattva:fix</code> M).</td></tr></table></div>
 <ul><li>Settings (tests / logging / docs) выводятся из репозитория и пишутся одной строкой, не спрашиваются.</li>
 <li>Requirements Reconciliation Gate: строка на каждый <code>I-n</code>; при независимых режимах — перечень поддерживаемых сочетаний.</li>
-<li>Перед Approve: три ответа, на L — <code>/keystone:check</code> (без него самопроверки нет), потом Approve / Adjust. Approve → <code>Status: approved</code> и базовый коммит.</li></ul>
+<li>Перед Approve: три ответа, на L — <code>/sattva:check</code> (без него самопроверки нет), потом Approve / Adjust. Approve → <code>Status: approved</code> и базовый коммит.</li></ul>
 <h3>Как проверить, что сработал</h3>
 <ul><li>В шапке <code>Level · Mode · Status</code>, <code>Authority</code> (на L) и <code>Settings</code> с причинами.</li>
 <li>Строк сверки не меньше, чем непогашенных <code>I-n</code>; нет «handle / support / as needed / etc.».</li>
 <li>Есть <code>Project rules check</code> и <code>## Risks</code>; на L — coverage-строка от check.</li></ul>
 </div></details>
 
-<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:check</span><span class="what">Независимая проверка плана в чистых контекстах, до Approve.</span></summary><div class="body">
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/sattva:check</span><span class="what">Независимая проверка плана в чистых контекстах, до Approve.</span></summary><div class="body">
 <div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
-<tr><td><code>/keystone:check [intent] [план]</code></td><td>Агент-анализатор и агент-валидатор в чистых контекстах (Opus). Feasibility sweep: версии библиотек, деплой и env, генерация, privacy, вычисления, платформы, устаревший текст, необратимые действия. Для каждого <code>I-n</code> — covered / partial / missing, строка <code>Coverage: a/b = N%</code>. План правится только после твоего ответа; код не правится никогда.</td></tr></table></div>
+<tr><td><code>/sattva:check [intent] [план]</code></td><td>Агент-анализатор и агент-валидатор в чистых контекстах (Opus). Feasibility sweep: версии библиотек, деплой и env, генерация, privacy, вычисления, платформы, устаревший текст, необратимые действия. Для каждого <code>I-n</code> — covered / partial / missing, строка <code>Coverage: a/b = N%</code>. План правится только после твоего ответа; код не правится никогда.</td></tr></table></div>
 <h3>Как проверить, что сработал</h3>
 <ul><li>Отчёт по шаблону: группы находок, Summary (с Hidden/Adjusted by validator), строка на каждый I-n, <code>Notes</code>, <code>Coverage … verdict</code>.</li>
 <li>Покрытие: partial = 0.5; PASS при ≥ 90 %, без missing и нарушений правил.</li>
 <li>После «Apply all» строка Coverage записана в план после <code>Project rules check</code>; <code>[x]</code> и Original Request не тронуты; ничего не закоммичено.</li></ul>
 </div></details>
 
-<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:implement</span><span class="what">Реализация плана задача за задачей; план всегда равен построенному.</span></summary><div class="body">
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/sattva:implement</span><span class="what">Реализация плана задача за задачей; план всегда равен построенному.</span></summary><div class="body">
 <div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
-<tr><td><code>/keystone:implement [план]</code></td><td>Только по явной команде. Берёт план (или активный), ставит <code>implementing</code>, делает базовый коммит (если план не закоммичен), идёт по задачам с проверкой согласованности, <code>[x]</code> сразу, коммитом, продолжением после <code>/clear</code>. Дрейф — в плане в том же коммите, <code>BLOCKED:</code> — буквально в конце строки задачи, отчёт — строка в строку.</td></tr></table></div>
+<tr><td><code>/sattva:implement [план]</code></td><td>Только по явной команде. Берёт план (или активный), ставит <code>implementing</code>, делает базовый коммит (если план не закоммичен), идёт по задачам с проверкой согласованности, <code>[x]</code> сразу, коммитом, продолжением после <code>/clear</code>. Дрейф — в плане в том же коммите, <code>BLOCKED:</code> — буквально в конце строки задачи, отчёт — строка в строку.</td></tr></table></div>
 <h3>Как проверить, что сработал</h3>
 <ul><li>Baseline first: план и intent закоммичены до кода; галочки ставятся по ходу, а не пачкой в конце.</li>
 <li>Сумма a+b+c+d в строке <code>Reconciliation</code> равна числу строк таблицы; pass стоит только у проверок, реально выполненных в этой сессии.</li>
 <li>Не создано отчётных файлов; <code>git push</code> не запущен.</li></ul>
 </div></details>
 
-<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:fix</span><span class="what">Багфикс регрессией вперёд: воспроизвести, тест, починить, тот же тест зелёный.</span></summary><div class="body">
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/sattva:fix</span><span class="what">Багфикс регрессией вперёд: воспроизвести, тест, починить, тот же тест зелёный.</span></summary><div class="body">
 <div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
-<tr><td><code>/keystone:fix &lt;баг&gt;</code></td><td>Спрашивает режим: <b>Fix now</b> (S) — план сразу в <code>implementing</code>; <b>Plan first</b> (M) — план <code>draft</code> и остановка. Баг с данными, безопасностью или чужим модулем — это L, идти через <code>/keystone:start</code>.</td></tr>
-<tr><td><code>/keystone:fix</code> (без аргумента)</td><td>Продолжает активный fix-план; <code>draft</code> — сначала Approve через <code>/keystone:plan</code>.</td></tr></table></div>
+<tr><td><code>/sattva:fix &lt;баг&gt;</code></td><td>Спрашивает режим: <b>Fix now</b> (S) — план сразу в <code>implementing</code>; <b>Plan first</b> (M) — план <code>draft</code> и остановка. Баг с данными, безопасностью или чужим модулем — это L, идти через <code>/sattva:start</code>.</td></tr>
+<tr><td><code>/sattva:fix</code> (без аргумента)</td><td>Продолжает активный fix-план; <code>draft</code> — сначала Approve через <code>/sattva:plan</code>.</td></tr></table></div>
 <ul><li>Сначала регрессия: минимальная проверка, <b>падающий тест новым файлом</b>, подтверждённое падение, потом минимальная правка, та же проверка зелёная.</li>
 <li>Тесты из HEAD не правятся (гейт запрещает, включая перезапись). Неверный старый тест — решает человек.</li>
 <li>В план пишутся <code>## Root cause</code> и <code>## Prevention</code>; отдельных отчётов нет.</li>
-<li>S: после зелёной регрессии <b>в этой сессии</b> скилл сам ставит <code>Status: verified</code> перед единственным коммитом кода и плана. M: коммит и совет <code>/keystone:verify</code> в новой сессии.</li></ul>
+<li>S: после зелёной регрессии <b>в этой сессии</b> скилл сам ставит <code>Status: verified</code> перед единственным коммитом кода и плана. M: коммит и совет <code>/sattva:verify</code> в новой сессии.</li></ul>
 <h3>Как проверить, что сработал</h3>
 <ul><li>В выводе процитировано падение до фикса и успех после — для одной и той же проверки.</li>
 <li>Тест — новый файл; изменённых тестов из HEAD нет; в плане заполнены Root cause и Prevention.</li></ul>
 </div></details>
 
-<details class="skill"><summary><span class="pill core">порт</span><span class="name">/keystone:verify</span><span class="what">Сверка готовой работы с планом и intent в чистом контексте; запись verify.md.</span></summary><div class="body">
+<details class="skill"><summary><span class="pill core">порт</span><span class="name">/sattva:verify</span><span class="what">Сверка готовой работы с планом и intent в чистом контексте; запись verify.md.</span></summary><div class="body">
 <div class="tbl"><table><tr><th>Вызов</th><th>Что делает</th></tr>
-<tr><td><code>/keystone:verify [план [base-ref]]</code></td><td>Определяет диф от базового коммита, запускает команды проверки (сборка, тесты, линтер), вызывает <code>keystone:verifier</code> в чистом контексте. Каждая задача, строка сверки и <code>I-n</code> — ok / missing / wrong / not proven / BLOCKED с доказательством; unrequested; adversarial pass по изменённой логике. Вердикт PASS / PASS-UNPROVEN / FAIL, запись в <code>verify.md</code>. Пишет только <code>verify.md</code> и значение <code>Status:</code>.</td></tr>
-<tr><td><code>/keystone:verify accept</code></td><td>Только после PASS-UNPROVEN: показывает список not proven / BLOCKED, спрашивает «Yes / No»; на Yes дописывает <code>Accepted unproven by …</code> в <code>verify.md</code> и ставит <code>verified</code>.</td></tr></table></div>
+<tr><td><code>/sattva:verify [план [base-ref]]</code></td><td>Определяет диф от базового коммита, запускает команды проверки (сборка, тесты, линтер), вызывает <code>sattva:verifier</code> в чистом контексте. Каждая задача, строка сверки и <code>I-n</code> — ok / missing / wrong / not proven / BLOCKED с доказательством; unrequested; adversarial pass по изменённой логике. Вердикт PASS / PASS-UNPROVEN / FAIL, запись в <code>verify.md</code>. Пишет только <code>verify.md</code> и значение <code>Status:</code>.</td></tr>
+<tr><td><code>/sattva:verify accept</code></td><td>Только после PASS-UNPROVEN: показывает список not proven / BLOCKED, спрашивает «Yes / No»; на Yes дописывает <code>Accepted unproven by …</code> в <code>verify.md</code> и ставит <code>verified</code>.</td></tr></table></div>
 <h3>Как проверить, что сработал</h3>
 <ul><li>Рядом с каждым статусом — доказательство: file:line, имя теста или команда и строка вывода.</li>
 <li>Итог <code>n rows — ok a, missing b, wrong c, not proven d, BLOCKED e; unrequested u</code>, причём a+b+c+d+e = n.</li>
 <li>Строки с <code>BLOCKED:</code> посчитаны как открытая работа, не как ok; <code>[x]</code> без доказательства — not proven.</li>
-<li>Строка <code>Keystone Chain:</code> есть в отчёте дословно, даже когда всё в порядке; <code>verify.md</code> закоммичен отдельно.</li></ul>
+<li>Строка <code>Sattva Chain:</code> есть в отчёте дословно, даже когда всё в порядке; <code>verify.md</code> закоммичен отдельно.</li></ul>
 </div></details>
 
 <h3>Остальные 15 скиллов (0.8)</h3>
 <p class="muted">Краткая сводка. Параметры, модели и «кто вызывает» — в <a href="skills.ru.md">справочнике</a>.</p>
 <div class="card tbl"><table>
 <tr><th>Группа</th><th>Скилл</th><th>Коротко</th></tr>
-<tr><td>Контекст проекта</td><td><code>/keystone:setup</code></td><td>Пишет короткий <code>CLAUDE.md</code>, <code>.claude/rules/base.md</code> и <code>.mcp.json</code> после диффа и «да». Готовый <code>AGENTS.md</code> импортирует через <code>@AGENTS.md</code>.</td></tr>
-<tr><td></td><td><code>/keystone:architecture</code></td><td>Подбирает паттерн и пишет <code>docs/architecture.md</code>; у каждого правила MUST NOT своя grep-проверка.</td></tr>
-<tr><td></td><td><code>/keystone:docs</code></td><td>README как лендинг и страницы в <code>docs/</code>; режим <code>update</code> вызывает implement.</td></tr>
-<tr><td>Проверки и качество</td><td><code>/keystone:security</code></td><td>Аудит OWASP, prompt injection, race conditions. Итог: Security gate pass / warn / fail.</td></tr>
-<tr><td></td><td><code>/keystone:review</code></td><td>Ревью без правок; валидатор в чистом контексте перепроверяет каждую находку.</td></tr>
-<tr><td></td><td><code>/keystone:qa</code>, <code>/keystone:qa-check</code></td><td>Сценарии ручного тестирования со ссылками на <code>I-n</code> и их прогон (вы или агент).</td></tr>
-<tr><td></td><td><code>/keystone:ask</code></td><td>Отвечает только по доказательствам, иначе <code>INSUFFICIENT INFORMATION</code>.</td></tr>
-<tr><td>Сборка и выкладка</td><td><code>/keystone:dockerize</code>, <code>/keystone:ci</code></td><td>Docker и CI-пайплайн из того, что реально есть в проекте; пишут после показа файлов и «да».</td></tr>
-<tr><td>Уроки и знания</td><td><code>/keystone:roadmap</code></td><td><code>docs/roadmap.md</code> с вехами <code>M-n</code>.</td></tr>
-<tr><td></td><td><code>/keystone:evolve</code>, <code>/keystone:transfer</code></td><td>Превращают повторяющиеся уроки (свои или из другого проекта) в правила <code>.claude/rules/</code> после «да».</td></tr>
-<tr><td></td><td><code>/keystone:reference</code>, <code>/keystone:distill</code></td><td>Справочник проекта; превращение книги или документов в скилл.</td></tr>
+<tr><td>Контекст проекта</td><td><code>/sattva:setup</code></td><td>Пишет короткий <code>CLAUDE.md</code>, <code>.claude/rules/base.md</code> и <code>.mcp.json</code> после диффа и «да». Готовый <code>AGENTS.md</code> импортирует через <code>@AGENTS.md</code>.</td></tr>
+<tr><td></td><td><code>/sattva:architecture</code></td><td>Подбирает паттерн и пишет <code>docs/architecture.md</code>; у каждого правила MUST NOT своя grep-проверка.</td></tr>
+<tr><td></td><td><code>/sattva:docs</code></td><td>README как лендинг и страницы в <code>docs/</code>; режим <code>update</code> вызывает implement.</td></tr>
+<tr><td>Проверки и качество</td><td><code>/sattva:security</code></td><td>Аудит OWASP, prompt injection, race conditions. Итог: Security gate pass / warn / fail.</td></tr>
+<tr><td></td><td><code>/sattva:review</code></td><td>Ревью без правок; валидатор в чистом контексте перепроверяет каждую находку.</td></tr>
+<tr><td></td><td><code>/sattva:qa</code>, <code>/sattva:qa-check</code></td><td>Сценарии ручного тестирования со ссылками на <code>I-n</code> и их прогон (вы или агент).</td></tr>
+<tr><td></td><td><code>/sattva:ask</code></td><td>Отвечает только по доказательствам, иначе <code>INSUFFICIENT INFORMATION</code>.</td></tr>
+<tr><td>Сборка и выкладка</td><td><code>/sattva:dockerize</code>, <code>/sattva:ci</code></td><td>Docker и CI-пайплайн из того, что реально есть в проекте; пишут после показа файлов и «да».</td></tr>
+<tr><td>Уроки и знания</td><td><code>/sattva:roadmap</code></td><td><code>docs/roadmap.md</code> с вехами <code>M-n</code>.</td></tr>
+<tr><td></td><td><code>/sattva:evolve</code>, <code>/sattva:transfer</code></td><td>Превращают повторяющиеся уроки (свои или из другого проекта) в правила <code>.claude/rules/</code> после «да».</td></tr>
+<tr><td></td><td><code>/sattva:reference</code>, <code>/sattva:distill</code></td><td>Справочник проекта; превращение книги или документов в скилл.</td></tr>
 </table></div>
 
 </section>
@@ -429,7 +429,7 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
 <h2>Чек-листы «правильно ли отработало»</h2>
 <p class="muted">Отметки сохраняются в этом браузере. <button class="opt" id="reset" style="padding:3px 10px;font-size:13px">Сбросить</button></p>
 <div class="grid">
-  <div class="card check" data-list="intent"><h3>После /keystone:intent</h3><div class="progress"><i></i></div>
+  <div class="card check" data-list="intent"><h3>После /sattva:intent</h3><div class="progress"><i></i></div>
     <label><input type="checkbox"><span>Агент сам нашёл факты в коде, не спрашивал меня о них</span></label>
     <label><input type="checkbox"><span>Grill дошёл до конца: итог D1…Dn и просьба подтвердить</span></label>
     <label><input type="checkbox"><span>Все разделы, Status: draft, у результатов и ограничений ID I-n</span></label>
@@ -437,7 +437,7 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
     <label><input type="checkbox"><span>Каждый Desired outcome проверяемый, внутри одна задача</span></label>
     <label><input type="checkbox"><span>Я прочитал целиком, исправил неточности и сделал accept</span></label>
   </div>
-  <div class="card check" data-list="plan"><h3>После /keystone:plan</h3><div class="progress"><i></i></div>
+  <div class="card check" data-list="plan"><h3>После /sattva:plan</h3><div class="progress"><i></i></div>
     <label><input type="checkbox"><span>В шапке Level, Mode, Status: draft; на L — Authority с путём и датой</span></label>
     <label><input type="checkbox"><span>Settings выведены из репо, не спрошены; у каждого значения причина</span></label>
     <label><input type="checkbox"><span>Для каждого I-n есть строка сверки с проверкой</span></label>
@@ -446,14 +446,14 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
     <label><input type="checkbox"><span>У каждой задачи файлы и проверка; нет «as needed / etc.»</span></label>
     <label><input type="checkbox"><span>Approve: Status approved и базовый коммит; дальше новая сессия (/clear)</span></label>
   </div>
-  <div class="card check" data-list="check"><h3>После /keystone:check</h3><div class="progress"><i></i></div>
+  <div class="card check" data-list="check"><h3>После /sattva:check</h3><div class="progress"><i></i></div>
     <label><input type="checkbox"><span>Отработали analyzer и validator (в Summary есть Hidden/Adjusted)</span></label>
     <label><input type="checkbox"><span>Feasibility sweep дал находки или явное «solid»</span></label>
     <label><input type="checkbox"><span>Строка на каждый I-n и итог Coverage ≥ 90 %, verdict PASS</span></label>
     <label><input type="checkbox"><span>План правился только после моего ответа; [x] и Original Request целы</span></label>
     <label><input type="checkbox"><span>Строка Coverage записана после Project rules check; код не тронут</span></label>
   </div>
-  <div class="card check" data-list="impl"><h3>После /keystone:implement</h3><div class="progress"><i></i></div>
+  <div class="card check" data-list="impl"><h3>После /sattva:implement</h3><div class="progress"><i></i></div>
     <label><input type="checkbox"><span>Baseline first: план и intent закоммичены до первой задачи</span></label>
     <label><input type="checkbox"><span>Галочки [x] ставились сразу после задачи, а не пачкой</span></label>
     <label><input type="checkbox"><span>Отклонения от плана — в тексте плана, в том же коммите, что и код</span></label>
@@ -461,7 +461,7 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
     <label><input type="checkbox"><span>Отчёт строка в строку; pass+fail+not run+BLOCKED равно числу строк</span></label>
     <label><input type="checkbox"><span>Строка Level · cost; verify не запускался, push не делался</span></label>
   </div>
-  <div class="card check" data-list="fix"><h3>После /keystone:fix</h3><div class="progress"><i></i></div>
+  <div class="card check" data-list="fix"><h3>После /sattva:fix</h3><div class="progress"><i></i></div>
     <label><input type="checkbox"><span>Регрессия написана первой, новым файлом, и падала до фикса</span></label>
     <label><input type="checkbox"><span>Фикс минимальный, исправлена причина, а не симптом</span></label>
     <label><input type="checkbox"><span>Та же проверка зелёная в этой сессии (вывод процитирован)</span></label>
@@ -469,12 +469,12 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
     <label><input type="checkbox"><span>В плане заполнены Root cause и Prevention</span></label>
     <label><input type="checkbox"><span>S: Status verified и один коммит; M: draft-план или совет на verify</span></label>
   </div>
-  <div class="card check" data-list="verify"><h3>После /keystone:verify</h3><div class="progress"><i></i></div>
+  <div class="card check" data-list="verify"><h3>После /sattva:verify</h3><div class="progress"><i></i></div>
     <label><input type="checkbox"><span>Команды проверки выполнены; пропущенные честно помечены not run</span></label>
     <label><input type="checkbox"><span>Строка на каждую задачу, строку сверки и I-n, с доказательством</span></label>
     <label><input type="checkbox"><span>Подсчёт ok+missing+wrong+not proven+BLOCKED равен числу строк</span></label>
     <label><input type="checkbox"><span>Unrequested пуст или объяснён; [x] без доказательства не засчитан</span></label>
-    <label><input type="checkbox"><span>Есть строка «Keystone Chain:» и verify.md в папке задачи</span></label>
+    <label><input type="checkbox"><span>Есть строка «Sattva Chain:» и verify.md в папке задачи</span></label>
     <label><input type="checkbox"><span>Вердикт PASS → Status verified; PASS-UNPROVEN → доказал строки или сделал accept</span></label>
   </div>
 </div>
@@ -488,15 +488,15 @@ Written after plan: &lt;путь&gt;   (только для ретроспект
 <tr><td>Скиллы плагина</td><td><code>skills/start|grill|intent|plan|check|implement|fix|verify</code>; манифесты — <code>.claude-plugin/plugin.json</code>, <code>marketplace.json</code></td></tr>
 <tr><td>Агенты</td><td><code>agents/analyzer.md</code>, <code>validator.md</code> (check), <code>verifier.md</code> (verify)</td></tr>
 <tr><td>Хуки (гейты)</td><td><code>hooks/gate.mjs</code>, <code>hooks/hooks.json</code></td></tr>
-<tr><td>Артефакты задачи в проекте</td><td><code>docs/keystone/&lt;дата&gt;-&lt;slug&gt;/</code>: <code>intent.md</code>, <code>plan.md</code>, <code>verify.md</code>. В проекте с AI Factory — в <code>paths.specs</code></td></tr>
+<tr><td>Артефакты задачи в проекте</td><td><code>docs/sattva/&lt;дата&gt;-&lt;slug&gt;/</code>: <code>intent.md</code>, <code>plan.md</code>, <code>verify.md</code>. В проекте с AI Factory — в <code>paths.specs</code></td></tr>
 <tr><td>Атрибуция</td><td><code>THIRD_PARTY_NOTICES.md</code> — что портировано из AI Factory 2.19.0 (MIT)</td></tr>
 <tr><td>Тесты</td><td><code>npm test</code>, <code>claude plugin validate .</code>, <code>claude plugin test .</code>; headless-стенд — <code>test/harness/README.md</code>, сводки — <code>docs/test-reports/</code></td></tr>
 </table></div>
 
-<h3>Установить плагин (скиллы <code>/keystone:*</code>)</h3>
-<pre>claude plugin marketplace add sattva2020/keystone
-claude plugin install keystone@keystone</pre>
-<p class="muted">Плагинные скиллы имеют префикс <code>keystone:</code>, поэтому личные скиллы из <code>~/.claude/skills</code> их не перекрывают.</p>
+<h3>Установить плагин (скиллы <code>/sattva:*</code>)</h3>
+<pre>claude plugin marketplace add sattva2020/sattva-plugin
+claude plugin install sattva@sattva</pre>
+<p class="muted">Плагинные скиллы имеют префикс <code>sattva:</code>, поэтому личные скиллы из <code>~/.claude/skills</code> их не перекрывают.</p>
 <h3>Разовая проба без установки</h3>
 <pre>claude --plugin-dir <path-to-repo></pre>
 
@@ -514,22 +514,22 @@ claude plugin install keystone@keystone</pre>
 <h2>Если что-то пошло не так</h2>
 <input class="search" id="q" placeholder="Поиск по вопросам: например, «push» или «BLOCKED»">
 <div class="card" id="faqlist">
-<details class="faq"><summary>Гейт не даёт править код</summary><div>Есть активный план в <code>draft</code> (самая свежая папка задачи). Либо одобри его: <code>/keystone:plan &lt;путь к plan.md&gt;</code> → Approve; либо, если план не нужен, поставь в его шапке <code>Status: abandoned</code>. Правки внутри папки задачи разрешены. Аварийно — запуск с <code>KEYSTONE_GATES=off</code>. Если мешает тест-файл во время fix: регрессию пиши новым файлом, а неверный старый тест — решение человека.</div></details>
-<details class="faq"><summary>push запрещён</summary><div>Пока есть активный план, <code>git push</code> и <code>gh pr create</code> закрыты. Открывает их <code>/keystone:verify</code> с вердиктом PASS (<code>Status: verified</code>) или <code>/keystone:verify accept</code> после PASS-UNPROVEN. Если план больше не нужен — <code>Status: abandoned</code>. Не снимай гейт, чтобы обойти FAIL: сначала <code>/keystone:fix</code> или <code>/keystone:implement</code>.</div></details>
+<details class="faq"><summary>Гейт не даёт править код</summary><div>Есть активный план в <code>draft</code> (самая свежая папка задачи). Либо одобри его: <code>/sattva:plan &lt;путь к plan.md&gt;</code> → Approve; либо, если план не нужен, поставь в его шапке <code>Status: abandoned</code>. Правки внутри папки задачи разрешены. Аварийно — запуск с <code>SATTVA_GATES=off</code>. Если мешает тест-файл во время fix: регрессию пиши новым файлом, а неверный старый тест — решение человека.</div></details>
+<details class="faq"><summary>push запрещён</summary><div>Пока есть активный план, <code>git push</code> и <code>gh pr create</code> закрыты. Открывает их <code>/sattva:verify</code> с вердиктом PASS (<code>Status: verified</code>) или <code>/sattva:verify accept</code> после PASS-UNPROVEN. Если план больше не нужен — <code>Status: abandoned</code>. Не снимай гейт, чтобы обойти FAIL: сначала <code>/sattva:fix</code> или <code>/sattva:implement</code>.</div></details>
 <details class="faq"><summary>Stop-хук напоминает о задачах</summary><div>План в <code>implementing</code>, а в <code>## Tasks</code> остались <code>[ ]</code> без <code>BLOCKED:</code>. Варианты: продолжить задачи; дописать <code>BLOCKED: причина</code> в конец строки той, что выполнить нельзя; либо сказать одной строкой, что ты сделал паузу или ждёшь ответа, и завершить ход. Напоминание приходит один раз за ход и вопросам человеку не мешает.</div></details>
-<details class="faq"><summary>Скилл /keystone:* не виден</summary><div>Плагин не установлен или не включён. Проверь <code>claude plugin list</code>: должен быть <code>keystone</code> в состоянии enabled. Если нет — выполни <code>claude plugin marketplace add sattva2020/keystone</code> и <code>claude plugin install keystone@keystone</code> (или запусти <code>claude --plugin-dir …</code>), затем открой новую сессию: список скиллов запоминается на старте.</div></details>
-<details class="faq"><summary>Нужен ли AI Factory?</summary><div>Нет. Keystone — самостоятельный плагин, все 23 скилла работают без него. Если в проекте уже есть файлы AI Factory (<code>.ai-factory/*</code>), Keystone читает их как запасной источник, когда нет нативных <code>CLAUDE.md</code>, <code>docs/architecture.md</code> и <code>.claude/rules</code>. Что взято из AI Factory и почему — в <a href="ai-factory.ru.md">ai-factory.ru.md</a>.</div></details>
+<details class="faq"><summary>Скилл /sattva:* не виден</summary><div>Плагин не установлен или не включён. Проверь <code>claude plugin list</code>: должен быть <code>sattva</code> в состоянии enabled. Если нет — выполни <code>claude plugin marketplace add sattva2020/sattva-plugin</code> и <code>claude plugin install sattva@sattva</code> (или запусти <code>claude --plugin-dir …</code>), затем открой новую сессию: список скиллов запоминается на старте.</div></details>
+<details class="faq"><summary>Нужен ли AI Factory?</summary><div>Нет. Sattva — самостоятельный плагин, все 23 скилла работают без него. Если в проекте уже есть файлы AI Factory (<code>.ai-factory/*</code>), Sattva читает их как запасной источник, когда нет нативных <code>CLAUDE.md</code>, <code>docs/architecture.md</code> и <code>.claude/rules</code>. Что взято из AI Factory и почему — в <a href="ai-factory.ru.md">ai-factory.ru.md</a>.</div></details>
 <details class="faq"><summary>Агент спрашивает у меня факты о коде</summary><div>Нарушение контракта grill: факты он ищет сам. Ответь «посмотри в коде» и запомни пример — это повод поправить скилл.</div></details>
-<details class="faq"><summary>План говорит «intent is draft, not accepted»</summary><div>Так и задумано: ты ещё не подписал intent. Прочитай его и выполни <code>/keystone:intent accept &lt;путь&gt;/intent.md</code>, затем снова планируй. Или выбери «Plan anyway» — в Authority появится пометка.</div></details>
+<details class="faq"><summary>План говорит «intent is draft, not accepted»</summary><div>Так и задумано: ты ещё не подписал intent. Прочитай его и выполни <code>/sattva:intent accept &lt;путь&gt;/intent.md</code>, затем снова планируй. Или выбери «Plan anyway» — в Authority появится пометка.</div></details>
 <details class="faq"><summary>Check вернул FAIL, но я считаю, что план нормальный</summary><div>FAIL — это missing, нарушение MUST-правила или покрытие ниже 90 %. Partial считается как 0.5: добавь в план проверку, которая доказывает поведение, а не присутствие. Если расхождение в самом intent — поправь его (запись в Decisions log) и запусти check снова.</div></details>
-<details class="faq"><summary>Verify вернул PASS-UNPROVEN</summary><div>Нет ошибок, но часть строк не доказана (только grep/чтение кода) или помечена BLOCKED. Докажи их тестом или запуском и проверь снова, либо осознанно прими: <code>/keystone:verify accept</code> покажет список и спросит «Yes / No»; push останется закрытым до этого.</div></details>
+<details class="faq"><summary>Verify вернул PASS-UNPROVEN</summary><div>Нет ошибок, но часть строк не доказана (только grep/чтение кода) или помечена BLOCKED. Докажи их тестом или запуском и проверь снова, либо осознанно прими: <code>/sattva:verify accept</code> покажет список и спросит «Yes / No»; push останется закрытым до этого.</div></details>
 <details class="faq"><summary>Почему нет spec.md, как в плейбуке Anthropic?</summary><div>План и есть спека: требования и дизайн живут в плане, его таблица сверки ссылается на строки intent по ID, а конфликты с правилами проекта ловит Project rules check. Отдельный документ дублировал бы план.</div></details>
 <details class="faq"><summary>Intent получился огромным (много функций сразу)</summary><div>Попроси: «раздели на отдельные intent: &lt;A&gt;, &lt;B&gt;». Одна задача — один intent; иначе план неподъёмен, а один спорный пункт держит всё.</div></details>
-<details class="faq"><summary>Кажется, на мелочь ушла вся цепочка</summary><div>Скажи уровень явно: «это S» — и ответь на вопрос <code>/keystone:start</code>. Если агент предлагает старший уровень, он назвал причину (данные, безопасность, чужой модуль, неясное «готово»); любой признак L делает задачу L. Стенд 11.10.2026: мелкая правка $3.9–10.2 против $30 за полную цепочку.</div></details>
+<details class="faq"><summary>Кажется, на мелочь ушла вся цепочка</summary><div>Скажи уровень явно: «это S» — и ответь на вопрос <code>/sattva:start</code>. Если агент предлагает старший уровень, он назвал причину (данные, безопасность, чужой модуль, неясное «готово»); любой признак L делает задачу L. Стенд 11.10.2026: мелкая правка $3.9–10.2 против $30 за полную цепочку.</div></details>
 </div>
 </section>
 
-<footer>Keystone · справка к версии 0.6.0 · 12.10.2026</footer>
+<footer>Sattva · справка к версии 0.6.0 · 12.10.2026</footer>
 </main>
 
 <script>

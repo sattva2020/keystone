@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { collect, findBase, git, trend, findings, ceiling, gateFails } from '../skills/verify/scripts/collect.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const DIR = 'docs/keystone/2026-11-09-x';
+const DIR = 'docs/sattva/2026-11-09-x';
 const PLAN = `${DIR}/plan.md`;
 const VERIFY = `${DIR}/verify.md`;
 const INTENT = `${DIR}/intent.md`;
@@ -27,7 +27,7 @@ const TASKS = '- [ ] 1. a — files: src/a.js — check: npm test\n- [ ] 2. b �
 const planText = ({ level = 'L', settings = 'Settings: tests — yes', tasks = TASKS, recon = '' } = {}) =>
   `# Plan: x\n\nLevel: ${level} · Mode: feature · Status: implementing\nAuthority: intent.md — \`${INTENT}\` (accepted)\n${settings}\n\n${recon}## Tasks\n${tasks}`;
 const vmd = (base, report, { checks = '', carried = '', verdict = 'FAIL', sweep = '', late = '' } = {}) =>
-  `# Verify: x\nDate: 2026-11-09 · Base: ${base.slice(0, 7)} · Verdict: ${verdict}\n\n## Checks\n- base: ${base.slice(0, 7)}\n${checks}\n## Carried\n${carried}\n## Report\nKeystone verify: ${PLAN} · base ${base.slice(0, 7)}\n${report}\n\n${sweep ? `## Sweep\n${sweep}\n\n` : ''}## Verdict\n${verdict}\n${late}`;
+  `# Verify: x\nDate: 2026-11-09 · Base: ${base.slice(0, 7)} · Verdict: ${verdict}\n\n## Checks\n- base: ${base.slice(0, 7)}\n${checks}\n## Carried\n${carried}\n## Report\nSattva verify: ${PLAN} · base ${base.slice(0, 7)}\n${report}\n\n${sweep ? `## Sweep\n${sweep}\n\n` : ''}## Verdict\n${verdict}\n${late}`;
 
 function setup(opts = {}) {
   const root = mkdtempSync(join(tmpdir(), 'ks-stage-'));
@@ -66,7 +66,7 @@ test('I-7 ceiling after the third judged FAIL', () => {
 
 test('I-7 build-failed run and accept commit do not count', () => {
   const { root, base, shas } = fails(2);
-  const stop = vmd(base, '', { checks: '- build: npm run build → fail\n' }).replace(/(## Report\n)Keystone verify: .*\n/, '$1not judged — build failed\n');
+  const stop = vmd(base, '', { checks: '- build: npm run build → fail\n' }).replace(/(## Report\n)Sattva verify: .*\n/, '$1not judged — build failed\n');
   commit(root, { [VERIFY]: stop }, 'verify 3: build failed');
   commit(root, { [VERIFY]: `${stop}Accepted unproven by t 2026-11-09: Task 2\n` }, 'docs(verify): accept');
   assert.equal(ceiling(root, PLAN).f, 2);
@@ -278,7 +278,7 @@ test('I-12 legacy plan: sweep n/a, ceiling counts old runs', () => {
 test('I-10 build failed: sweep stays due', () => {
   const { root, base } = setup();
   const stop = vmd(base, '', { checks: '- build: npm run build → fail\n- sweep: due — first verify\n', sweep: 'Sweep: not run — build failed' })
-    .replace(/(## Report\n)Keystone verify: .*\n/, '$1not judged — build failed\n');
+    .replace(/(## Report\n)Sattva verify: .*\n/, '$1not judged — build failed\n');
   commit(root, { [VERIFY]: stop }, 'verify 1: build failed');
   assert.equal(sweepOf(out(root)), 'sweep: due — not done yet (Sweep: not run — build failed)');
   // the failed-build branch prints the sweep line right after the marker
@@ -347,11 +347,11 @@ test('I-3 verifier prints Impact; carried BLOCKED and the sweep gate pass throug
 });
 
 test('review and security know the sweep call', () => {
-  hasAll('skills/review/SKILL.md', '## Called from /keystone:verify (sweep)', 'section: critical|suggestion', 'Do not run the validator');
+  hasAll('skills/review/SKILL.md', '## Called from /sattva:verify (sweep)', 'section: critical|suggestion', 'Do not run the validator');
   const sec = text('skills/security/SKILL.md');
   assert.match(sec.split('## Modes')[1].split('\n## ')[0], /`<plan path> sweep \[files: <a, b>\]`/, 'Modes table');
   assert.match(sec.match(/^argument-hint: .*$/m)[0], /<plan path> sweep \[files: <a, b>\]/);
-  hasAll('skills/security/SKILL.md', 'Called from /keystone:verify', 'no menu, no `Next:`');
+  hasAll('skills/security/SKILL.md', 'Called from /sattva:verify', 'no menu, no `Next:`');
 });
 
 // --- Task 5: SWEEP.md, SKILL.md, CHECKS.md ---
@@ -360,9 +360,9 @@ const SW = 'skills/verify/references/SWEEP.md';
 const SK = 'skills/verify/SKILL.md';
 
 test('I-1 SWEEP.md launches verifier and review finder in one message', () => {
-  assert.match(text(SW), /^<!-- original Keystone file \(MIT\) -->/);
-  hasAll(SW, 'one message', 'keystone:verifier', 'general-purpose', 'model: "opus"', '/keystone:security <plan path> sweep',
-    'keystone:review-validator', '../review/references/VALIDATOR.md', '../review/references/SEVERITY.md', '../review/references/CHECK-MODE.md',
+  assert.match(text(SW), /^<!-- original Sattva file \(MIT\) -->/);
+  hasAll(SW, 'one message', 'sattva:verifier', 'general-purpose', 'model: "opus"', '/sattva:security <plan path> sweep',
+    'sattva:review-validator', '../review/references/VALIDATOR.md', '../review/references/SEVERITY.md', '../review/references/CHECK-MODE.md',
     '## Sweep', 'tasks added');
   hasAll(SK, 'Accepted finding by', 'references/SWEEP.md', 'sweep: due');
 });
@@ -379,7 +379,7 @@ test('I-4 no review/security after the sweep', () => {
   const v = text(SK).replace(/\s+/g, ' ');
   assert.match(v, /\*\*Correctness review — only when the plan had no sweep\*\* \(M, a plan before the sweep, `Sweep: not run`\): run the built-in `\/code-review`/);
   assert.match(v, /After a sweep neither runs/);
-  assert.match(v, /on L without a sweep `\/keystone:review` first/);
+  assert.match(v, /on L without a sweep `\/sattva:review` first/);
 });
 
 test('I-9 Late advisory counter only', () => {
@@ -395,7 +395,7 @@ test('I-11 one retry, then not run', () => hasAll(SW, 'one retry', 'Sweep: not r
 
 test('I-13 verifier prompt carries nothing from the sweep', () => {
   hasAll(SW, 'in the sweep (not for the verifier)', 'The verifier gets no line of the sweep', "never get the\nverifier's output");
-  assert.ok(text(SK).indexOf('references/SWEEP.md') < text(SK).indexOf('subagent_type: "keystone:verifier"'), 'Step 3 routes to SWEEP.md first');
+  assert.ok(text(SK).indexOf('references/SWEEP.md') < text(SK).indexOf('subagent_type: "sattva:verifier"'), 'Step 3 routes to SWEEP.md first');
 });
 
 test('CHECKS.md describes every new line; no trend menu', () => {
@@ -419,11 +419,11 @@ test('I-5 LOOP.md nothing to judge', () => {
   const sec = loop.split('## Nothing to judge')[1].split('\n## ')[0];
   assert.match(sec, /Do not call the verifier; do not rewrite or commit `verify\.md`/);
   assert.match(sec, /Waiting for you:/);
-  assert.match(sec, /\/keystone:verify accept <plan>/);
+  assert.match(sec, /\/sattva:verify accept <plan>/);
 });
 
 test('I-7 ceiling menu and Decide at the ceiling', () => {
-  hasAll('skills/verify/references/LOOP.md', 'ceiling: reached', 'Decide each open finding', 'Back to the plan — /keystone:plan <plan>',
+  hasAll('skills/verify/references/LOOP.md', 'ceiling: reached', 'Decide each open finding', 'Back to the plan — /sattva:plan <plan>',
     'What lifts it:', '`--full`', 'checked before the rules menu');
   const acc = text('skills/verify/references/ACCEPT.md');
   const dec = acc.split('## Decide at the ceiling')[1].split('\n## ')[0];
@@ -437,7 +437,7 @@ test('I-4 AFTER-CHOICE.md: no review and security after the sweep', () => {
   const ac = text('skills/verify/references/AFTER-CHOICE.md').replace(/\s+/g, ' ');
   assert.match(ac, /After the sweep — no review and security again \(I-4\)/);
   assert.match(ac, /lose `Review the diff` and `Security check`/);
-  assert.match(ac, /manual `\/keystone:review` or `\/keystone:security` stays possible/);
+  assert.match(ac, /manual `\/sattva:review` or `\/sattva:security` stays possible/);
 });
 
 // --- Task 8: fix verify ---

@@ -11,13 +11,13 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = join(root, 'skills/feedback/scripts/feedback.mjs');
 const FIX = join(root, 'test/fixtures/feedback');
 const tmp = () => mkdtempSync(join(tmpdir(), 'ks-fb-'));
-const PLAN = 'docs/keystone/2026-01-01-fixture/plan.md';
+const PLAN = 'docs/sattva/2026-01-01-fixture/plan.md';
 
 // the environment of a test: no feedback switches from the outside, storage in a temp folder, and no transcripts of this machine
 // (the summary counts coverage over <config>/projects)
 const envOf = (store, extra = {}) => {
-  const e = { ...process.env, KEYSTONE_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store, ...extra };
-  for (const k of Object.keys(e)) if (/^(KEYSTONE_FEEDBACK$|CLAUDE_PLUGIN_OPTION_)/.test(k) && !(k in extra)) delete e[k];
+  const e = { ...process.env, SATTVA_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store, ...extra };
+  for (const k of Object.keys(e)) if (/^(SATTVA_FEEDBACK$|CLAUDE_PLUGIN_OPTION_)/.test(k) && !(k in extra)) delete e[k];
   return e;
 };
 const g = (cwd, ...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...a], { cwd, encoding: 'utf8' });
@@ -39,7 +39,7 @@ const cli = (args, { input = '', env, cwd } = {}) => spawnSync(process.execPath,
 test('add: none → empty record and "no notes"', () => {
   const store = tmp(), cwd = repo();
   const r = fb.add({ skill: 'start', task: '-' }, 'none\n', envOf(store), cwd);
-  assert.match(r.line, /^Keystone feedback: no notes \(/);
+  assert.match(r.line, /^Sattva feedback: no notes \(/);
   assert.deepEqual(records(store)[0].items, []);
 });
 
@@ -47,7 +47,7 @@ test('add: 3 good lines + 1 malformed → 3 items and a skipped warning, one lin
   const store = tmp(), cwd = repo();
   const text = ['unclear | plan § Step 2 | what is "Settings"?', 'deviated | plan § Step 3 | skipped the grill, the user said so', 'guessed | plan § Step 4 | which test command', 'this is not a note'].join('\n');
   const r = fb.add({ skill: 'plan', task: 'x' }, text, envOf(store), cwd);
-  assert.match(r.line, /^Keystone feedback: 3 notes → .*feedback\.jsonl \(.+\) — skipped 1 malformed line\(s\)$/);
+  assert.match(r.line, /^Sattva feedback: 3 notes → .*feedback\.jsonl \(.+\) — skipped 1 malformed line\(s\)$/);
   assert.equal(r.line.split('\n').length, 1);
   assert.equal(records(store)[0].items.length, 3);
   assert.deepEqual(records(store)[0].items[0], { kind: 'unclear', skill: 'plan', section: 'Step 2', text: 'what is "Settings"?' });
@@ -79,7 +79,7 @@ test('add: secrets, fences and long fields are cleaned — also in judge evidenc
 
 test('add: task and skill keys are normalised', () => {
   const store = tmp(), cwd = repo();
-  for (const t of ['docs/keystone/x/plan.md', 'docs/keystone/x/', 'x', 'docs\\keystone\\x\\plan.md']) fb.add({ skill: 'keystone:start', task: t }, 'none', envOf(store), cwd);
+  for (const t of ['docs/sattva/x/plan.md', 'docs/sattva/x/', 'x', 'docs\\sattva\\x\\plan.md']) fb.add({ skill: 'sattva:start', task: t }, 'none', envOf(store), cwd);
   const rs = records(store);
   assert.deepEqual(rs.map((r) => r.task), ['x', 'x', 'x', 'x']);
   assert.ok(rs.every((r) => r.skill === 'start'));
@@ -110,26 +110,26 @@ test('projectDir: a worktree and its main checkout share a folder; path spelling
   assert.match(fb.projectDir('e:/x/repo', e).name, /^repo-[0-9a-f]{6}$/);
 });
 
-test('add: KEYSTONE_FEEDBACK=off writes nothing; without a switch add still writes (the option is checked by the hook only)', () => {
+test('add: SATTVA_FEEDBACK=off writes nothing; without a switch add still writes (the option is checked by the hook only)', () => {
   const store = tmp(), cwd = repo();
-  const r = cli(['add', '--skill', 'start'], { input: 'none', env: envOf(store, { KEYSTONE_FEEDBACK: 'off' }), cwd });
+  const r = cli(['add', '--skill', 'start'], { input: 'none', env: envOf(store, { SATTVA_FEEDBACK: 'off' }), cwd });
   assert.equal(r.stdout, '');
   assert.equal(r.status, 0);
   assert.equal(existsSync(store) && records(store).length, 0);
   const w = cli(['add', '--skill', 'start'], { input: 'none', env: envOf(store), cwd });
-  assert.match(w.stdout, /^Keystone feedback: no notes/);
+  assert.match(w.stdout, /^Sattva feedback: no notes/);
   assert.equal(records(store).length, 1);
 });
 
 test('add --kind judge: one malformed line → error and no record; none → empty record; hash and tokens kept', () => {
   const store = tmp(), cwd = repo();
   const bad = fb.add({ skill: 'feedback', task: 'x', kind: 'judge', hash: 'aaaaaaaaaaaa' }, 'looks fine to me', envOf(store), cwd);
-  assert.equal(bad.line, 'Keystone feedback judge: error — no parseable line');
+  assert.equal(bad.line, 'Sattva feedback judge: error — no parseable line');
   assert.equal(records(store).length, 0);
   const none = fb.add({ skill: 'feedback', task: 'x', kind: 'judge', hash: 'aaaaaaaaaaaa', tokens: '1234' }, 'none', envOf(store), cwd);
-  assert.match(none.line, /^Keystone feedback judge: no findings/);
+  assert.match(none.line, /^Sattva feedback judge: no findings/);
   const ok = fb.add({ skill: 'feedback', task: 'x', kind: 'judge', hash: 'bbbbbbbbbbbb' }, 'skill-text | added | implement § Step 4 | missing-rule | no rule for X | evidence: 3 retries\nagent | confirmed | verify § Step 2 | skipped-step | did not run it', envOf(store), cwd);
-  assert.match(ok.line, /^Keystone feedback judge: 2 findings/);
+  assert.match(ok.line, /^Sattva feedback judge: 2 findings/);
   const rs = records(store);
   assert.equal(rs[0].kind, 'judge');
   assert.equal(rs[0].hash, 'aaaaaaaaaaaa');
@@ -144,12 +144,12 @@ test('add --kind judge: one malformed line → error and no record; none → emp
 test('hook: silent without a switch; on → instruction with path in quotes, session, rules; option and off', () => {
   const store = tmp();
   assert.equal(cli(['hook'], { input: '{"session_id":"s1"}', env: envOf(store) }).stdout, '');
-  const on = cli(['hook'], { input: '{"session_id":"s1"}', env: envOf(store, { KEYSTONE_FEEDBACK: 'on' }) });
+  const on = cli(['hook'], { input: '{"session_id":"s1"}', env: envOf(store, { SATTVA_FEEDBACK: 'on' }) });
   assert.equal(on.status, 0);
   const out = JSON.parse(on.stdout);
   assert.equal(out.hookSpecificOutput.hookEventName, 'SessionStart');
   const c = out.hookSpecificOutput.additionalContext;
-  assert.ok(c.startsWith('Keystone feedback: on'));
+  assert.ok(c.startsWith('Sattva feedback: on'));
   assert.match(c, /node '[^'\\]+\/skills\/feedback\/scripts\/feedback\.mjs' add --skill <skill> --task "<task folder name or ->" --session s1 /);
   assert.match(c, /^session: s1$/m);
   assert.match(c, /^plugin: \d+\.\d+\.\d+$/m);
@@ -157,18 +157,18 @@ test('hook: silent without a switch; on → instruction with path in quotes, ses
     'first the self-report of verify', 'not an action outside the repository', 'literal commands that push to git or create a PR', '`none`']) assert.ok(c.includes(w), w);
   assert.ok(!/PowerShell/i.test(c));
   assert.ok(!/git push|gh pr create/.test(c), 'the instruction itself must not trip the push gate');
-  assert.match(cli(['hook'], { input: '{}', env: envOf(store, { KEYSTONE_FEEDBACK: 'on' }) }).stdout, /session: -/);
-  for (const v of ['true', '1', 'ON']) assert.ok(cli(['hook'], { input: '{}', env: envOf(store, { CLAUDE_PLUGIN_OPTION_FEEDBACK: v }) }).stdout.includes('Keystone feedback: on'), v);
-  assert.ok(cli(['hook'], { input: '{}', env: envOf(store, { CLAUDE_PLUGIN_OPTION_feedback: 'true' }) }).stdout.includes('Keystone feedback: on'));
+  assert.match(cli(['hook'], { input: '{}', env: envOf(store, { SATTVA_FEEDBACK: 'on' }) }).stdout, /session: -/);
+  for (const v of ['true', '1', 'ON']) assert.ok(cli(['hook'], { input: '{}', env: envOf(store, { CLAUDE_PLUGIN_OPTION_FEEDBACK: v }) }).stdout.includes('Sattva feedback: on'), v);
+  assert.ok(cli(['hook'], { input: '{}', env: envOf(store, { CLAUDE_PLUGIN_OPTION_feedback: 'true' }) }).stdout.includes('Sattva feedback: on'));
   assert.equal(cli(['hook'], { input: '{}', env: envOf(store, { CLAUDE_PLUGIN_OPTION_FEEDBACK: 'false' }) }).stdout, '');
-  assert.equal(cli(['hook'], { input: '{}', env: envOf(store, { CLAUDE_PLUGIN_OPTION_FEEDBACK: 'true', KEYSTONE_FEEDBACK: 'off' }) }).stdout, '');
+  assert.equal(cli(['hook'], { input: '{}', env: envOf(store, { CLAUDE_PLUGIN_OPTION_FEEDBACK: 'true', SATTVA_FEEDBACK: 'off' }) }).stdout, '');
   assert.equal(cli(['hook'], { input: 'not json', env: envOf(store) }).stdout, '');
-  assert.equal(fb.enabled({ KEYSTONE_FEEDBACK: 'off', CLAUDE_PLUGIN_OPTION_FEEDBACK: 'true' }), false);
+  assert.equal(fb.enabled({ SATTVA_FEEDBACK: 'off', CLAUDE_PLUGIN_OPTION_FEEDBACK: 'true' }), false);
 });
 
 test('context: a plugin root with a space stays one quoted path with forward slashes', () => {
-  const c = fb.context('C:\\Users\\John Smith\\.claude\\plugins\\keystone\\', 'abc');
-  assert.ok(c.includes("node 'C:/Users/John Smith/.claude/plugins/keystone/skills/feedback/scripts/feedback.mjs' add"));
+  const c = fb.context('C:\\Users\\John Smith\\.claude\\plugins\\sattva\\', 'abc');
+  assert.ok(c.includes("node 'C:/Users/John Smith/.claude/plugins/sattva/skills/feedback/scripts/feedback.mjs' add"));
   assert.ok(c.includes('session abc') || c.includes('--session abc'));
 });
 
@@ -177,7 +177,7 @@ test('add: storage path that is a file → one error line, exit 0', () => {
   writeFileSync(blocker, 'x');
   const r = cli(['add', '--skill', 'start'], { input: 'none', env: envOf(blocker), cwd: repo() });
   assert.equal(r.status, 0);
-  assert.match(r.stdout, /^Keystone feedback: error — .+/);
+  assert.match(r.stdout, /^Sattva feedback: error — .+/);
   assert.equal(r.stdout.trim().split('\n').length, 1);
 });
 
@@ -192,7 +192,7 @@ test('feedback.mjs: no network, no deletion, only appends to feedback.jsonl', ()
 // a repo with a committed plan, a config dir with the given transcripts
 function world({ transcripts = ['noisy.jsonl'], commitPlan = true } = {}) {
   const cwd = repo(), store = tmp(), cfg = tmp();
-  mkdirSync(join(cwd, 'docs/keystone/2026-01-01-fixture'), { recursive: true });
+  mkdirSync(join(cwd, 'docs/sattva/2026-01-01-fixture'), { recursive: true });
   writeFileSync(join(cwd, PLAN), '# Plan\nLevel: M · Mode: feature · Status: implementing\n');
   if (commitPlan) { g(cwd, 'add', '.'); g(cwd, 'commit', '-qm', 'plan'); }
   mkdirSync(join(cfg, 'projects/x'), { recursive: true });
@@ -200,7 +200,7 @@ function world({ transcripts = ['noisy.jsonl'], commitPlan = true } = {}) {
   transcripts.forEach((f, i) => { const to = join(cfg, 'projects/x', `s${i}.jsonl`); copyFileSync(join(FIX, f), to); utimesSync(to, now, now); });
   return { cwd, store, cfg, env: envOf(store, { CLAUDE_CONFIG_DIR: cfg }) };
 }
-const verifyCommit = (cwd, verdict) => { writeFileSync(join(cwd, 'docs/keystone/2026-01-01-fixture/verify.md'), `# Verify\nDate: x · Verdict: ${verdict}\n`); g(cwd, 'add', '.'); g(cwd, 'commit', '-qm', `verify ${verdict}`); };
+const verifyCommit = (cwd, verdict) => { writeFileSync(join(cwd, 'docs/sattva/2026-01-01-fixture/verify.md'), `# Verify\nDate: x · Verdict: ${verdict}\n`); g(cwd, 'add', '.'); g(cwd, 'commit', '-qm', `verify ${verdict}`); };
 
 test('readTrail: noisy fixture counts are exact', () => {
   const t = fb.readTrail(join(FIX, 'noisy.jsonl'));
@@ -296,8 +296,8 @@ test('signals: the feedback machinery is not part of the trail — same hash aft
   const use = (id, name, input) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] } });
   const res = (id) => JSON.stringify({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'boom', is_error: true }] } });
   appendFileSync(tr, [
-    JSON.stringify({ type: 'user', message: { role: 'user', content: '<command-name>/keystone:feedback</command-name>' } }),
-    use('f1', 'Skill', { skill: 'keystone:feedback', args: `auto ${PLAN}` }), res('f1'),
+    JSON.stringify({ type: 'user', message: { role: 'user', content: '<command-name>/sattva:feedback</command-name>' } }),
+    use('f1', 'Skill', { skill: 'sattva:feedback', args: `auto ${PLAN}` }), res('f1'),
     use('f2', 'Bash', { command: `node "/p/skills/feedback/scripts/feedback.mjs" signals ${PLAN} --auto` }), use('f3', 'Bash', { command: `node "/p/skills/feedback/scripts/feedback.mjs" signals ${PLAN} --auto` }), res('f2'),
   ].join('\n') + '\n');
   const after = fb.signals({ task: 'fixture', transcripts: [tr] }, w.env, w.cwd);
@@ -305,7 +305,7 @@ test('signals: the feedback machinery is not part of the trail — same hash aft
   fb.add({ skill: 'feedback', task: 'fixture', kind: 'judge', hash: before }, 'none', w.env, w.cwd);
   assert.match(fb.signals({ task: 'fixture', transcripts: [tr] }, w.env, w.cwd), /judge: no — already judged/);
   const only = join(w.cfg, 'projects/x/only.jsonl');
-  writeFileSync(only, JSON.stringify({ type: 'user', message: { role: 'user', content: '<command-name>/keystone:feedback</command-name> 2026-01-01-fixture' } }) + '\n');
+  writeFileSync(only, JSON.stringify({ type: 'user', message: { role: 'user', content: '<command-name>/sattva:feedback</command-name> 2026-01-01-fixture' } }) + '\n');
   assert.match(fb.signals({ plan: PLAN }, w.env, w.cwd), /sessions: 1/);
 });
 
@@ -362,7 +362,7 @@ test('summary: coverage — per chain skill, sessions with feedback on where it 
   const dir = join(cfg, 'projects/x');
   mkdirSync(dir, { recursive: true });
   const row = (o) => JSON.stringify(o);
-  const ran = (skill) => row({ type: 'user', message: { role: 'user', content: `<command-name>/keystone:${skill}</command-name>` } });
+  const ran = (skill) => row({ type: 'user', message: { role: 'user', content: `<command-name>/sattva:${skill}</command-name>` } });
   const hook = (attachment) => row({ type: 'attachment', attachment: { hookEvent: 'SessionStart', ...attachment } });
   const session = (id, ...rows) => writeFileSync(join(dir, `${id}.jsonl`), rows.join('\n') + '\n');
   // A: the hook's own output (stdout is still JSON); plan has a report, verify has none
@@ -372,9 +372,9 @@ test('summary: coverage — per chain skill, sessions with feedback on where it 
   // C: the context row; start left no command in the transcript (followed from a menu), only its report
   session('C', hook({ type: 'hook_additional_context', content: [fb.context('/p', 'C')] }));
   // D: the instruction only quoted in a tool result — the session did not start with it
-  session('D', row({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'Keystone feedback: on' }] } }), ran('fix'));
+  session('D', row({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'Sattva feedback: on' }] } }), ran('fix'));
   // E: a session of a plugin version that did not print its version yet
-  session('E', hook({ type: 'hook_additional_context', content: ['Keystone feedback: on\nsession: E'] }), ran('implement'));
+  session('E', hook({ type: 'hook_additional_context', content: ['Sattva feedback: on\nsession: E'] }), ran('implement'));
   put(store, 'p1-aaaaaa', [
     rec({ id: 'a1', project: 'p1-aaaaaa', skill: 'plan', session: 'A' }),
     rec({ id: 'a2', project: 'p1-aaaaaa', skill: 'plan', session: 'A' }), // a second round of the same skill is the same run
@@ -399,11 +399,11 @@ test('summary: coverage — per chain skill, sessions with feedback on where it 
 // ---- boundary input and "never judged twice" (found by the first verify) --------------------------------------------
 
 test('hook: input that is not a hook object stays silent; an odd session id never reaches the instruction', () => {
-  const store = tmp(), env = envOf(store, { KEYSTONE_FEEDBACK: 'on' });
+  const store = tmp(), env = envOf(store, { SATTVA_FEEDBACK: 'on' });
   for (const input of ['null', '123', '"x"', '[]', 'true', '']) {
     const r = cli(['hook'], { input, env });
     assert.equal(r.status, 0, input);
-    if (input === '') assert.match(r.stdout, /Keystone feedback: on/, 'empty stdin is a hook without data: still on');
+    if (input === '') assert.match(r.stdout, /Sattva feedback: on/, 'empty stdin is a hook without data: still on');
     else assert.equal(r.stdout, '', `stdin ${input}`);
   }
   const odd = JSON.parse(cli(['hook'], { input: JSON.stringify({ session_id: 'a\nb "c"' }), env }).stdout).hookSpecificOutput.additionalContext;
@@ -416,7 +416,7 @@ test('projectDir: a drive root and odd characters give a folder name every syste
   for (const p of ['E:\\', 'e:/', 'C:\\Users\\x\\wei:rd*name?', '/']) assert.match(fb.projectDir(p, e).name, /^[^<>:"/\\|?*]+-[0-9a-f]{6}$/, p);
   const store = tmp();
   const r = fb.add({ skill: 'start', task: '-' }, 'none', envOf(store), 'E:\\');
-  assert.match(r.line, /^Keystone feedback: no notes/);
+  assert.match(r.line, /^Sattva feedback: no notes/);
 });
 
 test('storage and transcripts: records or rows that are not what they should be are skipped, never crash', () => {
@@ -426,7 +426,7 @@ test('storage and transcripts: records or rows that are not what they should be 
   assert.doesNotThrow(() => fb.summary({}, envOf(store)));
   assert.match(fb.summary({}, envOf(store)), /plan § S/);
   const f = join(tmp(), 't.jsonl');
-  writeFileSync(f, '"keystone"\nnull keystone\n{"type":"user","message":{"role":"user","content":"<command-name>/keystone:plan</command-name>"}}\n');
+  writeFileSync(f, '"sattva"\nnull sattva\n{"type":"user","message":{"role":"user","content":"<command-name>/sattva:plan</command-name>"}}\n');
   assert.deepEqual([...fb.readTrail(f).skills], ['plan']);
 });
 
@@ -449,7 +449,7 @@ test('signals: repeated calls (also those of the judge itself) are shown but do 
   const w = world();
   const tr = join(w.cfg, 'projects/x/s0.jsonl');
   const before = fb.signals({ plan: PLAN }, w.env, w.cwd);
-  const read = (id) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: 'docs/keystone/2026-01-01-fixture/plan.md' } }] } });
+  const read = (id) => JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: 'docs/sattva/2026-01-01-fixture/plan.md' } }] } });
   appendFileSync(tr, [read('p1'), read('p2'), read('p3')].join('\n') + '\n');
   const after = fb.signals({ plan: PLAN }, w.env, w.cwd);
   assert.match(after, /plan\.md/);
@@ -487,7 +487,7 @@ test('signals: two different tasks without traces or reports never look "already
 // ---- third verify: session values, project scope of a task, several addresses in one judge line ---------------------
 
 test('session values: only a checked string is an id; a valueless flag or a falsy id is "-" everywhere', () => {
-  const store = tmp(), cwd = repo(), env = envOf(store, { KEYSTONE_FEEDBACK: 'on' });
+  const store = tmp(), cwd = repo(), env = envOf(store, { SATTVA_FEEDBACK: 'on' });
   for (const sid of [0, false, 5, null, '', 'a b', 'x'.repeat(200)]) {
     const c = JSON.parse(cli(['hook'], { input: JSON.stringify({ session_id: sid }), env }).stdout).hookSpecificOutput.additionalContext;
     assert.match(c, /--session - <</, String(sid));
@@ -496,11 +496,11 @@ test('session values: only a checked string is an id; a valueless flag or a fals
   const ok = JSON.parse(cli(['hook'], { input: JSON.stringify({ session_id: 's-1.a' }), env }).stdout).hookSpecificOutput.additionalContext;
   assert.match(ok, /--session s-1\.a <</);
   const r = cli(['add', '--skill', 'start', '--session'], { input: 'none', env, cwd });
-  assert.match(r.stdout, /^Keystone feedback: no notes/);
+  assert.match(r.stdout, /^Sattva feedback: no notes/);
   assert.equal(records(store)[0].session, '-');
   assert.equal(typeof records(store)[0].session, 'string');
   assert.equal(cli(['signals', '--session'], { env, cwd }).status, 0);
-  assert.doesNotMatch(cli(['signals', '--session'], { env, cwd }).stdout, /Keystone feedback: error/);
+  assert.doesNotMatch(cli(['signals', '--session'], { env, cwd }).stdout, /Sattva feedback: error/);
 });
 
 test('signals: the records of a same-named task in another project are not this task\'s', () => {
@@ -537,10 +537,10 @@ test('judge line with several addresses: one item per address, so the summary co
 
 test('addresses: the one split helper serves self-reports and judge lines, whatever the spelling of the later addresses', () => {
   const addr = (p) => p.items.map((i) => `${i.skill} § ${i.section}`);
-  assert.deepEqual(addr(fb.parseJudge('skill-text | added | plan § Step 1, keystone:verify § Step 2 | c | t')), ['plan § Step 1', 'verify § Step 2']);
+  assert.deepEqual(addr(fb.parseJudge('skill-text | added | plan § Step 1, sattva:verify § Step 2 | c | t')), ['plan § Step 1', 'verify § Step 2']);
   assert.deepEqual(addr(fb.parseJudge('skill-text | added | plan § Step 1, verify §, fix § Step 3 | c | t')), ['plan § Step 1', 'fix § Step 3'], 'a place without a section is dropped');
-  assert.deepEqual(addr(fb.parseJudge('skill-text | added | keystone:plan § A, § B, /keystone:fix § C | c | t')), ['plan § A', 'plan § B', 'fix § C']);
-  assert.deepEqual(addr(fb.parseSelf('unclear | plan § Step 1, verify § Step 2 | t\nextra | keystone:fix § Step 3, § Step 4 | u')), ['plan § Step 1', 'verify § Step 2', 'fix § Step 3', 'fix § Step 4']);
+  assert.deepEqual(addr(fb.parseJudge('skill-text | added | sattva:plan § A, § B, /sattva:fix § C | c | t')), ['plan § A', 'plan § B', 'fix § C']);
+  assert.deepEqual(addr(fb.parseSelf('unclear | plan § Step 1, verify § Step 2 | t\nextra | sattva:fix § Step 3, § Step 4 | u')), ['plan § Step 1', 'verify § Step 2', 'fix § Step 3', 'fix § Step 4']);
   assert.ok(fb.parseSelf('unclear | plan § Step 1, verify § Step 2 | t').items.every((i) => i.kind === 'unclear' && i.text === 't'));
   assert.equal(fb.parseSelf('guessed | plan § Settings: ask, never ask (2.1) | t').items.length, 1, 'a comma inside a section is no second address');
   const store = tmp();
@@ -562,15 +562,15 @@ test('addresses: first and later places follow the same rules — alphabet, sepa
   }
   for (const bad of ['unclear | plan § | t', 'unclear | § Step 1 | t']) assert.deepEqual([fb.parseSelf(bad).items.length, fb.parseSelf(bad).skipped], [0, 1], bad);
   assert.deepEqual(addr(fb.parseSelf('unclear | план § Шаг 1 | t')), [], 'a name that is no skill of this plugin is no address');
-  assert.deepEqual(addr(fb.parseSelf('unclear | keystone: plan § A, keystone: verify § B | t')), ['plan|A', 'verify|B']);
-  assert.deepEqual(addr(fb.parseSelf('unclear | Keystone:plan § A, /KEYSTONE:fix § B | t')), ['plan|A', 'fix|B']);
+  assert.deepEqual(addr(fb.parseSelf('unclear | sattva: plan § A, sattva: verify § B | t')), ['plan|A', 'verify|B']);
+  assert.deepEqual(addr(fb.parseSelf('unclear | Sattva:plan § A, /SATTVA:fix § B | t')), ['plan|A', 'fix|B']);
   assert.deepEqual(addr(fb.parseSelf('unclear | plan§Step 1,verify§Step 2 | t')), ['plan|Step 1', 'verify|Step 2']);
   assert.deepEqual(addr(fb.parseSelf('guessed | plan § Settings: ask, never ask (2.1) | t')), ['plan|Settings: ask, never ask (2.1)']);
   const j = fb.parseJudge('agent | added | plan § A, verify § B | cls | the text | evidence: ev');
   assert.ok(j.items.every((i) => i.cls === 'cls' && i.text === 'the text' && i.evidence === 'ev' && i.cause === 'agent' && i.source === 'added'));
   const store = tmp();
   put(store, 'p1-aaaaaa', [rec({ id: 'j1', project: 'p1-aaaaaa', kind: 'judge', items: fb.parseJudge('skill-text | added | plan § Step 1, verify § Step 2, | missing-rule | a').items })]);
-  put(store, 'p2-bbbbbb', [rec({ id: 'j2', project: 'p2-bbbbbb', kind: 'judge', items: fb.parseJudge('skill-text | added | keystone: verify § Step 2 | missing-rule | b').items })]);
+  put(store, 'p2-bbbbbb', [rec({ id: 'j2', project: 'p2-bbbbbb', kind: 'judge', items: fb.parseJudge('skill-text | added | sattva: verify § Step 2 | missing-rule | b').items })]);
   const cand = fb.summary({}, envOf(store)).split('### Candidates')[1].split('###')[0];
   assert.match(cand, /\| verify § Step 2 \| missing-rule \| 2 \|/);
   assert.doesNotMatch(cand, /Step 2, /);
@@ -592,7 +592,7 @@ test('skill part of an address: only a skill or agent of this plugin; secrets, f
 test('add: task, hash and skill from the command line are cleaned like the text; the truncation line does not contradict itself', () => {
   const store = tmp(), cwd = repo(), env = envOf(store);
   const k = 'sk-ant-' + 'a'.repeat(30);
-  fb.add({ skill: k, task: `docs/keystone/${k}/plan.md` }, 'none', env, cwd);
+  fb.add({ skill: k, task: `docs/sattva/${k}/plan.md` }, 'none', env, cwd);
   fb.add({ skill: 'feedback', task: 'x', kind: 'judge', hash: 'hash: 0123456789AB.' }, 'none', env, cwd);
   const [a, b] = records(store);
   assert.equal(a.skill, '-');
@@ -604,7 +604,7 @@ test('add: task, hash and skill from the command line are cleaned like the text;
   assert.match(r.line, /20 notes .* — only the first 10 lines and 30 notes kept$/);
 });
 
-// ---- rush mode: the judge sees rush stages (subagent transcripts with `Keystone rush stage:`), not other subagents ----
+// ---- rush mode: the judge sees rush stages (subagent transcripts with `Sattva rush stage:`), not other subagents ----
 
 test('rush stages: signals --session and signals <plan> read stage transcripts; verifier ones and the stage prompt are not counted', () => {
   const row = (o) => JSON.stringify(o);
@@ -614,11 +614,11 @@ test('rush stages: signals --session and signals <plan> read stage transcripts; 
   const setup = (withStage) => {
     const w = world({ transcripts: [] });
     const main = join(w.cfg, 'projects/x/rs-1.jsonl');
-    writeFileSync(main, [prompt('<command-name>/keystone:implement</command-name> ' + PLAN)].join('\n') + '\n');
+    writeFileSync(main, [prompt('<command-name>/sattva:implement</command-name> ' + PLAN)].join('\n') + '\n');
     const sub = join(w.cfg, 'projects/x/rs-1/subagents');
     mkdirSync(sub, { recursive: true });
     writeFileSync(join(sub, 'agent-v.jsonl'), [prompt('You are the verifier. ' + PLAN), use('v1', 'Bash', { command: 'git x' }), res('v1')].join('\n') + '\n');
-    if (withStage) writeFileSync(join(sub, 'agent-s.jsonl'), [prompt(`Keystone rush stage: implement · ${PLAN}\nRead x`), use('s1', 'Edit', { file_path: 'a.js' }), res('s1')].join('\n') + '\n');
+    if (withStage) writeFileSync(join(sub, 'agent-s.jsonl'), [prompt(`Sattva rush stage: implement · ${PLAN}\nRead x`), use('s1', 'Edit', { file_path: 'a.js' }), res('s1')].join('\n') + '\n');
     return w;
   };
   for (const [name, call] of [['--session', (w) => fb.signals({ session: 'rs-1' }, w.env, w.cwd)], ['<plan>', (w) => fb.signals({ plan: PLAN }, w.env, w.cwd)]]) {
@@ -636,8 +636,8 @@ test('rush stages: coverage counts a verify stage without its self-report as mis
   mkdirSync(join(dir, 'R/subagents'), { recursive: true });
   const row = (o) => JSON.stringify(o);
   const hook = row({ type: 'attachment', attachment: { hookEvent: 'SessionStart', type: 'hook_additional_context', content: [fb.context('/p', 'R')] } });
-  writeFileSync(join(dir, 'R.jsonl'), [hook, row({ type: 'user', message: { role: 'user', content: '<command-name>/keystone:implement</command-name>' } })].join('\n') + '\n');
-  writeFileSync(join(dir, 'R/subagents/agent-1.jsonl'), row({ type: 'user', message: { role: 'user', content: `Keystone rush stage: verify · ${PLAN}` } }) + '\n');
+  writeFileSync(join(dir, 'R.jsonl'), [hook, row({ type: 'user', message: { role: 'user', content: '<command-name>/sattva:implement</command-name>' } })].join('\n') + '\n');
+  writeFileSync(join(dir, 'R/subagents/agent-1.jsonl'), row({ type: 'user', message: { role: 'user', content: `Sattva rush stage: verify · ${PLAN}` } }) + '\n');
   const all = fb.summary({}, envOf(store, { CLAUDE_CONFIG_DIR: cfg })).split('### Coverage')[1].split('###')[0];
   assert.match(all, /^- verify: report written in 0 of 1 session\(s\) — 1 missing$/m);
 });

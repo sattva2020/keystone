@@ -1,9 +1,9 @@
 <!-- derived from ai-factory@2.19.0 skills/aif-plan/references/TASK-FORMAT.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone plan format
+# Sattva plan format
 
-Read this before writing `plan.md`. The header and section order are parsed by hooks and by `/keystone:implement`,
-`/keystone:check`, `/keystone:verify` — keep them exact.
+Read this before writing `plan.md`. The header and section order are parsed by hooks and by `/sattva:implement`,
+`/sattva:check`, `/sattva:verify` — keep them exact.
 
 ## Template
 
@@ -54,22 +54,22 @@ Project rules check: read <CLAUDE.md, docs/architecture.md, .claude/rules/*.md, 
 - [ ] R1. <external step after verify: merge into main, push, deploy, a production job or migration, smoke check> — check: <observable result>
 
 ## Debt
-<!-- written by /keystone:verify accept and release mode; never by the plan author. Closed by release mode, /keystone:qa-check or /keystone:verify accept D<k> -->
+<!-- written by /sattva:verify accept and release mode; never by the plan author. Closed by release mode, /sattva:qa-check or /sattva:verify accept D<k> -->
 - D1 · <row id> · open · accepted <YYYY-MM-DD> by <name> (verify <sha7>) · prove by: <what proves it>
 
 ## Implementation notes
-<!-- left empty by /keystone:plan; /keystone:implement appends one line per decision made while building -->
+<!-- left empty by /sattva:plan; /sattva:implement appends one line per decision made while building -->
 ```
 
 Rules for the template:
 
 - `Authority:` line only when an intent exists (L, or M with an intent). Header lines are exactly the three shown, plus `Pace: rush` when the plan runs in rush mode.
-- `Status` is always `draft` when written; `/keystone:plan` flips it to `approved` only on the human's Approve.
+- `Status` is always `draft` when written; `/sattva:plan` flips it to `approved` only on the human's Approve.
 - `Original Request` is raw source input: no translation, even when the plan is in another language.
 - The `## Requirements Reconciliation` heading and the table header `| Decision | Source | Verification evidence |`
   are compatibility tokens — never rename. `Source` is `intent — I-n` or `<path> — <section>`.
 - The Rules check line sits directly under the table (or after `Settings:` when there is no table); the next line is
-  `Coverage: …`, written by `/keystone:check` (on M it is absent).
+  `Coverage: …`, written by `/sattva:check` (on M it is absent).
 - Every task is one checkbox line `- [ ] N. … — files: … — check: …`; detail goes on indented non-checkbox bullets.
   Never put a second `- [ ]` inside a task — hooks and implement count checkbox lines.
 - A blocked task gets `BLOCKED: <reason>` appended to the END of its `- [ ] N.` line (never in a nested bullet).
@@ -78,13 +78,13 @@ Rules for the template:
 - No test tasks when Settings say `tests — no`; no summary/report task at the end ever.
 - **Release steps are never tasks.** Merge into the main branch, push, deploy, production jobs or migrations and smoke
   checks on production go to `## Release` as `- [ ] R<n>. …` lines (only when the change ships somewhere). They run
-  after verify — the push gate opens only on `Status: verified` — by `/keystone:implement` in release mode, each
+  after verify — the push gate opens only on `Status: verified` — by `/sattva:implement` in release mode, each
   external step after the human's yes. Verify does not count them as open work.
 - **A row only a release step can prove** gets `proved by R<n>` in its `Verification evidence` cell, and step `R<n>`
   must exist in `## Release` with a `check:`. Verify then gives the row `pending R<n>` (no accept needed); release mode
   writes the proof into the cell when the check passes, or a `## Debt` line when it does not. The mark counts only in
-  Reconciliation rows; `/keystone:check` reports it anywhere else and a missing step or check.
-- **`## Debt`** is not written when the plan is made: `/keystone:verify accept` and release mode add its lines, with no
+  Reconciliation rows; `/sattva:check` reports it anywhere else and a missing step or check.
+- **`## Debt`** is not written when the plan is made: `/sattva:verify accept` and release mode add its lines, with no
   checkbox (`- D<k> · <row id> · open · … · prove by: …`); editing it never counts as a plan change for verify.
 
 ## Example task

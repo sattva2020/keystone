@@ -27,8 +27,8 @@ test('levels at the borders', async () => {
 })
 
 test('the agent is asked, in English, to update the plan, not to commit, and to answer the marker', async () => {
-  const p = handoffPrompt('docs/keystone/x/plan.md')
-  expect(p).toContain('docs/keystone/x/plan.md')
+  const p = handoffPrompt('docs/sattva/x/plan.md')
+  expect(p).toContain('docs/sattva/x/plan.md')
   expect(p).toContain('## Implementation notes')
   expect(p).toContain('Do not commit or push')
   expect(p).toContain(MARKER)

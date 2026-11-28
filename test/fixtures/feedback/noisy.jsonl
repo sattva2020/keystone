@@ -1,4 +1,4 @@
-{"type":"user","message":{"role":"user","content":"<command-message>keystone:implement</command-message>\n<command-name>/keystone:implement</command-name>\n<command-args>docs/keystone/2026-01-01-fixture/plan.md</command-args>"}}
+{"type":"user","message":{"role":"user","content":"<command-message>sattva:implement</command-message>\n<command-name>/sattva:implement</command-name>\n<command-args>docs/sattva/2026-01-01-fixture/plan.md</command-args>"}}
 {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"e1","name":"Bash","input":{"command":"npm test"}}]}}
 {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"e1","content":"Error: npm test failed","is_error":true}]}}
 {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"e2","name":"Bash","input":{"command":"npm run lint"}}]}}
@@ -16,4 +16,4 @@
 {"type":"user","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}
 {"type":"user","message":{"role":"user","content":"нет, не так, переделай"}}
 {"type":"user","message":{"role":"user","content":"и добавь обработку пустого ввода"}}
-{"type":"user","message":{"role":"user","content":"<command-message>keystone:verify</command-message>\n<command-name>/keystone:verify</command-name>\n<command-args>docs/keystone/2026-01-01-fixture/plan.md</command-args>"}}
+{"type":"user","message":{"role":"user","content":"<command-message>sattva:verify</command-message>\n<command-name>/sattva:verify</command-name>\n<command-args>docs/sattva/2026-01-01-fixture/plan.md</command-args>"}}

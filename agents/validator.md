@@ -1,6 +1,6 @@
 ---
 name: validator
-description: "Keystone finding validator — fresh-context, read-only second opinion on the analyzer's findings; keep, modify or drop each one after re-reading the plan and the cited files. Called by /keystone:check; not for direct use."
+description: "Sattva finding validator — fresh-context, read-only second opinion on the analyzer's findings; keep, modify or drop each one after re-reading the plan and the cited files. Called by /sattva:check; not for direct use."
 tools: Read, Grep, Glob
 model: opus
 effort: high

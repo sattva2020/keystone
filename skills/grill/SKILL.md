@@ -1,13 +1,13 @@
 ---
 name: grill
-description: "Keystone: interview the user relentlessly, round by round, over the whole decision tree — implementation, UX, edge cases, failures, data, security, trade-offs, what done means — until every branch is visited and nothing is silently assumed. Facts are found by the agent, decisions are made by the user. Writes no file; returns a confirmed, numbered decision list (D1…) to the caller (/keystone:intent, /keystone:plan, /keystone:fix) or to the user. Use for 'grill me', 'interview me', 'stress-test this idea', or when open decisions depend on each other."
+description: "Sattva: interview the user relentlessly, round by round, over the whole decision tree — implementation, UX, edge cases, failures, data, security, trade-offs, what done means — until every branch is visited and nothing is silently assumed. Facts are found by the agent, decisions are made by the user. Writes no file; returns a confirmed, numbered decision list (D1…) to the caller (/sattva:intent, /sattva:plan, /sattva:fix) or to the user. Use for 'grill me', 'interview me', 'stress-test this idea', or when open decisions depend on each other."
 argument-hint: "[idea, plan or question to grill — empty: the topic of the current conversation]"
 allowed-tools: Read Glob Grep Bash(git *) AskUserQuestion Agent
 model: opus
 effort: high
 ---
 
-# Keystone · grill — the whole decision tree, round by round
+# Sattva · grill — the whole decision tree, round by round
 
 Grill relentlessly until you and the user share one understanding of the change. The interview ends when every branch
 of the decision tree has been visited and **nothing is silently assumed** — not when it "seems clear". Depth is the
@@ -16,7 +16,7 @@ are the user's. (Contract agreed in lee-to/ai-factory#151; depth as in the desig
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -25,7 +25,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -38,7 +38,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -49,7 +49,7 @@ text, without backticks. Link only a file you checked exists.
 `$ARGUMENTS` is the idea, plan or question. Empty → grill the topic of the current conversation: say in one line what
 you took as the topic and from where. Nothing to take → ask for the idea in one line and stop.
 
-**Explicit `/keystone:grill` always grills.** When another skill calls you implicitly, a request with no open user
+**Explicit `/sattva:grill` always grills.** When another skill calls you implicitly, a request with no open user
 decision is not grilled — one simple fork is an ordinary question.
 
 ## 1. Build the tree — wide first
@@ -143,8 +143,8 @@ Returns to the caller: the confirmed `D#` list + `Open:` list + facts used (with
 questions asked. **Writes nothing to disk** — the caller owns its artifact (`intent.md`, plan, fix plan).
 
 **Run directly by the user** (no caller): after the confirmation the decisions exist only in this chat, so the last
-line routes them into an artifact — `Next: /keystone:intent <topic> — D1…Dn above` for L, `Next: /keystone:start <topic>
-— D1…Dn above` when the level is unclear, or `Next: nothing now — waiting for <event>; then /keystone:start <topic>`
+line routes them into an artifact — `Next: /sattva:intent <topic> — D1…Dn above` for L, `Next: /sattva:start <topic>
+— D1…Dn above` when the level is unclear, or `Next: nothing now — waiting for <event>; then /sattva:start <topic>`
 when the user chose to wait. Say in one line that the list is not saved until that command runs.
 
 ## Project memory (memlab, optional)

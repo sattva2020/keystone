@@ -1,8 +1,8 @@
 import { test, expect, mock } from 'claude-code/testing'
 import { bench } from '../test/panel-bench.ts'
 
-const PLAN_FILE = 'docs/keystone/2026-10-12-reminders/plan.md'
-const DIR = 'docs/keystone/2026-10-12-reminders'
+const PLAN_FILE = 'docs/sattva/2026-10-12-reminders/plan.md'
+const DIR = 'docs/sattva/2026-10-12-reminders'
 const LEDGER = `cost:${PLAN_FILE}`
 const planText = (status = 'implementing', tasks = '- [x] 1. schema\n- [x] 2. job\n- [ ] 3. ui', tail = '') =>
   `# Plan: reminders\n\nLevel: L · Mode: feature · Status: ${status}\nDone means: x\n\n## Requirements Reconciliation\nCoverage: 18/18 = 100% (partial counts 0.5) · verdict: PASS\n\n## Tasks\n${tasks}\n${tail}`
@@ -12,7 +12,7 @@ const files: Record<string, string> = {}
 let usd: number | undefined
 let sid = 'sess-1'
 const mt: Record<string, number> = {} // mtimeMs by path; 1 when unset
-const rel = (p: string) => String(p).split('\\').join('/').replace(/^.*?(?=docs\/keystone)/, '')
+const rel = (p: string) => String(p).split('\\').join('/').replace(/^.*?(?=docs\/sattva)/, '')
 const stub = (on: any, store: Record<string, unknown> = {}, commands: string[] = [], sent: string[] = []) => {
   for (const k of Object.keys(files)) delete files[k]
   files[PLAN_FILE] = planText()
@@ -40,20 +40,20 @@ const stub = (on: any, store: Record<string, unknown> = {}, commands: string[] =
 const bound = (extra: Record<string, unknown> = {}) => ({ 'bound:sess-1': ['2026-10-12-reminders'], ...extra })
 const TURN = { answer: 'done', durationMs: 1, isAborted: false, turnId: 't', reason: 'answer' } as any
 const START = { cwd: 'E:/proj', surface: 'desktop', isInteractive: true } as any
-const BAND = (bodyColumns = 100, isWorking = false) => ({ plugin: 'keystone', component: 'AbovePrompt', props: { hasSurvey: false, isWorking, maxRows: 10, bodyColumns } }) as any
+const BAND = (bodyColumns = 100, isWorking = false) => ({ plugin: 'sattva', component: 'AbovePrompt', props: { hasSurvey: false, isWorking, maxRows: 10, bodyColumns } }) as any
 
 test('band cost: the sum of the ledger in the title, none without it, hidden while Claude works', async ($, on) => {
   const store = stub(on, bound({ [LEDGER]: { plan: 2, implement: 1.2 } }))
   mock.clock(on)
   const band = async (cols = 100, working = false) => {
     const ui = await $.ui.mount({ surface: 'desktop', ...BAND(cols, working) })
-    const text = (await ui.find({ type: 'Text', text: /^Keystone/ }))?.text
+    const text = (await ui.find({ type: 'Text', text: /^Sattva/ }))?.text
     const bars = (await ui.find({ key: 'bars' })) as any
     await ui.unmount()
     return { text, direction: bars?.props?.flexDirection, wide: JSON.stringify(bars ?? null).includes('"width":38') }
   }
   await $.session.start(START)
-  expect((await band()).text).toBe('Keystone · L · implementing · $3.20')
+  expect((await band()).text).toBe('Sattva · L · implementing · $3.20')
   expect((await band(100, true)).text).toBeUndefined()
   expect((await band(79)).direction).toBe('column')
   expect((await band(79)).wide).toBe(false)
@@ -61,17 +61,17 @@ test('band cost: the sum of the ledger in the title, none without it, hidden whi
   expect((await band(80)).wide).toBe(true)
   store[LEDGER] = { plan: 123.45 }
   await $.session.start(START)
-  expect((await band()).text).toBe('Keystone · L · implementing · $123.45')
+  expect((await band()).text).toBe('Sattva · L · implementing · $123.45')
   expect((await band()).text!.length <= 38).toBe(true)
   delete store[LEDGER]
   await $.session.start(START)
-  expect((await band()).text).toBe('Keystone · L · implementing')
+  expect((await band()).text).toBe('Sattva · L · implementing')
 })
 
 // ---- the panel
-const PANE = 'keystone-panel'
+const PANE = 'sattva-panel'
 const KID = { sessionId: 'kid', title: 'Kid', branch: 'b', isArchived: false, isRunning: false, startedBy: 'me', originCwd: 'E:/proj', worktreePath: 'E:/wt', sourceBranch: 'main' }
-const ROW = (o: any = {}) => ({ id: 'kid', title: 'Kid', state: 'idle', ready: false, stage: 'implementing', done: 1, total: 3, code: 'approve', arg: '', next: '/keystone:plan p', wait: true, ...o })
+const ROW = (o: any = {}) => ({ id: 'kid', title: 'Kid', state: 'idle', ready: false, stage: 'implementing', done: 1, total: 3, code: 'approve', arg: '', next: '/sattva:plan p', wait: true, ...o })
 // the app around the plugin: its session tools, the script, the panes
 const world = (on: any, o: any = {}) => {
   const w: any = { list: 'No other sessions found.', rows: [], mcp: [], stdin: [], runs: 0, fail: '', opened: 0, open: false, placed: true, shown: true, surfaces: ['desktop'], detail: [], ...o }
@@ -91,7 +91,7 @@ const world = (on: any, o: any = {}) => {
     if (w.fail === 'run') return { deny: 'timeout' }
     return { value: { exitCode: w.fail === 'exit' ? 1 : 0, stdout: w.fail === 'json' ? 'oops' : JSON.stringify({ rows: w.rows }), stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
-  on('ui.panes', () => ({ value: w.open ? [{ id: PANE, title: 'Keystone', isShown: w.shown, isFocused: false, isPlaced: w.placed }] : [] }))
+  on('ui.panes', () => ({ value: w.open ? [{ id: PANE, title: 'Sattva', isShown: w.shown, isFocused: false, isPlaced: w.placed }] : [] }))
   on('ui.open', () => { if (w.openFails) return { deny: 'no panes' }; w.opened++; w.open = true; return { value: w.placed ? { isPlaced: true } : { isPlaced: false, reason: 'no-surface: none' } } })
   on('ui.close', () => { w.open = false; return { value: undefined } })
   on('session.attach', ($: any, e: any) => ({ clientId: e.clientId }))
@@ -99,7 +99,7 @@ const world = (on: any, o: any = {}) => {
 }
 const family = (w: any, rows: any[] = [ROW()]) => { w.list = JSON.stringify([KID]); w.rows = rows }
 const mountPane = ($: any, surface: any = 'desktop', placement: any = 'dock') =>
-  $.ui.mount({ plugin: 'keystone', surface, component: 'Pane', requestId: PANE, props: { title: 'Keystone', isFocused: false, bodyColumns: 37, placement, scroll: { offset: 0, bodyRows: 40 }, view: {} } } as any)
+  $.ui.mount({ plugin: 'sattva', surface, component: 'Pane', requestId: PANE, props: { title: 'Sattva', isFocused: false, bodyColumns: 37, placement, scroll: { offset: 0, bodyRows: 40 }, view: {} } } as any)
 const words = async (ui: any) => ((await ui.findAll({ type: 'Text' })) as any[]).map((x) => x.text as string)
 const shown = async ($: any, placement: any = 'dock') => { const ui = await mountPane($, 'desktop', placement); const w = await words(ui); await ui.unmount(); return w }
 const RU = { options: { language: 'ru' } } as any
@@ -119,7 +119,7 @@ test('own block: plan, checks, cost with this turn in it', RU, async ($, on) => 
   expect(t).toContain('security warn')
   expect(t).toContain('субсессий нет')
   expect(w.runs).toBe(0) // no children: the script is not run
-  await $.prompt.submit({ text: `/keystone:implement ${PLAN_FILE}` } as any)
+  await $.prompt.submit({ text: `/sattva:implement ${PLAN_FILE}` } as any)
   usd = 3.5
   await $.turn.complete(TURN)
   await clock.settle()
@@ -162,14 +162,14 @@ test('own wait and the next command: every case, security first on L with threat
     const t = await words(ui)
     expect([why, t.includes(why ? `  ${why}` : 'никто не ждёт')]).toEqual([why, true])
     expect([why, ((await ui.find({ key: 'panel-next' })) as any)?.props?.label ?? null]).toEqual([why, button])
-    if (why?.includes('accept')) expect(t).toContain(`  /keystone:verify accept ${PLAN_FILE}`)
+    if (why?.includes('accept')) expect(t).toContain(`  /sattva:verify accept ${PLAN_FILE}`)
     await ui.unmount()
   }
   // the answer's Next: is the panel's button too
   files[PLAN_FILE] = planText()
   files[`${DIR}/verify.md`] = ''
   mt[PLAN_FILE] = 1
-  await $.prompt.submit({ text: `/keystone:implement ${PLAN_FILE}` } as any)
+  await $.prompt.submit({ text: `/sattva:implement ${PLAN_FILE}` } as any)
   await $.turn.complete({ ...TURN, answer: 'Next: /x now' })
   await clock.settle()
   const ui = await mountPane($)
@@ -253,10 +253,10 @@ test('option off: no command, no hooks, no refresh', { options: { panel: false }
   await $.turn.complete(TURN)
   await $.session.attach({ surface: 'desktop', clientId: 'd' } as any)
   await clock.advance(120000)
-  expect(commands).toEqual(['keystone-status', 'keystone-handoff'])
+  expect(commands).toEqual(['sattva-status', 'sattva-handoff'])
   expect([w.mcp.length, w.runs, w.opened]).toEqual([0, 0, 0])
   const ui = await mountPane($)
-  expect(await ui.find({ key: 'engine' })).toBeDefined() // the pane is not drawn by Keystone
+  expect(await ui.find({ key: 'engine' })).toBeDefined() // the pane is not drawn by Sattva
   await ui.unmount()
 })
 
@@ -276,7 +276,7 @@ test('five blocks, waiting first', RU, async ($, on) => {
 test('nothing read yet: the heading and no data', async ($, on) => {
   stub(on)
   world(on)
-  expect(await shown($)).toEqual(['Keystone', 'no data on child sessions'])
+  expect(await shown($)).toEqual(['Sattva', 'no data on child sessions'])
 })
 
 test('waiting block: who, why and the next command; own first', RU, async ($, on) => {
@@ -284,11 +284,11 @@ test('waiting block: who, why and the next command; own first', RU, async ($, on
   const w = world(on)
   const clock = mock.clock(on)
   files[PLAN_FILE] = planText('draft')
-  family(w, [ROW(), ROW({ id: 'b', title: 'Rel', code: 'release', arg: 'R1, R2', next: `/keystone:implement ${PLAN_FILE}` }), ROW({ id: 'c', title: 'Busy', state: 'working', wait: false, code: null, next: null })])
+  family(w, [ROW(), ROW({ id: 'b', title: 'Rel', code: 'release', arg: 'R1, R2', next: `/sattva:implement ${PLAN_FILE}` }), ROW({ id: 'c', title: 'Busy', state: 'working', wait: false, code: null, next: null })])
   await $.session.start(START)
   await clock.settle()
   const t = await shown($)
-  expect(t.slice(1, t.indexOf('Субсессии'))).toEqual(['⏳ эта сессия', '  план ждёт Approve', `  /keystone:plan ${PLAN_FILE}`, '⏳ Kid', '  план ждёт Approve', '  /keystone:plan p', '⏳ Rel', '  шаги релиза: R1, R2', `  /keystone:implement ${PLAN_FILE}`])
+  expect(t.slice(1, t.indexOf('Субсессии'))).toEqual(['⏳ эта сессия', '  план ждёт Approve', `  /sattva:plan ${PLAN_FILE}`, '⏳ Kid', '  план ждёт Approve', '  /sattva:plan p', '⏳ Rel', '  шаги релиза: R1, R2', `  /sattva:implement ${PLAN_FILE}`])
   files[PLAN_FILE] = planText()
   family(w, [ROW({ wait: false })])
   await $.turn.complete(TURN)
@@ -346,7 +346,7 @@ test('button fills only; it is the only button', async ($, on) => {
     await ui.press({ key: 'panel-next' })
     await ui.unmount()
   }
-  expect(filled).toEqual(Array(4).fill(`/keystone:implement ${PLAN_FILE}`))
+  expect(filled).toEqual(Array(4).fill(`/sattva:implement ${PLAN_FILE}`))
   expect(sent).toEqual([])
 })
 
@@ -426,7 +426,7 @@ test('open, close, command: a closed panel stays closed, also after /clear; the 
   const store: Record<string, unknown> = {}
   const b = bench(store)
   await b.start()
-  expect(b.w.commands).toEqual(['keystone-panel'])
+  expect(b.w.commands).toEqual(['sattva-panel'])
   expect(b.w.opened).toBe(1)
   for (const kind of ['plugin', 'unload']) {
     expect(await b.close(kind)).toBe(1) // the close goes through
@@ -440,7 +440,7 @@ test('open, close, command: a closed panel stays closed, also after /clear; the 
   b.w.sid = 'sess-2' // /clear: a new engine session, the same app session
   await b.turn()
   expect([b.w.opened, b.w.runs]).toEqual([opened, runs])
-  expect(await b.command()).toBe('Панель Keystone открыта.')
+  expect(await b.command()).toBe('Панель Sattva открыта.')
   expect([b.w.opened, b.w.runs]).toEqual([opened + 1, runs + 1])
   expect(store).toEqual({})
   b.w.open = false
@@ -557,7 +557,7 @@ test('the terminal pays nothing: no app calls; the command still opens; a deskto
   await $.session.attach(ATTACH('mobile'))
   await clock.advance(90000)
   expect([w.mcp.length, w.runs, w.opened]).toEqual([0, 0, 0])
-  await $.command.run({ command: 'keystone-panel', args: '' })
+  await $.command.run({ command: 'sattva-panel', args: '' })
   await clock.settle()
   expect([w.runs, w.opened]).toEqual([1, 1])
   w.open = false

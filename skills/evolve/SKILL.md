@@ -1,6 +1,6 @@
 ---
 name: evolve
-description: "Keystone: turn the lessons of finished tasks into project rules. Reads fix plans (Root cause, Prevention), verify FAIL and Found lines, Implementation notes deviations, saved review and security findings and docs/notes; finds recurring patterns and stack pitfalls; proposes rules for .claude/rules/ — written only after you see the diff and say yes. Processed sources are logged in docs/keystone/evolve-log.md so a re-run skips them. `add [rule text]` writes one rule you dictate (dedupe, topic file, paths:) after the same diff and yes. Use for 'evolve', 'learn from our fixes', 'what keeps going wrong', after several fixes, and for 'add rule', 'remember this convention', 'always do X'. `skills [skill]` (only in the Keystone repository) proposes diffs to a Keystone skill's text from the feedback judge's findings, written to the working branch after a yes."
+description: "Sattva: turn the lessons of finished tasks into project rules. Reads fix plans (Root cause, Prevention), verify FAIL and Found lines, Implementation notes deviations, saved review and security findings and docs/notes; finds recurring patterns and stack pitfalls; proposes rules for .claude/rules/ — written only after you see the diff and say yes. Processed sources are logged in docs/sattva/evolve-log.md so a re-run skips them. `add [rule text]` writes one rule you dictate (dedupe, topic file, paths:) after the same diff and yes. Use for 'evolve', 'learn from our fixes', 'what keeps going wrong', after several fixes, and for 'add rule', 'remember this convention', 'always do X'. `skills [skill]` (only in the Sattva repository) proposes diffs to a Sattva skill's text from the feedback judge's findings, written to the working branch after a yes."
 argument-hint: "[all | plan | implement | fix | verify | <rules topic> | add <rule text> | skills [<skill>]]"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion Bash(node *feedback.mjs*) Bash(npm test*)
 model: opus
@@ -9,7 +9,7 @@ disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-evolve/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone · evolve — lessons become project rules
+# Sattva · evolve — lessons become project rules
 
 ```
 fix plans (Root cause, Prevention) + verify FAIL/Found + Implementation notes + review/security findings + docs/notes
@@ -25,7 +25,7 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -34,7 +34,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -47,24 +47,24 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
 text, without backticks. Link only a file you checked exists.
 
 Claude Code loads `.claude/rules/*.md` by itself, so a lesson written there reaches every later session with no extra
-layer. **Keystone has no per-skill override layer and its skills are never edited** — a plugin's files are replaced on
-update. Everything evolve learns becomes a **project rule** — except Mode skills, which runs only in the Keystone
+layer. **Sattva has no per-skill override layer and its skills are never edited** — a plugin's files are replaced on
+update. Everything evolve learns becomes a **project rule** — except Mode skills, which runs only in the Sattva
 repository itself and edits its own skills/*/SKILL.md, their references/ and agents/*.md, and a `CHANGELOG.md` line for
 each accepted section.
 
-Arguments: `$ARGUMENTS` — `all` or empty (every source and topic), a Keystone stage (`plan`, `implement`, `fix`,
+Arguments: `$ARGUMENTS` — `all` or empty (every source and topic), a Sattva stage (`plan`, `implement`, `fix`,
 `verify`, `check`, `review`) to look only at lessons for that stage, or any other word as a rules topic filter.
 The first word `add` switches to **Mode add** below; the rest of the argument is the rule text. The first word `skills`
 switches to **Mode skills**; the next word, if any, is the skill.
 
-## Mode add — one rule you dictate (`/keystone:evolve add <rule text>`)
+## Mode add — one rule you dictate (`/sattva:evolve add <rule text>`)
 
 No sources, no registry, no 8-proposal cap: the human's words are the evidence. Steps 1–3 are skipped.
 
@@ -73,7 +73,7 @@ No sources, no registry, no 8-proposal cap: the human's words are the evidence. 
 2. **Context.** Step 0 — the loaded rules are the baseline for dedupe.
 3. **Wording.** One short imperative line in English, the user's meaning kept, a concrete format, name or command kept
    verbatim. The user says always / never / must → `MUST` / `MUST NOT` (only those lines are checked by
-   `/keystone:review rules` and the verifier's Rules gate); a preference → a plain imperative, and say it will not be
+   `/sattva:review rules` and the verifier's Rules gate); a preference → a plain imperative, and say it will not be
    gated. Evidence comment: `<!-- evolve add: user, <YYYY-MM-DD> -->`.
 4. **Target.** Use the table in "Where a rule goes": an existing `.claude/rules/<topic>.md` whose topic fits, else a new
    `<topic>.md` (kebab-case). The rule names files, folders or a language → `paths:` globs; Glob each one and drop or
@@ -84,20 +84,20 @@ No sources, no registry, no 8-proposal cap: the human's words are the evidence. 
 6. **Show, then write only after "yes".** Show the exact diff (new file content or the added line), then ask once:
    `Write` / `Change topic or paths` / `Cancel`. Only on `Write` follow the Writing rules of Step 4. `Change` → ask
    what, show the new diff, ask again.
-7. **Log.** Append to `docs/keystone/evolve-log.md` an entry `## <date> — evolve add` with an `Added:` line (or
+7. **Log.** Append to `docs/sattva/evolve-log.md` an entry `## <date> — evolve add` with an `Added:` line (or
    `Rejected:` on Cancel) and no `Sources:` line. Then Step 6.
 
-## Mode skills — fix the text of a Keystone skill from the judge's findings (`/keystone:evolve skills [<skill>]`)
+## Mode skills — fix the text of a Sattva skill from the judge's findings (`/sattva:evolve skills [<skill>]`)
 
-Only in the Keystone repository: the feedback judge's findings on the text of one skill become diffs of that skill. No
+Only in the Sattva repository: the feedback judge's findings on the text of one skill become diffs of that skill. No
 rules, no sources of Step 1, no 8-proposal cap. The script is `node '${CLAUDE_SKILL_DIR}/../feedback/scripts/feedback.mjs'`
 (single quotes). One skill per run.
 
-1. **Off.** No `Keystone feedback: on` line in the context → the single line `Keystone evolve: nothing to do — feedback is off`,
+1. **Off.** No `Sattva feedback: on` line in the context → the single line `Sattva evolve: nothing to do — feedback is off`,
    stop; nothing is written.
-2. **Findings.** Run the script with `evolve` (and `--skill <skill>` when one was named). A line starting `Keystone evolve:
+2. **Findings.** Run the script with `evolve` (and `--skill <skill>` when one was named). A line starting `Sattva evolve:
    nothing to do` → show it (with the possibly-fixed table if printed) and stop: nothing is written. A line starting
-   `Keystone evolve: error` → show it and stop the same way. An output starting `## Keystone evolve` lists the findings to
+   `Sattva evolve: error` → show it and stop the same way. An output starting `## Sattva evolve` lists the findings to
    take — key, address, class, source, version, text, evidence, note — and a "Possibly fixed" table. Anything else (no
    output, another line) → show it and stop the same way.
 3. **Branch.** If the current branch is `main` (or `master`) or HEAD is detached, say so and stop before writing: Mode skills writes only to a
@@ -125,13 +125,13 @@ rules, no sources of Step 1, no 8-proposal cap. The script is `node '${CLAUDE_SK
    project or task names, never quotes of the findings or of project code: skills and CHANGELOG go to the public repository.
 9. **Write** the accepted diffs with Edit, then the log (No diff accepted → only the log). A diff Edit cannot apply → its
    keys stay open: name them, do not log them. Before the log, one line per accepted section whose Edit applied in
-   `CHANGELOG.md` under `## [Unreleased]` → `### Changed`, in the item for `/keystone:<skill>` (create the `### Changed` heading
-   and the item if missing): what the text asks now, keys only through `docs/keystone/evolve-log.md`, no project or task
-   names. An edit of `agents/<name>.md` goes into the item of the skill that dispatches it: `verifier` → `/keystone:verify`,
-   `feedback-judge` → `/keystone:feedback`, `analyzer` and `validator` → `/keystone:check`, `review-validator` →
-   `/keystone:review`. Its diff is shown in step 6 with the diff of its section; a `Reject` of the section → no line. The log: the script with `evolved --skill <skill> --accepted <keys>
+   `CHANGELOG.md` under `## [Unreleased]` → `### Changed`, in the item for `/sattva:<skill>` (create the `### Changed` heading
+   and the item if missing): what the text asks now, keys only through `docs/sattva/evolve-log.md`, no project or task
+   names. An edit of `agents/<name>.md` goes into the item of the skill that dispatches it: `verifier` → `/sattva:verify`,
+   `feedback-judge` → `/sattva:feedback`, `analyzer` and `validator` → `/sattva:check`, `review-validator` →
+   `/sattva:review`. Its diff is shown in step 6 with the diff of its section; a `Reject` of the section → no line. The log: the script with `evolved --skill <skill> --accepted <keys>
    --rejected <keys>` (keys joined by `,`); show its line. The script alone writes these log lines. No key to log (every
-   finding open) → skip the call. A line starting `Keystone evolve: error` → correct the call once; still an error → show it
+   finding open) → skip the call. A line starting `Sattva evolve: error` → correct the call once; still an error → show it
    and stop: the edits stay uncommitted, name the keys that were not logged.
 10. **Test.** No edit was written → skip it, say so. `npm test` — longer than the tool's limit → run it in the background and
    wait for its result. Green → report. No result (broken off, timed out) → not green: leave the edits uncommitted, say that the tests
@@ -139,7 +139,7 @@ rules, no sources of Step 1, no 8-proposal cap. The script is `node '${CLAUDE_SK
     stop: do not revert, do not commit. Say that this run's log entry and its `CHANGELOG.md` lines are uncommitted with
     them: whoever discards the edits discards them too, or the findings stay logged as accepted.
 11. **End.** Mode skills never commits and never releases. Report: accepted, rejected and open keys, the CHANGELOG lines written,
-    `git status --short` of the touched files; an open `needs a script` finding goes to `Found:` with `/keystone:fix <what>`. `Next:` — review and
+    `git status --short` of the touched files; an open `needs a script` finding goes to `Found:` with `/sattva:fix <what>`. `Next:` — review and
     commit the edits, then the release steps of the project.
 
 ## Where a rule goes
@@ -148,10 +148,10 @@ rules, no sources of Step 1, no 8-proposal cap. The script is `node '${CLAUDE_SK
 |---|---|
 | Specific files or folders (a module, a test layout, a config) | `.claude/rules/<topic>.md` with `paths:` frontmatter listing the globs |
 | The whole project (a convention, a pitfall of the stack) | `.claude/rules/<topic>.md`, no `paths:` |
-| How a Keystone stage should be run in this project | `.claude/rules/keystone.md` under the heading `## plan`, `## implement`, `## fix`, `## verify`, `## check`, `## review` |
+| How a Sattva stage should be run in this project | `.claude/rules/sattva.md` under the heading `## plan`, `## implement`, `## fix`, `## verify`, `## check`, `## review` |
 
 Rules are short imperative lines in English (agents read them), one rule = one bullet, each with its evidence in a
-trailing comment, for example `- MUST guard nullable relations before reading nested fields. <!-- evolve: docs/keystone/2026-09-02-x/plan.md -->`.
+trailing comment, for example `- MUST guard nullable relations before reading nested fields. <!-- evolve: docs/sattva/2026-09-02-x/plan.md -->`.
 Never write to `CLAUDE.md` from here; never touch anything under the plugin folder — Mode skills excepted (see above).
 
 ## Step 0: context
@@ -160,9 +160,9 @@ Read what exists: `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, ever
 `paths:`), `AGENTS.md`.
 From them take the **stack** and the **existing rules** — the baseline for dedupe.
 
-Read `docs/keystone/evolve-log.md` if it exists (format in Step 5). Its listed sources are **already processed**.
+Read `docs/sattva/evolve-log.md` if it exists (format in Step 5). Its listed sources are **already processed**.
 
-Task folders: `docs/keystone/<date>-<slug>/`.
+Task folders: `docs/sattva/<date>-<slug>/`.
 
 ## Step 1: collect intelligence
 
@@ -174,7 +174,7 @@ Task folders: `docs/keystone/<date>-<slug>/`.
 3. `plan.md` `## Implementation notes` — decisions that deviated from the plan and "unexplained deviation" entries.
 4. Review and security findings saved in a task folder (`review.md`, `security.md`, `qa/` results).
 5. `docs/notes/*.md` (memlab notes), when the folder exists.
-6. `### Suggested rule updates` from a `/keystone:review rules` run earlier in this session — in the conversation, not
+6. `### Suggested rule updates` from a `/sattva:review rules` run earlier in this session — in the conversation, not
    a file; each line becomes a prevention point (source `review rules <date>`), and they are not added to the log's
    `Sources:` line.
 
@@ -188,7 +188,7 @@ added to the log's `Sources:` line again.
 - **Root-cause pattern** (the class of mistake)
 - **Prevention points** — each independent actionable rule from Prevention / Found / the notes. A source often holds
   several independent points aimed at different stages. Extract EACH separately with its target (a rules topic or a
-  Keystone stage). Do NOT treat a source as a single unit.
+  Sattva stage). Do NOT treat a source as a single unit.
 
 - **Verdict** — what the record shows the point's action actually did, judged from execution evidence (a test, a
   re-verify, a later task), never from the source's own claim:
@@ -205,8 +205,8 @@ Build one flat registry:
 ```text
 | # | Source (path) | Prevention point (specific action) | Target | Verdict — evidence |
 |---|---------------|------------------------------------|--------|--------------------|
-| 1 | docs/keystone/2026-09-02-x/plan.md | <concrete action to enforce> | .claude/rules/db.md | helped — test_x red→green in fix commit |
-| 2 | docs/keystone/2026-09-02-x/plan.md | <different action, same source> | keystone.md ## fix | confounded — fix also changed y, z |
+| 1 | docs/sattva/2026-09-02-x/plan.md | <concrete action to enforce> | .claude/rules/db.md | helped — test_x red→green in fix commit |
+| 2 | docs/sattva/2026-09-02-x/plan.md | <different action, same source> | sattva.md ## fix | confounded — fix also changed y, z |
 ```
 
 A patch with 5 prevention points produces 5 rows, not 1. The same holds for a plan, a verify.md or a note. A
@@ -280,10 +280,10 @@ Verdicts: helped <h>, hurt <x>, no observed effect <n>, confounded <c>
 1. [new]  .claude/rules/db.md (paths: src/db/**)
    Rule: MUST guard optional relations before reading nested fields.
    Cue: a template or serializer reads a field through an optional relation.
-   Evidence: docs/keystone/2026-09-02-x/plan.md ## Prevention (helped — test_invoice_no_customer red→green);
-             docs/keystone/2026-09-20-y/verify.md Found (confounded)
+   Evidence: docs/sattva/2026-09-02-x/plan.md ## Prevention (helped — test_invoice_no_customer red→green);
+             docs/sattva/2026-09-20-y/verify.md Found (confounded)
    Confidence: high — 3 fixes in 6 weeks, one isolated by a regression test.
-2. [strengthen]  .claude/rules/keystone.md ## fix
+2. [strengthen]  .claude/rules/sattva.md ## fix
    <unified diff of the change>
 
 ### Declined   <points left out on verdicts: # — why (confounded only / no observed effect / hurt) | none>
@@ -307,12 +307,12 @@ Writing rules:
 
 ## Step 5: log (append-only)
 
-Append to `docs/keystone/evolve-log.md` (create it with the header `# Evolve log` if missing). Never edit or delete
+Append to `docs/sattva/evolve-log.md` (create it with the header `# Evolve log` if missing). Never edit or delete
 earlier entries. One entry per run:
 
 ```markdown
 ## 2026-10-12 — evolve [all]
-Sources: docs/keystone/2026-09-02-x/plan.md, docs/keystone/2026-09-20-y/verify.md, … (<n>)
+Sources: docs/sattva/2026-09-02-x/plan.md, docs/sattva/2026-09-20-y/verify.md, … (<n>)
 Added: .claude/rules/db.md — "guard optional relations" (evidence: …)
 Rejected: "<rule text>" — <why: not evidence-backed / confounded only / human said no / conflicts with …>
 Rules after: <n rules in .claude/rules/>
@@ -321,7 +321,7 @@ Rules after: <n rules in .claude/rules/>
 The `Sources:` line lists every source **read as new** (not the overlap), whether or not it produced a rule: a source
 that gave nothing is still processed. If the human chose "None", ask once whether to log the sources anyway;
 recommended: **no** — keep them for a re-run, since one pass can miss points. Log when at least one rule was added or
-the human says to. `/keystone:transfer` writes to the same log (a `transfer from <project>` entry); those entries are
+the human says to. `/sattva:transfer` writes to the same log (a `transfer from <project>` entry); those entries are
 not sources of this project's lessons.
 
 ## Step 6: next steps
@@ -329,8 +329,8 @@ not sources of this project's lessons.
 ```text
 ## Evolution complete
 Rules added: <n> · strengthened: <n> · rejected: <n> · stale found: <n>
-Next: commit .claude/rules and docs/keystone/evolve-log.md; run /keystone:evolve again after 5–10 more fixes;
-      /keystone:review on recent code to see the new rules at work
+Next: commit .claude/rules and docs/sattva/evolve-log.md; run /sattva:evolve again after 5–10 more fixes;
+      /sattva:review on recent code to see the new rules at work
 ```
 
 Context is heavy after reading many sources — suggest `/clear` or `/compact`.
@@ -343,10 +343,10 @@ Context is heavy after reading many sources — suggest `/clear` or `/compact`.
 4. **Cumulative** — each run builds on the log and the existing rules.
 5. **No hallucination** — only what the sources and the code show; a rule rests on an isolated execution contrast
    or a recurring pattern, never on a fix having been accepted.
-6. **Plugin files are never edited**; Keystone has no per-skill override files — Mode skills excepted, in the Keystone
+6. **Plugin files are never edited**; Sattva has no per-skill override files — Mode skills excepted, in the Sattva
    repository itself.
 7. **English only** for rule text; the report may follow the user's language.
-8. **No new skills** — a pattern that keeps recurring and needs a procedure is a candidate for `/keystone:distill`.
+8. **No new skills** — a pattern that keeps recurring and needs a procedure is a candidate for `/sattva:distill`.
 9. **Read-only** towards sources: plans, verify.md and notes are never changed by evolve.
-10. **Ownership** — evolve writes only `.claude/rules/**` and `docs/keystone/evolve-log.md`. Mode skills also writes
-    skills/**, agents/** and the `## [Unreleased]` lines of `CHANGELOG.md` of the Keystone repository; its log lines are written by feedback.mjs evolved.
+10. **Ownership** — evolve writes only `.claude/rules/**` and `docs/sattva/evolve-log.md`. Mode skills also writes
+    skills/**, agents/** and the `## [Unreleased]` lines of `CHANGELOG.md` of the Sattva repository; its log lines are written by feedback.mjs evolved.

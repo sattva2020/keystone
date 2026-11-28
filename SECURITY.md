@@ -1,15 +1,15 @@
 # Security Policy
 
-## What Keystone runs on your machine
+## What Sattva runs on your machine
 
 - **Hooks.** `hooks/hooks.json` registers two Node scripts. `hooks/gate.mjs` runs on `PreToolUse` (for
   `Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell`) and on `Stop`. It reads the hook JSON from stdin and the plan
-  files under `docs/keystone/` (or the AI Factory `paths.specs` folder), and runs `git cat-file -e` to see whether a
+  files under `docs/sattva/` (or the AI Factory `paths.specs` folder), and runs `git cat-file -e` to see whether a
   test file is committed. It writes only a JSON decision to stdout. `hooks/sessions-event.mjs` runs on
   `UserPromptSubmit`: it reads only the hook JSON from stdin and, on a side-sessions event, prints only a JSON context
   line; it runs no git and reads no files. Neither makes network calls or writes files.
 - **Permissions.** The hooks run with your user's permissions. `gate.mjs` can deny a tool call or remind at `Stop`; it
-  cannot approve anything. `KEYSTONE_GATES=off` disables `gate.mjs`; `KEYSTONE_SESSIONS=off` disables
+  cannot approve anything. `SATTVA_GATES=off` disables `gate.mjs`; `SATTVA_SESSIONS=off` disables
   `sessions-event.mjs`.
 - **Skills and agents** are prompts. They use only the tools Claude Code already grants the session. The optional memlab
   integration calls an MCP server you configured yourself.
@@ -17,7 +17,7 @@
 ## Reporting a vulnerability
 
 Please report privately through GitHub's
-[private vulnerability reporting](https://github.com/sattva2020/keystone/security/advisories/new) for this repository.
+[private vulnerability reporting](https://github.com/sattva2020/sattva-plugin/security/advisories/new) for this repository.
 Do not open a public issue for a security problem. Include the affected file, steps to reproduce and the impact. You
 should get a first reply within a few days.
 

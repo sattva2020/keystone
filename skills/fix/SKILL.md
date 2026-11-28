@@ -1,6 +1,6 @@
 ---
 name: fix
-description: "Keystone: fix a bug regression-first — reproduce, failing test, smallest fix, same check green; root cause and prevention recorded in the plan. Fix now (S) or plan first (M). Use only via explicit /keystone:fix [bug description or error], or /keystone:fix verify to fix every finding of the last FAIL verify.md in one pass."
+description: "Sattva: fix a bug regression-first — reproduce, failing test, smallest fix, same check green; root cause and prevention recorded in the plan. Fix now (S) or plan first (M). Use only via explicit /sattva:fix [bug description or error], or /sattva:fix verify to fix every finding of the last FAIL verify.md in one pass."
 argument-hint: "<bug description or error message> | verify (every finding of the last FAIL verify.md) | (empty: continue the active fix plan)"
 allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Task Bash(node *feedback.mjs*)
 model: opus
@@ -9,11 +9,11 @@ disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-fix/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone · fix — bug fix workflow, regression-first
+# Sattva · fix — bug fix workflow, regression-first
 
 Fix a specific bug or problem in the codebase. Two modes: **fix now** (level S, a short plan created directly in
-`implementing`) or **plan first** (level M, a `draft` plan in the `/keystone:plan` format, then Approve and
-`/keystone:implement`). The default workflow is regression-first whenever a regression check is needed: reproduce the
+`implementing`) or **plan first** (level M, a `draft` plan in the `/sattva:plan` format, then Approve and
+`/sattva:implement`). The default workflow is regression-first whenever a regression check is needed: reproduce the
 problem, confirm the reported behavior, implement the fix, then verify the same check passes.
 
 **Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
@@ -22,18 +22,18 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
-**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `fix`).
+**Feedback.** If the context has a `Sattva feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `fix`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -46,7 +46,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -79,23 +79,23 @@ Do not duplicate or weaken this policy in later workflow sections. Later steps s
 ### Test files are never edited (the gate enforces it)
 
 The regression test is written as a **NEW file**. Your own new test (not yet committed in HEAD) may be edited freely;
-test files that exist in HEAD are not edited — while a fix plan is `implementing` the Keystone hook denies any change to
+test files that exist in HEAD are not edited — while a fix plan is `implementing` the Sattva hook denies any change to
 them, including overwriting with `Write`. If an existing test
 is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned` in the plan header or
-`KEYSTONE_GATES=off` themselves). Never route around the gate (Bash, renaming, copying over).
+`SATTVA_GATES=off` themselves). Never route around the gate (Bash, renaming, copying over).
 
 ### Step 0: Existing fix plan and project context
 
-1. **Active plan.** It is the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
+1. **Active plan.** It is the plan.md of the newest task folder under docs/sattva/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/sattva) is used only when its path is given explicitly as the argument.
    - `$ARGUMENTS` empty and the active plan has `Mode: fix` → "Found existing fix plan. Executing the fix based on the
-     plan." Skip Step 1; if `draft`, STOP ("Approve it in `/keystone:plan` first"); otherwise `take` it (see "One
+     plan." Skip Step 1; if `draft`, STOP ("Approve it in `/sattva:plan` first"); otherwise `take` it (see "One
      session per plan") and only then, if `approved`, set `Status: implementing`. **Runtime resources (worktree):**
      once, as a command of its own, `node "${CLAUDE_SKILL_DIR}/../implement/scripts/worktree-check.mjs" --linked-only`
      (static, read-only: ports, `container_name`, Compose project, volumes, networks shared with another worktree).
      One line (nothing to check) → show it or stay silent; a conflicts report → show its table and hint in the chat
      and go on, no question, no stop; exit 1 → one line and go on. Go to Step 2 using the plan as a
      guide, still applying the Regression-First Policy.
-   - `$ARGUMENTS` empty and no fix plan → "No fix plan and no problem description. Run `/keystone:fix <description>`."
+   - `$ARGUMENTS` empty and no fix plan → "No fix plan and no problem description. Run `/sattva:fix <description>`."
      STOP.
    - `$ARGUMENTS` is `verify` or `verify critical` → `take` the active plan, then **Verify findings mode** below; it
      works inside the active plan, no question.
@@ -110,18 +110,18 @@ is itself wrong, STOP and ask the human; they decide (and set `Status: abandoned
    against the Step 2 budget):
    - memlab, when its tools are available: `search_decisions` on the error text and on the affected module or files
      (in a git worktree pass `root` = the worktree); read the notes it returns at their `path:line`;
-   - the `.claude/rules/**/*.md` files `/keystone:evolve` wrote whose `paths:` match the files you will touch (already
+   - the `.claude/rules/**/*.md` files `/sattva:evolve` wrote whose `paths:` match the files you will touch (already
      read in 2 — look again at those);
-   - no memlab → the `## Root cause` / `## Prevention` sections of the 10 newest `Mode: fix` plans under docs/keystone/
+   - no memlab → the `## Root cause` / `## Prevention` sections of the 10 newest `Mode: fix` plans under docs/sattva/
      (newest by the folder's date prefix).
    Prefer recurring Root cause / Prevention patterns. Name what applies in one line — `Lessons: <note or rule> — <how
    it shapes this fix> | none found` — and write that line into task 1's evidence in the plan.
 
-### Verify findings mode — `/keystone:fix verify`
+### Verify findings mode — `/sattva:fix verify`
 
 **At the ceiling — first.** Run `node ${CLAUDE_SKILL_DIR}/../verify/scripts/collect.mjs <plan> --history`. A
 `ceiling: reached` line → fix nothing: say that the verifier will not run for this plan again until every open finding
-is decided (accept / debt / back to the plan), and make the Next `/keystone:verify <plan>` (it shows the ceiling menu).
+is decided (accept / debt / back to the plan), and make the Next `/sattva:verify <plan>` (it shows the ceiling menu).
 
 `verify critical` narrows the list to the critical findings: every `wrong` line, every open `review <n> — critical`
 line of `## Sweep`, and an Architecture or Security gate `fail`. The rest (rule-only findings, `Settings: violated`) are listed as `left open` in the report — they keep the
@@ -146,7 +146,7 @@ plus the files changed since its commit. In this order:
    the regression check. Print the list numbered. Before each finding of this list run `beat` (see "One session per
    plan").
 2. **New work is not a fix.** A finding whose fix needs a function, task, endpoint, screen or behaviour that no task,
-   row or `I-n` asks for is not fixed here: `not fixed — new work: <what> → /keystone:plan <plan path>`, and then that
+   row or `I-n` asks for is not fixed here: `not fixed — new work: <what> → /sattva:plan <plan path>`, and then that
    command is the `Next:` line.
 3. **The whole class.** The verifier's `Class:` is a hint: widen it and grep every task file for the same call, guard,
    pattern, missing step and the neighbouring places. Print each as `Class <name>: <file:line>; …`. Fix at the shared
@@ -159,14 +159,14 @@ plus the files changed since its commit. In this order:
 5. **`Decision:`.** Read the named earlier intent whole and find every `I-n` and confirmed decision the diff or this
    plan contradicts, not only the named one. Ask once (AskUserQuestion): `Supersede <path> I-a, I-b, I-c? (<why, one
    line>)` — Yes / No. Yes → one line in this task's intent `## Decisions log` (the only intent edit fix ever makes,
-   by the rule of `/keystone:intent`): `- <YYYY-MM-DD> Q: <path> conflicts with this change → A: supersedes <path> I-a, I-b, I-c (<why>)`.
-   No → `not fixed — the decision stands; change the code or the intent with /keystone:intent`.
+   by the rule of `/sattva:intent`): `- <YYYY-MM-DD> Q: <path> conflicts with this change → A: supersedes <path> I-a, I-b, I-c (<why>)`.
+   No → `not fixed — the decision stands; change the code or the intent with /sattva:intent`.
 6. **The same class again.** The past run is the newest earlier commit of `git log --format=%H -- <verify.md>` that
    is a run (its text without `Accepted … by …` lines differs from the commit before it) and was judged (its
    `## Report`, past blank lines and a ``` fence, does not start with `not judged`); never judge a commit by its message.
    A class of the same nature as one of its `Class:` (even named differently) is a repeat: the class test of item 4 is
    then required for a rule finding too (a guard script that greps the task files and fails on any new place will do),
-   and ask (AskUserQuestion) `Add a rule via /keystone:evolve: "<MUST … line>"?` — Yes → read
+   and ask (AskUserQuestion) `Add a rule via /sattva:evolve: "<MUST … line>"?` — Yes → read
    `${CLAUDE_SKILL_DIR}/../evolve/SKILL.md` and follow its `add` path with that line (it shows the diff and asks
    itself); No → a line in the notes. No rule is written without that yes.
 7. **Rules before the commit.** Check every MUST / MUST NOT line of the project rules (Step 0, item 2) against fix's
@@ -180,7 +180,7 @@ plus the files changed since its commit. In this order:
    (and intent after item 5) together, then `release`.
 
 Report each finding as `fixed — <file:line>` or `not fixed — <why>`, and the line `Владелец: <remote>; <warning>`.
-Next: `/keystone:verify <plan>`.
+Next: `/sattva:verify <plan>`.
 
 ### Step 1: Understand the problem and choose the mode
 
@@ -190,10 +190,10 @@ when it started.
 
 Then ask once (AskUserQuestion, recommended first): **Fix now** — investigate and fix immediately (level S) — or
 **Plan first** — write a plan for review, fix later (level M). A bug that touches data/schema, security/auth/payments or
-a module owned by others is L: say so and use `/keystone:start` instead.
+a module owned by others is L: say so and use `/sattva:start` instead.
 
-- **Fix now (S)** → create `docs/keystone/<YYYY-MM-DD>-fix-<slug>/plan.md` (slug from the problem) in the short format below, with `Status: implementing`, `take` it right away (see "One session per plan"), then go to Step 2.
-- **Plan first (M)** → Step 1.1. It takes no plan: `/keystone:implement` takes it.
+- **Fix now (S)** → create `docs/sattva/<YYYY-MM-DD>-fix-<slug>/plan.md` (slug from the problem) in the short format below, with `Status: implementing`, `take` it right away (see "One session per plan"), then go to Step 2.
+- **Plan first (M)** → Step 1.1. It takes no plan: `/sattva:implement` takes it.
 
 ```markdown
 # Plan: fix — <short name>
@@ -222,19 +222,19 @@ Settings: tests — <yes|tdd|no> (<why, from repo>) · logging — <minimal|stan
 ### Step 1.1: Plan first (M)
 
 Investigate with Step 2 (budget below), then write `plan.md` in the same folder with `Level: M · Mode: fix ·
-Status: draft` in exactly the `/keystone:plan` format (Original Request, `## Requirements Reconciliation` with header
+Status: draft` in exactly the `/sattva:plan` format (Original Request, `## Requirements Reconciliation` with header
 `| Decision | Source | Verification evidence |`, `Project rules check:` line, `## Risks` with Could break / Riskiest step /
 Rejected alternatives, `## Tasks` as `- [ ] N. <task> — files: … — check: …`). The tasks follow the Fix Checklist:
 regression check first, run it and confirm it reproduces the problem (or record the fallback), smallest fix, rerun the
 same check, closest related checks. Add `## Root cause` (suspected) and `## Prevention` (filled after the fix).
 
 Show the plan. **STOP here. Do NOT apply the fix.** Immediately offer Approve: "Approve with
-`/keystone:plan <path to plan.md>`" (it takes an existing draft straight to Approve), then `/keystone:implement`
+`/sattva:plan <path to plan.md>`" (it takes an existing draft straight to Approve), then `/sattva:implement`
 executes it.
 
 ### Step 2: Investigate the codebase
 
-Budget (same as `/keystone:start`): level S — at most 2 searches or reads before acting; level M — one Explore sweep.
+Budget (same as `/sattva:start`): level S — at most 2 searches or reads before acting; level M — one Explore sweep.
 Use the `Task` tool with `subagent_type: Explore` to keep the main context clean; run up to 3 in parallel only when the
 bug is M:
 
@@ -295,11 +295,11 @@ was it missing?), a wrong assumption (what was assumed?), a race (what sequence 
 practice prevents this class of problem, what to check in code review, what test would catch it. Level S: once the
 regression check is green **in this session**, set `Status: verified` yourself (an allowed transition for S-fix) BEFORE
 the single commit of code and plan (`git diff --cached --stat`; the plan must be staged). Level M: commit code and plan
-together and recommend `/keystone:verify <plan>` in a new session. Run `beat` right before the commit (`taken` → STOP
+together and recommend `/sattva:verify <plan>` in a new session. Run `beat` right before the commit (`taken` → STOP
 without it) and `release` right after it.
 **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
 `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
-if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`fix(<area>)`).
+if the rule allows it; never a scope the hook rejects. No scope list → keep the Sattva scope (`fix(<area>)`).
 Suggest `/clear` to free context if needed.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
@@ -316,7 +316,7 @@ Found: <defects, surprises, open questions | none>
 ## One session per plan
 
 fix takes its plan so that a second session cannot run it at the same time; the record lives on the service branch
-`keystone/owners`, the work tree and the plan folder are not touched. Script:
+`sattva/owners`, the work tree and the plan folder are not touched. Script:
 `node "${CLAUDE_SKILL_DIR}/../implement/scripts/owner.mjs" take|beat|release <plan> [--stage fix] [--force] [--any]` — one
 JSON line; exit 0 = go on, 3 = stop, 1 = error (say it in one line and go on). Run every call as a command of its own
 and read its exit code before the next step — never chained with the fix's work (`;`, `&&`).
@@ -330,7 +330,7 @@ and read its exit code before the next step — never chained with the fix's wor
 - `node "${CLAUDE_SKILL_DIR}/../implement/scripts/owner.mjs" beat <plan> --stage fix` before each finding of Verify findings mode and before every commit; exit 3 (`taken`) →
   STOP: `План забрала <place> в <since> — эта сессия останавливается`, no commit.
 - `release <plan>` right after the fix commit. `remote: "local"` + `warning` → say it once and go on.
-  `KEYSTONE_GATES=off` → nothing is guarded.
+  `SATTVA_GATES=off` → nothing is guarded.
 
 ## Important rules
 
@@ -344,7 +344,7 @@ and read its exit code before the next step — never chained with the fix's wor
 7. **Tests in HEAD are untouchable** — the regression test is a new file (your own uncommitted one is editable); a wrong
    existing test is the human's call.
 8. **Root cause** — fix the actual problem, not symptoms. **Minimal changes**; **one fix at a time**, no scope creep —
-   except `/keystone:fix verify`, which fixes every finding of the FAIL `verify.md` in one pass — every finding and
+   except `/sattva:fix verify`, which fixes every finding of the FAIL `verify.md` in one pass — every finding and
    every place of its class.
 
 **DO NOT:** apply a fix when the user chose "Plan first"; skip the active-plan check; refactor unrelated code; add

@@ -1,6 +1,6 @@
 <!-- derived from ai-factory@2.19.0 skills/aif-verify/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone verify — build / test / lint / imports
+# Sattva verify — build / test / lint / imports
 
 These tables are implemented by `scripts/collect.mjs`: the verify skill runs it once and passes its lines to the
 verifier; during a run the skill reads only "Limits". Change a table here and in the script together. Never install
@@ -63,13 +63,13 @@ One line per check: `build: <command> → pass | pass (reused: …) | fail (<fir
 (with passed/failed counts), `lint`, `imports`. Keep the last ~20 lines of any failing output. Changed files in the
 command and each output line are in backticks (`verify.md` copies these lines; Prettier mangles a bare `__tests__`).
 
-A timeout is `not run`, not a failure (limit: `KEYSTONE_CHECK_TIMEOUT_MS`, default 10 min; the line names the variable:
-`not run (timeout after 600 s — raise KEYSTONE_CHECK_TIMEOUT_MS)`). `pass (reused: …)` is a pass
+A timeout is `not run`, not a failure (limit: `SATTVA_CHECK_TIMEOUT_MS`, default 10 min; the line names the variable:
+`not run (timeout after 600 s — raise SATTVA_CHECK_TIMEOUT_MS)`). `pass (reused: …)` is a pass
 measured earlier on the same code: only this task's folder or docs/**/*.md changed since.
 
 ## Limits
 
-A suite longer than the limit: raise `KEYSTONE_CHECK_TIMEOUT_MS` and run collect once more. Still too long → the test
+A suite longer than the limit: raise `SATTVA_CHECK_TIMEOUT_MS` and run collect once more. Still too long → the test
 commands the plan names (`Done means:`, a task's `check:`) run as second commands: they prove their own rows, the
 `test:` line stays `not run`. A build or test run of another session or checkout is not `pass (reused: …)`, even on
 an equal tree: the reuse is only the script's own.

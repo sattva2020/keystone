@@ -1,5 +1,5 @@
 {
-  "description": "Keystone gates: no code edits while the active plan is draft; no edits to existing tests during a fix; Stop reminder while plan tasks are open; no push/PR before /keystone:verify, also through GitHub MCP tools (a cloud session may push its work branch). Off: KEYSTONE_GATES=off. On a side-sessions event, asks the model for /keystone:sessions (not a gate). Off: KEYSTONE_SESSIONS=off. Agent feedback (off by default, plugin option `feedback`; `KEYSTONE_FEEDBACK=off`): SessionStart adds the self-report instruction.",
+  "description": "Sattva gates: no code edits while the active plan is draft; no edits to existing tests during a fix; Stop reminder while plan tasks are open; no push/PR before /sattva:verify, also through GitHub MCP tools (a cloud session may push its work branch). Off: SATTVA_GATES=off. On a side-sessions event, asks the model for /sattva:sessions (not a gate). Off: SATTVA_SESSIONS=off. Agent feedback (off by default, plugin option `feedback`; `SATTVA_FEEDBACK=off`): SessionStart adds the self-report instruction.",
   "hooks": {
     "SessionStart": [
       {
@@ -74,6 +74,6 @@
     ]
   },
   "modules": [
-    "./keystone.ts"
+    "./sattva.ts"
   ]
 }

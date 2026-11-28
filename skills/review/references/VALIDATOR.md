@@ -1,5 +1,5 @@
 <!-- derived from ai-factory@2.19.0 skills/aif-review/references/VALIDATOR.md, coverage-first and PR pinning from ai-factory@2.20.0 (MIT); see THIRD_PARTY_NOTICES.md -->
-# Review item validator — instructions for keystone:review-validator
+# Review item validator — instructions for sattva:review-validator
 
 You are an independent validator of code review findings produced by another agent. Your job is to read each finding, verify it against the actual change, and decide for each one whether it should be kept as-is, kept with a corrected wording, dropped, or reclassified between severity levels.
 

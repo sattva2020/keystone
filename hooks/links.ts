@@ -1,4 +1,4 @@
-// Keystone links: a file path in `backticks` in an agent's answer is drawn as a link relative to the folder the
+// Sattva links: a file path in `backticks` in an agent's answer is drawn as a link relative to the folder the
 // session started in (the Desktop file pane opens links from there). Only the drawing changes, never the message.
 import type { Register } from 'claude-code'
 
@@ -106,7 +106,7 @@ export const register: Register = (on) => {
     const text = e.props.text
     if (!text.includes('`') && !text.includes('](')) return next(e)
     try {
-      const base = (await $.state.get({ plugin: 'keystone', key: 'base' })).value ?? normalize(await $.session.cwd())
+      const base = (await $.state.get({ plugin: 'sattva', key: 'base' })).value ?? normalize(await $.session.cwd())
       const isFile = async (abs: string) => {
         if (found.has(abs)) return true
         const ok = await $.fs.stat(abs).then((s) => s.kind === 'file', () => false)

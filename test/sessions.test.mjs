@@ -10,8 +10,8 @@ import { classify, decide, facts, gitSessions, readPlan, recordSent, readSent } 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = join(ROOT, 'skills', 'sessions', 'scripts', 'triage.mjs');
 const HOOK = join(ROOT, 'hooks', 'sessions-event.mjs');
-const P = 'docs/keystone/2026-11-04-x/plan.md';
-const TEMPLATE = /^Keystone: осталось — .+\. Сделай этот шаг и закончи ход\.$/;
+const P = 'docs/sattva/2026-11-04-x/plan.md';
+const TEMPLATE = /^Sattva: осталось — .+\. Сделай этот шаг и закончи ход\.$/;
 
 const roots = [];
 after(() => { for (const r of roots) try { rmSync(r, { recursive: true, force: true }); } catch { /* Windows file locks */ } });
@@ -45,17 +45,17 @@ const S = { sessionId: 'c', title: 'child', branch: 'claude/c', sourceBranch: 'm
 
 test('rule table rows 7–21 (decide)', () => {
   const cases = [
-    [7, F({ plans: [pl({ verdict: 'FAIL', fixedAfterFail: true, verify: true })] }), { group: 'message', step: `/keystone:verify ${P}` }],
-    [8, F({ plans: [pl({ verdict: 'FAIL', verify: true })] }), { group: 'message', step: '/keystone:fix verify' }],
+    [7, F({ plans: [pl({ verdict: 'FAIL', fixedAfterFail: true, verify: true })] }), { group: 'message', step: `/sattva:verify ${P}` }],
+    [8, F({ plans: [pl({ verdict: 'FAIL', verify: true })] }), { group: 'message', step: '/sattva:fix verify' }],
     [9, F({ plans: [pl({ verdict: 'PASS-UNPROVEN', verify: true })] }), { group: 'waiting', reason: 'ждёт accept' }],
     [10, F({ plans: [pl({ blocked: 'needs the DB' })] }), { group: 'waiting', reason: 'BLOCKED: needs the DB' }],
-    [11, F({ plans: [pl({ status: 'approved', open: 2 })] }), { group: 'message', step: `/keystone:implement ${P}` }],
-    [12, F({ plans: [pl({ open: 0 })] }), { group: 'message', step: `/keystone:verify ${P}` }],
+    [11, F({ plans: [pl({ status: 'approved', open: 2 })] }), { group: 'message', step: `/sattva:implement ${P}` }],
+    [12, F({ plans: [pl({ open: 0 })] }), { group: 'message', step: `/sattva:verify ${P}` }],
     [13, F({ plans: [pl({ status: 'draft' })] }), { group: 'waiting', reason: 'план ждёт Approve' }],
     [14, F({ merged: true, plans: [pl({ status: 'verified', release: ['R1', 'R2'] })] }), { group: 'waiting', reason: 'релиз: R1, R2 — ваш шаг' }],
     [15, F({ dirty: true, files: ['a.js'] }), { group: 'message', step: 'закоммить изменения' }],
     [16, F({ merged: true, dirty: true, files: ['a.js', 'b.js'] }), { group: 'waiting', reason: 'незакоммиченные файлы: a.js, b.js' }],
-    [17, F({ plans: [{ name: 'y', path: 'docs/keystone/y/plan.md', intentOnly: true }] }), { group: 'waiting', reason: 'intent без плана — `/keystone:plan`' }],
+    [17, F({ plans: [{ name: 'y', path: 'docs/sattva/y/plan.md', intentOnly: true }] }), { group: 'waiting', reason: 'intent без плана — `/sattva:plan`' }],
     [18, F({ ownCommits: false }), { group: 'archive' }],
     [18, F({ own: false }), { group: 'archive' }],
     // merged implies no own commits (base..branch is empty), as facts() reports it
@@ -76,9 +76,9 @@ test('I-9: dirty or nested never archived; shared folder: plan step before archi
   assert.equal(decide(S, F({ merged: true, dirty: true, files: ['x'] })).group, 'waiting');
   assert.equal(decide(S, F({ own: false, dirty: true, files: ['x'], merged: true })).group, 'waiting'); // shared, dirty
   assert.equal(decide(S, F({ own: false, ownCommits: false })).group, 'archive'); // shared, clean
-  assert.deepEqual(decide(S, F({ own: false, ownCommits: false, plans: [pl({ open: 1 })] })).step, `/keystone:implement ${P}`);
+  assert.deepEqual(decide(S, F({ own: false, ownCommits: false, plans: [pl({ open: 1 })] })).step, `/sattva:implement ${P}`);
   // two plans: an old verified one and a new implementing one → the step of the new one
-  assert.equal(decide(S, F({ plans: [pl({ name: 'b', open: 1 }), pl({ name: 'a', status: 'verified' })] })).step, `/keystone:implement ${P}`);
+  assert.equal(decide(S, F({ plans: [pl({ name: 'b', open: 1 }), pl({ name: 'a', status: 'verified' })] })).step, `/sattva:implement ${P}`);
   // all open tasks BLOCKED → no implement message
   assert.equal(readPlan(plan('implementing', '- [ ] 1. a BLOCKED: needs prod')).blocked, 'needs prod');
 });
@@ -116,22 +116,22 @@ test('classify: grandchild first, live grandchild keeps its parent (I-9, D14)', 
 test('classify: message text is the fixed template; bad plan path and repeats go to waiting (I-5, I-10, I-11)', () => {
   const f = stub({ c: F({ plans: [pl({ open: 1 })] }) });
   const m = classify(fam(), { self: 'root', factsOf: f }).message[0];
-  assert.equal(m.text, `Keystone: осталось — /keystone:implement ${P}. Сделай этот шаг и закончи ход.`);
+  assert.equal(m.text, `Sattva: осталось — /sattva:implement ${P}. Сделай этот шаг и закончи ход.`);
   assert.match(m.text, TEMPLATE);
   const again = classify(fam(), { self: 'root', factsOf: f, sent: { c: { step: m.step } } });
   assert.equal(again.waiting[0].reason, `не продвинулась после «${m.step}»`);
-  const bad = classify(fam(), { self: 'root', factsOf: stub({ c: F({ plans: [pl({ open: 1, path: 'docs/keystone/x y/plan.md' })] }) }) });
+  const bad = classify(fam(), { self: 'root', factsOf: stub({ c: F({ plans: [pl({ open: 1, path: 'docs/sattva/x y/plan.md' })] }) }) });
   assert.equal(bad.waiting[0].reason, 'путь плана не прошёл проверку');
 });
 
 test('facts from git: merged, own commits, dirty, plans = unmerged commits, FAIL fixed after verify, path normalization', () => {
   const root = repo();
   DATE = '2026-01-01T00:00:00Z';
-  commit(root, { 'docs/keystone/2026-01-01-old/plan.md': plan('implementing', '- [ ] 1. old') }, 'old plan on main');
+  commit(root, { 'docs/sattva/2026-01-01-old/plan.md': plan('implementing', '- [ ] 1. old') }, 'old plan on main');
   DATE = null;
   const wt = join(root, '.claude', 'worktrees', 'w1');
   git(root, 'worktree', 'add', '-q', '-b', 'claude/w1', wt);
-  commit(wt, { [P]: plan('implementing', '- [x] 1. a'), 'docs/keystone/2026-11-04-x/verify.md': 'Verdict: FAIL\n' }, 'plan + verify');
+  commit(wt, { [P]: plan('implementing', '- [x] 1. a'), 'docs/sattva/2026-11-04-x/verify.md': 'Verdict: FAIL\n' }, 'plan + verify');
   const s = { sessionId: 'w1', worktreePath: wt, originCwd: root, branch: 'claude/w1', sourceBranch: 'main' };
   let f = facts(s);
   assert.equal(f.own, true);
@@ -140,11 +140,11 @@ test('facts from git: merged, own commits, dirty, plans = unmerged commits, FAIL
   assert.deepEqual(f.plans.map((p) => p.name), ['2026-11-04-x']); // the old plan from main is not the session's
   assert.equal(f.plans[0].verdict, 'FAIL');
   assert.equal(f.plans[0].fixedAfterFail, false);
-  assert.equal(decide(s, f).step, '/keystone:fix verify');
+  assert.equal(decide(s, f).step, '/sattva:fix verify');
   commit(wt, { 'src/fix.js': '1' }, 'fix');
   f = facts(s);
   assert.equal(f.plans[0].fixedAfterFail, true);
-  assert.equal(decide(s, f).step, `/keystone:verify ${P}`);
+  assert.equal(decide(s, f).step, `/sattva:verify ${P}`);
   put(wt, { 'src/wip.js': '2' });
   assert.deepEqual(facts(s).files, ['src/wip.js']);
   rmSync(join(wt, 'src', 'wip.js'));
@@ -172,9 +172,9 @@ test('I-8: git mode is read-only and prints the table', () => {
 
 test('sent store lives in the git common dir; CLI classify exits 1 on a wrong --self', () => {
   const root = repo();
-  recordSent('c', '/keystone:fix verify', root);
-  assert.equal(readSent(root).c.step, '/keystone:fix verify');
-  assert.match(readFileSync(join(root, '.git', 'keystone-sessions.json'), 'utf8'), /fix verify/);
+  recordSent('c', '/sattva:fix verify', root);
+  assert.equal(readSent(root).c.step, '/sattva:fix verify');
+  assert.match(readFileSync(join(root, '.git', 'sattva-sessions.json'), 'utf8'), /fix verify/);
   const file = join(root, 'in.json');
   writeFileSync(file, JSON.stringify(fam()));
   const r = spawnSync('node', [SCRIPT, 'classify', file, '--self', 'nobody'], { cwd: root, encoding: 'utf8' });
@@ -183,13 +183,13 @@ test('sent store lives in the git common dir; CLI classify exits 1 on a wrong --
 });
 
 test('I-1: the UserPromptSubmit hook asks for the skill only on a side-sessions event', () => {
-  const { KEYSTONE_SESSIONS: _, ...clean } = process.env; // the switch from the shell running npm test must not leak in
+  const { SATTVA_SESSIONS: _, ...clean } = process.env; // the switch from the shell running npm test must not leak in
   const run = (input, env = {}) => spawnSync('node', [HOOK], { input, encoding: 'utf8', env: { ...clean, ...env } });
   const ev = run(JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: '<side-sessions-event>a child session ended a turn</side-sessions-event>' }));
   assert.equal(ev.status, 0);
   const ctx = JSON.parse(ev.stdout).hookSpecificOutput;
   assert.equal(ctx.hookEventName, 'UserPromptSubmit');
-  assert.match(ctx.additionalContext, /keystone:sessions/);
+  assert.match(ctx.additionalContext, /sattva:sessions/);
   assert.match(ctx.additionalContext, /Skill tool/);
   assert.doesNotMatch(ctx.additionalContext, /skills\/sessions\/SKILL\.md/);
   for (const input of [JSON.stringify({ prompt: 'привет' }), '{not json', '']) {
@@ -199,16 +199,16 @@ test('I-1: the UserPromptSubmit hook asks for the skill only on a side-sessions 
   }
 });
 
-test('I-16: KEYSTONE_SESSIONS=off silences the hook; KEYSTONE_GATES=off does not', () => {
-  const { KEYSTONE_SESSIONS: _, ...clean } = process.env;
+test('I-16: SATTVA_SESSIONS=off silences the hook; SATTVA_GATES=off does not', () => {
+  const { SATTVA_SESSIONS: _, ...clean } = process.env;
   const ev = JSON.stringify({ prompt: '<side-sessions-event>x</side-sessions-event>' });
   const run = (env) => spawnSync('node', [HOOK], { input: ev, encoding: 'utf8', env: { ...clean, ...env } });
   for (const v of ['off', 'OFF']) {
-    const r = run({ KEYSTONE_SESSIONS: v });
+    const r = run({ SATTVA_SESSIONS: v });
     assert.equal(r.status, 0);
     assert.equal(r.stdout, '');
   }
-  const g = run({ KEYSTONE_GATES: 'off' });
+  const g = run({ SATTVA_GATES: 'off' });
   assert.equal(g.status, 0);
-  assert.match(JSON.parse(g.stdout).hookSpecificOutput.additionalContext, /keystone:sessions/);
+  assert.match(JSON.parse(g.stdout).hookSpecificOutput.additionalContext, /sattva:sessions/);
 });

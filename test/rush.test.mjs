@@ -8,13 +8,13 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const RUSH = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'implement', 'scripts', 'rush.mjs');
-const PLAN = 'docs/keystone/2026-11-19-x/plan.md';
-const VERIFY = 'docs/keystone/2026-11-19-x/verify.md';
+const PLAN = 'docs/sattva/2026-11-19-x/plan.md';
+const VERIFY = 'docs/sattva/2026-11-19-x/verify.md';
 const roots = [];
 after(() => { for (const r of roots) try { rmSync(r, { recursive: true, force: true }); } catch { /* Windows file locks */ } });
 
 const plan = (status, rush) => `# Plan: x\n\nLevel: M · Mode: feature · Status: ${status}\nSettings: tests — yes\nDone means: x\n${rush ? 'Pace: rush\n' : ''}\n## Original Request\nPace: rush in the body does not count\n\n## Tasks\n- [ ] 1. a — files: a.js\n`;
-const vmd = (verdict, n) => `# Verify: x\nDate: 2026-11-19 · Base: 0000000 · Verdict: ${verdict}\n\n## Checks\n- run ${n}\n\n## Report\nKeystone verify: ${PLAN}\n- Task 1 — wrong — a${n}. Repro: x\n\n## Verdict\n${verdict}\n`;
+const vmd = (verdict, n) => `# Verify: x\nDate: 2026-11-19 · Base: 0000000 · Verdict: ${verdict}\n\n## Checks\n- run ${n}\n\n## Report\nSattva verify: ${PLAN}\n- Task 1 — wrong — a${n}. Repro: x\n\n## Verdict\n${verdict}\n`;
 
 function git(root, args, date) {
   const env = { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' };
@@ -84,7 +84,7 @@ test('summary: root-relative, absolute and from-a-subfolder plan paths give one 
   const a = out(run(root, 'summary'));
   assert.match(a, /прогонов verify 2$/);
   assert.equal(out(run(root, 'summary', { plan: join(root, PLAN) })), a);
-  assert.equal(out(run(root, 'summary', { cwd: join(root, 'docs'), plan: 'keystone/2026-11-19-x/plan.md' })), a);
+  assert.equal(out(run(root, 'summary', { cwd: join(root, 'docs'), plan: 'sattva/2026-11-19-x/plan.md' })), a);
 });
 test('errors: no file, not git → rush: <message> on stderr, exit 1', () => {
   const r = run(repo(), 'pace', { plan: 'nope/plan.md' });
