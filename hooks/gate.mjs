@@ -85,6 +85,14 @@ function sessionTrail(transcript) {
   let raw = '';
   try { raw = readFileSync(transcript, 'utf8'); } catch { return trail; } // nothing written yet → nothing done yet
   for (const line of raw.split('\n')) {
+    // the last answer's text, for the Stop branch when Claude Code sends no last_assistant_message
+    if (line.includes('"assistant"') && line.includes('"text"')) {
+      try {
+        const r = JSON.parse(line);
+        const text = Array.isArray(r?.message?.content) ? r.message.content.filter((b) => b?.type === 'text').map((b) => b.text).join('\n') : '';
+        if (r.type === 'assistant' && text) trail.lastText = text;
+      } catch { /* a torn last line */ }
+    }
     if (line.includes('<task-notification>')) for (const m of line.matchAll(/<tool-use-id>(\w+)<\/tool-use-id>/g)) trail.finished.add(m[1]);
     if (!line.includes('keystone') && !line.includes('"tool_use"') && !line.includes('Async agent launched')) continue;
     let row;
@@ -252,7 +260,14 @@ export function decide(input, env = process.env) {
     if (input.stop_hook_active) return null; // one block per turn; Claude Code's 8-in-a-row cap is never reached
     if (plan.status !== 'implementing') return null;
     const open = openTasks(plan.text);
-    if (!open.length || waitingForBackground(trail)) return null;
+    if (waitingForBackground(trail)) return null;
+    if (!open.length) {
+      // every task ticked, plan not verified: the answer must point at verify, not call the work done.
+      // A session that ran verify (FAIL → Next: /keystone:fix, rush) passes; no answer text → cannot tell → pass.
+      const last = input.last_assistant_message ?? trail?.lastText;
+      if (!last || last.includes('/keystone:verify') || trail?.commands.some((c) => c.stage === 'verify')) return null;
+      return { decision: 'block', reason: `Keystone: every task of ${plan.file} is ticked, but the plan is still implementing — not verified, so the work is not done yet. Do not call it done. Your answer stays as written: do not repeat or replace it, add only \`Next: /clear, then /keystone:verify ${plan.file}\` (or \`Next: nothing now — waiting for <what>\` if you are waiting for the user) and end the turn. ${HOW}` };
+    }
     return { decision: 'block', reason: `Keystone: ${plan.file} is implementing and ${open.length} task(s) are still [ ] without BLOCKED:. If you are implementing: continue them, or append \`BLOCKED: <reason>\` to the task line of one that cannot run, then give the line-by-line report. If you are waiting for the user's answer, the user asked to pause, or you just answered a question — your answer stays as written: do not repeat or replace it, add only \`Next: nothing now — waiting for <what>\` (or the one next step) and end the turn. ${HOW}` };
   }
 

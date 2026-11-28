@@ -5,6 +5,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.48] — 2026-11-27
+
+### Changed
+- **Stop hook asks for verify once every task is ticked.** With all tasks `[x]` and the plan still `implementing`, an
+  answer that does not name `/keystone:verify` is blocked once per turn: the work is not done before verify. The normal
+  end of implement (`Next: /clear, then /keystone:verify …`) and a session that ran `/keystone:verify` pass. Idea from
+  the completion hook of AI Factory 2.22.
+
 ## [0.9.47] — 2026-11-27
 
 ### Added

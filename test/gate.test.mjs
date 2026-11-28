@@ -95,6 +95,27 @@ test('I-6/I-13: Stop blocks once while implementing with open tasks', () => {
   assert.equal(stop(approved), null);
 });
 
+test('Stop: every task ticked, not verified — the normal end of implement passes, "done" without verify is blocked once', () => {
+  const root = project({ '2026-10-12-x': 'Status: implementing' }, { tasks: '- [x] 1. a\n- [ ] 2. b — BLOCKED: no DB' });
+  const said = (text, active = false) => stop(root, active, { last_assistant_message: text });
+  assert.equal(said('Report…\n\nNext: /clear, then /keystone:verify docs/keystone/2026-10-12-x/plan.md'), null, 'normal end of implement');
+  const r = said('Готово, всё сделано.');
+  assert.equal(r.decision, 'block');
+  assert.match(r.reason, /docs\/keystone\/2026-10-12-x\/plan\.md/);
+  assert.match(r.reason, /Next: \/clear, then \/keystone:verify/);
+  assert.match(r.reason, /do not repeat or replace/);
+  assert.equal(said('Готово, всё сделано.', true), null, 'stop_hook_active → one block per turn');
+
+  // no last_assistant_message: the last assistant text in the transcript decides
+  const bind = { type: 'user', message: { role: 'user', content: '<command-name>/keystone:implement</command-name>\n<command-args>2026-10-12-x</command-args>' } };
+  const answer = (text) => ({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text }] } });
+  const file = (rows) => { const f = join(root, `.done${n++}.jsonl`); writeFileSync(f, rows.map((x) => JSON.stringify(x)).join('\n') + '\n'); return { transcript_path: f }; };
+  assert.equal(stop(root, false, file([bind, answer('Next: /keystone:verify x'), answer('All done.')])).decision, 'block', 'last answer wins');
+  assert.equal(stop(root, false, file([bind, answer('All done.\nNext: /clear, then /keystone:verify 2026-10-12-x')])), null);
+  const ranVerify = { type: 'user', message: { role: 'user', content: '<command-name>/keystone:verify</command-name>\n<command-args>2026-10-12-x</command-args>' } };
+  assert.equal(stop(root, false, file([ranVerify, answer('FAIL — Next: /keystone:fix 2026-10-12-x')])), null, 'a session that ran verify passes');
+});
+
 test('I-7: push and PR closed while a plan is active; commit allowed; PowerShell caught', () => {
   for (const s of ['draft', 'approved', 'implementing']) {
     const root = project({ '2026-10-12-x': `Status: ${s}` });

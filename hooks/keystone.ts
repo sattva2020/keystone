@@ -79,7 +79,7 @@ export function gatesFor(p: Plan): string[] {
   const g = ['push/PR closed until /keystone:verify']
   if (p.status === 'draft') g.unshift('code edits closed until Approve')
   if (p.mode === 'fix' && p.status === 'implementing') g.push('committed tests locked (fix)')
-  if (p.status === 'implementing' && p.total - p.done - p.blocked > 0) g.push('Stop reminds about open tasks')
+  if (p.status === 'implementing') g.push(p.total - p.done - p.blocked > 0 ? 'Stop reminds about open tasks' : 'Stop reminds to run /keystone:verify')
   return g
 }
 

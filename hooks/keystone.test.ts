@@ -32,6 +32,14 @@ test('parsePlan reads the header and counts only ## Tasks', async () => {
   expect(gatesFor(p).join(' ')).toContain('Stop reminds')
 })
 
+test('gatesFor: open tasks → Stop reminds about them; all ticked → Stop reminds to run verify', () => {
+  const plan = (tasks: string[]) => parsePlan('docs/keystone/x/plan.md', ['# Plan: x', '', 'Level: M · Mode: feature · Status: implementing', '', '## Tasks', ...tasks, ''].join('\n'))!
+  expect(gatesFor(plan(['- [x] 1. a', '- [ ] 2. b'])).join(' ')).toContain('Stop reminds about open tasks')
+  const done = gatesFor(plan(['- [x] 1. a', '- [ ] 2. b — BLOCKED: no db'])).join(' ')
+  expect(done).toContain('Stop reminds to run /keystone:verify')
+  expect(done).not.toContain('open tasks')
+})
+
 test('verified, abandoned and header-less plans are not active', async () => {
   expect(parsePlan('p', PLAN.replace('implementing', 'verified'))).toBe(null)
   expect(parsePlan('p', '# Plan\n## Tasks\n- [ ] 1. a\n')).toBe(null)
