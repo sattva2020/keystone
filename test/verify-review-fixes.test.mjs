@@ -11,9 +11,9 @@ import { fileURLToPath } from 'node:url';
 import { findBase, git, delta } from '../skills/verify/scripts/collect.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PLAN = 'docs/keystone/2026-10-18-x/plan.md';
-const VERIFY = 'docs/keystone/2026-10-18-x/verify.md';
-const INTENT = 'docs/keystone/2026-10-18-x/intent.md';
+const PLAN = 'docs/sattva/2026-10-18-x/plan.md';
+const VERIFY = 'docs/sattva/2026-10-18-x/verify.md';
+const INTENT = 'docs/sattva/2026-10-18-x/intent.md';
 const roots = [];
 after(() => { for (const r of roots) try { rmSync(r, { recursive: true, force: true }); } catch { /* Windows file locks */ } });
 
@@ -29,7 +29,7 @@ const T2 = '- [x] 2. b — files: src/b.js — check: npm test\n  - Source: inte
 const R1 = '| x | intent — I-1 | t |\n';
 const R2 = '| y | intent — I-2 | t |\n';
 const vmd = (base, report) =>
-  `# Verify: x\nDate: 2026-11-01 · Base: ${base.slice(0, 7)} · Verdict: PASS\n\n## Checks\n- base: ${base.slice(0, 7)}\n\n## Carried\n\n## Report\nKeystone verify: ${PLAN} · base ${base.slice(0, 7)}\n${report}\n\n## Verdict\nPASS\n`;
+  `# Verify: x\nDate: 2026-11-01 · Base: ${base.slice(0, 7)} · Verdict: PASS\n\n## Checks\n- base: ${base.slice(0, 7)}\n\n## Carried\n\n## Report\nSattva verify: ${PLAN} · base ${base.slice(0, 7)}\n${report}\n\n## Verdict\nPASS\n`;
 const ids = (out, label) => (out.find((l) => l.startsWith(`${label}: `)) || '').slice(label.length + 2).split(', ');
 
 test('review 1: a task, row or I-n deleted between runs is neither carried nor judged', () => {

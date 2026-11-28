@@ -1,6 +1,6 @@
 ---
 name: review-validator
-description: "Keystone review finding validator — fresh-context, read-only second opinion on code-review findings; keep, modify or drop each one against the reviewed diff, and move severity. Called by /keystone:review; not for direct use."
+description: "Sattva review finding validator — fresh-context, read-only second opinion on code-review findings; keep, modify or drop each one against the reviewed diff, and move severity. Called by /sattva:review; not for direct use."
 tools: Read, Grep, Glob
 model: opus
 effort: high

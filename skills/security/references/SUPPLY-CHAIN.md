@@ -1,4 +1,4 @@
-<!-- original Keystone file (MIT) -->
+<!-- original Sattva file (MIT) -->
 
 # Supply chain and CI (category `supply-chain`)
 

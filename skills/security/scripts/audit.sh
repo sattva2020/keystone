@@ -195,6 +195,6 @@ if [ $ISSUES -gt 0 ]; then
   exit 1
 else
   echo -e "${GREEN}✅ No critical issues found${NC}"
-  echo "Remember to also review manually using /keystone:security"
+  echo "Remember to also review manually using /sattva:security"
   exit 0
 fi

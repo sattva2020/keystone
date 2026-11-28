@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # derived from ai-factory@2.19.0 skills/aif-distillation/scripts/material-prep.py (MIT); see THIRD_PARTY_NOTICES.md
-"""Prepare large material for keystone-distill.
+"""Prepare large material for sattva-distill.
 
 The script extracts text from local files, folders, and URLs, then writes
 chunked markdown files plus a manifest. It intentionally leaves the output
@@ -28,8 +28,8 @@ from pathlib import Path
 from typing import Iterable
 
 
-TOOL_MARKER_FILE = ".keystone-distill-material-prep.json"
-TOOL_MARKER_NAME = "keystone/distill/material-prep"
+TOOL_MARKER_FILE = ".sattva-distill-material-prep.json"
+TOOL_MARKER_NAME = "sattva/distill/material-prep"
 TOOL_MARKER_VERSION = "1"
 
 TEXT_EXTENSIONS = {
@@ -276,7 +276,7 @@ def download_url(url: str, work_dir: Path) -> Path:
 
     request = urllib.request.Request(
         download_url_value,
-        headers={"User-Agent": "keystone-distill/1.0"},
+        headers={"User-Agent": "sattva-distill/1.0"},
     )
     with urllib.request.urlopen(request, timeout=60) as response:
         target.write_bytes(response.read())
@@ -594,7 +594,7 @@ def cleanup_output(path_value: str) -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Extract and chunk material for keystone-distill.")
+    parser = argparse.ArgumentParser(description="Extract and chunk material for sattva-distill.")
     parser.add_argument("sources", nargs="*", help="Local file, local directory, or URL.")
     parser.add_argument("--out", help="Output directory. Defaults to a new temp directory.")
     parser.add_argument("--chunk-chars", type=int, default=18000, help="Approximate max characters per chunk.")
@@ -615,10 +615,10 @@ def main() -> int:
     if not args.sources:
         raise RuntimeError("At least one source is required unless --cleanup is used.")
 
-    out_dir = Path(args.out).expanduser().resolve() if args.out else Path(tempfile.mkdtemp(prefix="keystone-distill-"))
+    out_dir = Path(args.out).expanduser().resolve() if args.out else Path(tempfile.mkdtemp(prefix="sattva-distill-"))
     prepare_output_dir(out_dir)
 
-    with tempfile.TemporaryDirectory(prefix="keystone-distill-download-") as download_dir:
+    with tempfile.TemporaryDirectory(prefix="sattva-distill-download-") as download_dir:
         docs: list[ExtractedDocument] = []
         for source in args.sources:
             docs.extend(

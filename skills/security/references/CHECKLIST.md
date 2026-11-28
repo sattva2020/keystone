@@ -88,7 +88,7 @@ Dockerfile/Kubernetes/Terraform → `IAC.md`, id → standard mapping → `MAPPI
 - Never in code (`const API_KEY = "sk_live_…"`), in git (`.env` committed), in logs, in error messages, in client bundles.
 - Do: env vars or a vault; `.env` in `.gitignore`; separate secrets per environment; rotation; access auditing.
 - If a secret was committed: rotate it first (history rewrite with `git filter-repo`/BFG is cosmetic once exposed), then
-  coordinate any force-push with the team. Keystone never rewrites history itself.
+  coordinate any force-push with the team. Sattva never rewrites history itself.
 - Starter: `grep -rnE "(password|secret|api_?key|token|private_key)\s*[:=]\s*['\"][^'\"]{8,}" .`
 
 ## Cryptographic Failures [A04:2025] (category `crypto`)

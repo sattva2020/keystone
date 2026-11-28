@@ -12,10 +12,10 @@ const g = (cwd, ...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.emai
 const TEXT = '# Skill\n\n## Step 1 — collect\nCollect.\n\n## Step 2 — run\nRun.\n';
 
 test('each counter of the evolve header belongs to the skill of the header, for every skill', () => {
-  const r = tmp(), store = tmp(), env = { ...process.env, KEYSTONE_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store };
+  const r = tmp(), store = tmp(), env = { ...process.env, SATTVA_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store };
   g(r, 'init', '-q');
   mkdirSync(join(r, '.claude-plugin'), { recursive: true });
-  writeFileSync(join(r, '.claude-plugin/plugin.json'), JSON.stringify({ name: 'keystone', version: '0.9.1' }));
+  writeFileSync(join(r, '.claude-plugin/plugin.json'), JSON.stringify({ name: 'sattva', version: '0.9.1' }));
   // skill → [findings, logged, in a section changed after the version]
   const want = { verify: [6, 2, 3], plan: [4, 1, 0], implement: [3, 0, 1] };
   for (const s of Object.keys(want)) { mkdirSync(join(r, 'skills', s), { recursive: true }); writeFileSync(join(r, 'skills', s, 'SKILL.md'), TEXT); }
@@ -29,8 +29,8 @@ test('each counter of the evolve header belongs to the skill of the header, for 
   }
   mkdirSync(join(store, 'p1-aaaaaa'));
   writeFileSync(join(store, 'p1-aaaaaa', 'feedback.jsonl'), recs.map((x) => JSON.stringify(x)).join('\n') + '\n');
-  mkdirSync(join(r, 'docs/keystone'), { recursive: true });
-  writeFileSync(join(r, 'docs/keystone/evolve-log.md'), log.join('\n') + '\n');
+  mkdirSync(join(r, 'docs/sattva'), { recursive: true });
+  writeFileSync(join(r, 'docs/sattva/evolve-log.md'), log.join('\n') + '\n');
   for (const [s, [n, logged, changed]] of Object.entries(want)) {
     assert.equal(fb.evolveReport({ skill: s }, env, r).split('\n')[1], `${n - logged - changed} to take · ${changed} possibly fixed · ${logged} already in the evolve log`, s);
   }

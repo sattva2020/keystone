@@ -1,5 +1,5 @@
 <!-- derived from ai-factory@2.19.0 skills/aif-improve/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
-# Analysis procedure for `keystone:analyzer`
+# Analysis procedure for `sattva:analyzer`
 
 You are given a plan path, an optional intent path and the project-rule files. You are read-only: never edit, never run
 anything that changes state. The plan's `## Original Request` is the scope anchor; `- [x]` tasks are done and are never
@@ -133,7 +133,7 @@ useful-but-unrelated idea → `out_of_scope`. Mark each such finding `(from requ
 verbatim quote. A request that contradicts the `## Original Request` or an intent line is a `goal-drift` finding quoting
 both — never a silent plan change.
 
-### Keystone categories (in addition to 4.1–4.7)
+### Sattva categories (in addition to 4.1–4.7)
 
 **K.1: `intent-gap`** — only when an intent file is given. Take every live `I-n` (struck-through lines are dropped; an
 intent without IDs: number lines `#O1…`, `#C1…` and say so). For each decide, citing the plan line verbatim:
@@ -180,7 +180,7 @@ that contradicts a prior decision, ADR or postmortem is a `rule-violation` findi
 ## Accepted decisions (always, memlab or not)
 
 Take the paths and key terms of the plan's tasks (directories, file names, tool and product names) and grep the
-accepted intents of other task folders (`docs/keystone/*/intent.md` with `Status: accepted`: their `I-n` lines and
+accepted intents of other task folders (`docs/sattva/*/intent.md` with `Status: accepted`: their `I-n` lines and
 Decisions log) and `docs/notes/*.md` for them. A task that contradicts an accepted decision the plan does not
 explicitly supersede is a `rule-violation` finding whose text starts with
 `Decision: <intent path:I-n | note path> — contradicted by Task <n> — <how>`. Catching it here, before Approve, is

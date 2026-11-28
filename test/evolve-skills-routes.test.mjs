@@ -27,14 +27,14 @@ test('an open finding: the text says what the script does with it', () => {
 });
 
 test('every line the script can answer with has a route where it is called', () => {
-  const store = mkdtempSync(join(tmpdir(), 'ks-evr-')), env = { ...process.env, KEYSTONE_FEEDBACK: '', KEYSTONE_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store };
+  const store = mkdtempSync(join(tmpdir(), 'ks-evr-')), env = { ...process.env, SATTVA_FEEDBACK: '', SATTVA_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store };
   try {
     mkdirSync(join(store, 'p-aaaaaa'));
     writeFileSync(join(store, 'p-aaaaaa', 'feedback.jsonl'), JSON.stringify({ v: 1, id: 'j1', date: '2026-11-21T10:00:00Z', plugin_version: '0.9.1', project: 'p-aaaaaa', task: 't', skill: 'feedback', session: '-', kind: 'judge', items: [] }) + '\n');
-    const err = 'Keystone evolve: error';
+    const err = 'Sattva evolve: error';
     assert.ok(fb.evolveReport({ skill: 'nope' }, env, root).startsWith(err));
     assert.ok(fb.evolved({ skill: 'verify' }, env, root).startsWith(err));
-    has('Findings', 'Keystone evolve: nothing to do', err);
+    has('Findings', 'Sattva evolve: nothing to do', err);
     has('Write', err, 'No key to log');
   } finally {
     rmSync(store, { recursive: true, force: true });
@@ -48,13 +48,13 @@ test('answers are never asked for and lost: the branch is checked before any que
 
 test('the steps run in this order: Findings answers its one-line ends before Branch, Branch before any question', () => {
   assert.deepEqual(Object.keys(steps), ['Off', 'Findings', 'Branch', 'Read', 'Draft', 'Show', 'Ask', 'Privacy', 'Write', 'Test', 'End']);
-  has('Findings', 'Keystone evolve: nothing to do', 'Keystone evolve: error');
+  has('Findings', 'Sattva evolve: nothing to do', 'Sattva evolve: error');
 });
 
 test('every place that lists what Mode skills writes names CHANGELOG.md', () => {
   const text = readFileSync(join(root, 'skills/evolve/SKILL.md'), 'utf8').replace(/\r\n/g, '\n');
   has('Show', 'CHANGELOG.md');
-  has('Write', 'whose Edit applied', '`### Changed` heading', '`verifier` → `/keystone:verify`');
+  has('Write', 'whose Edit applied', '`### Changed` heading', '`verifier` → `/sattva:verify`');
   has('Test', '`CHANGELOG.md` lines');
   const intro = text.split('\n\n').find((p) => p.includes('except Mode skills'));
   assert.ok(intro?.includes('CHANGELOG.md'), `intro: ${intro}`);
@@ -65,8 +65,9 @@ test('every place that lists what Mode skills writes names CHANGELOG.md', () => 
 test('CHANGELOG: the Mode skills line is part of the unreleased Added item, not a Changed item', () => {
   const log = readFileSync(join(root, 'CHANGELOG.md'), 'utf8').replace(/\s+/g, ' ');
   const sections = log.split(/ (?=## \[)/);
-  const section = sections.find((s) => s.includes('`/keystone:evolve skills'));
-  assert.ok(section, 'a version section with the /keystone:evolve skills item');
+  // CHANGELOG is history: entries before 0.10.0 keep the old plugin prefix, so match the command without it.
+  const section = sections.find((s) => s.includes(':evolve skills'));
+  assert.ok(section, 'a version section with the /sattva:evolve skills item');
   const added = section.indexOf('### Added'), changed = section.indexOf('### Changed'), line = section.indexOf('also writes a `CHANGELOG.md` line');
   assert.ok(added >= 0 && line > added && (changed < 0 || line < changed), 'the line sits between ### Added and ### Changed');
   assert.ok(!log.includes('Mode skills writes a `CHANGELOG.md` line'), 'no separate Changed item');
@@ -77,9 +78,9 @@ test('an accepted section gets its CHANGELOG line, written by Mode skills itself
   has('End', 'CHANGELOG');
 });
 
-test('KEYSTONE_FEEDBACK=off: evolve and evolved answer the Off line and write nothing', () => {
-  const store = mkdtempSync(join(tmpdir(), 'ks-evoff-')), env = { ...process.env, KEYSTONE_FEEDBACK: 'off', KEYSTONE_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store };
-  const line = 'Keystone evolve: nothing to do — feedback is off';
+test('SATTVA_FEEDBACK=off: evolve and evolved answer the Off line and write nothing', () => {
+  const store = mkdtempSync(join(tmpdir(), 'ks-evoff-')), env = { ...process.env, SATTVA_FEEDBACK: 'off', SATTVA_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store };
+  const line = 'Sattva evolve: nothing to do — feedback is off';
   assert.equal(fb.evolveReport({}, env, root), line);
   assert.equal(fb.evolved({ skill: 'verify', accepted: '20261121-121824-feedback-8020#6' }, env, root), line);
   rmSync(store, { recursive: true, force: true });

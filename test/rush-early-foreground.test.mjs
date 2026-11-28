@@ -22,7 +22,7 @@ test('rush stage: every Agent call is in the foreground and the stage waits for 
 
 test('rush early check: foreground verifier, one repeat per point', () => {
   const s = section('Early check');
-  assert.match(s, /`subagent_type: "keystone:verifier"`, `run_in_background: false`/);
+  assert.match(s, /`subagent_type: "sattva:verifier"`, `run_in_background: false`/);
   assert.equal(s.split('one more early check').length - 1, 1);
   assert.match(s, /one more early check of the same ids — one per point, never a second; what it still finds is `left for verify`/);
 });
@@ -31,8 +31,8 @@ test('rush sweep: security first, then verifier and finder in one message, nothi
   const s = section('Stage rules');
   const i = s.indexOf('`sweep: due`');
   assert.ok(i > 0);
-  const security = s.indexOf('/keystone:security <plan> sweep', i);
-  const judges = s.indexOf('then in one message `keystone:verifier` and the review finder', i);
+  const security = s.indexOf('/sattva:security <plan> sweep', i);
+  const judges = s.indexOf('then in one message `sattva:verifier` and the review finder', i);
   assert.ok(security > i && judges > security);
   assert.match(s, /not a line of the security output goes into their prompts/);
 });

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Agentic A/B benchmark for /keystone:verify, after Ponytail's benchmarks/agentic.
+"""Agentic A/B benchmark for /sattva:verify, after Ponytail's benchmarks/agentic.
 
 Each cell is a real headless `claude -p` session in a fresh temp repo outside any git checkout. The repo carries a
-Keystone plan whose boxes are all checked; three tasks hide a gap the tests do not catch, `clean` hides none. A cell
+Sattva plan whose boxes are all checked; three tasks hide a gap the tests do not catch, `clean` hides none. A cell
 is right when it says FAIL and names the gap (or PASS / PASS-UNPROVEN on `clean`).
 
   python run.py --selftest                       prove the instruments, no API -- run first
   python run.py --dry-run --task missing-task    print the seeded path and the command, no API
-  python run.py --task all --arms baseline,control,keystone --runs 5 --model opus
+  python run.py --task all --arms baseline,control,sattva --runs 5 --model opus
   python run.py --rescore runs/<stamp>           recompute the table from kept workspaces, no API
   python run.py --chain --task all --arms chain,rush --runs 2   the whole chain after Approve: chain vs rush (README)
 
@@ -21,12 +21,12 @@ from pathlib import Path
 from tasks import CHAIN_TASKS, TASKS, _load, chain_seed, with_pace
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[1]                      # the Keystone plugin under test: this checkout, not the installed cache
+ROOT = HERE.parents[1]                      # the Sattva plugin under test: this checkout, not the installed cache
 RUNS_DIR = HERE / "runs"
 MODELS = {"haiku": "claude-haiku-5-5", "sonnet": "claude-sonnet-5-5", "opus": "claude-opus-5-5"}
-CELL_TIMEOUT = 900                          # seconds; keystone runs a verifier subagent
+CELL_TIMEOUT = 900                          # seconds; sattva runs a verifier subagent
 BUDGET_USD = "5"                            # per-cell ceiling, passed to --max-budget-usd
-ENV = {"CLAUDE_CODE_DISABLE_CLAUDE_MDS": "1", "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "KEYSTONE_FEEDBACK": "off"}
+ENV = {"CLAUDE_CODE_DISABLE_CLAUDE_MDS": "1", "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1", "SATTVA_FEEDBACK": "off"}
 
 # Identical for every arm.
 VERDICT_ASK = ("Change no code. End your final reply with exactly one line: `VERDICT: PASS`, "
@@ -36,11 +36,11 @@ CONTROL_LINE = ("Do not trust checked boxes: check every plan task against the c
 ARMS = {  # arm -> (prompt for a plan path, loads the plugin)
     "baseline": (lambda p: f"Check whether the work in {p} is really done.", False),
     "control":  (lambda p: f"Check whether the work in {p} is really done. {CONTROL_LINE}", False),
-    "keystone": (lambda p: f"/keystone:verify {p}", True),
-    # the same command on another Keystone checkout (--base-plugin-dir): before/after a change to the plugin
-    "keystone-base": (lambda p: f"/keystone:verify {p}", True),
+    "sattva": (lambda p: f"/sattva:verify {p}", True),
+    # the same command on another Sattva checkout (--base-plugin-dir): before/after a change to the plugin
+    "sattva-base": (lambda p: f"/sattva:verify {p}", True),
 }
-DEFAULT_ARMS = "baseline,control,keystone"
+DEFAULT_ARMS = "baseline,control,sattva"
 BASE_PLUGIN_DIR = None                       # set from --base-plugin-dir
 
 def plugin_dir_ok(p):
@@ -72,8 +72,8 @@ def build_cmd(task, arm, model):
            "--setting-sources", "project,local", "--strict-mcp-config", "--max-budget-usd", BUDGET_USD,
            "--append-system-prompt", VERDICT_ASK]
     if not plugin: return cmd
-    pdir = BASE_PLUGIN_DIR if arm == "keystone-base" else ROOT
-    if not plugin_dir_ok(pdir): raise SystemExit(f"{arm}: no Keystone checkout at {pdir!r} (--base-plugin-dir)")
+    pdir = BASE_PLUGIN_DIR if arm == "sattva-base" else ROOT
+    if not plugin_dir_ok(pdir): raise SystemExit(f"{arm}: no Sattva checkout at {pdir!r} (--base-plugin-dir)")
     return cmd + ["--plugin-dir", str(pdir)]
 
 def move(src, dst):
@@ -108,7 +108,7 @@ VERDICT_RE = re.compile(r"VERDICT:\s*\**\s*(PASS-UNPROVEN|PASS|FAIL)")
 VERIFY_MD_RE = re.compile(r"Verdict:\s*\**\s*(PASS-UNPROVEN|PASS|FAIL)")
 
 def verdict_of(reply, verify_md):
-    """The reply's last VERDICT line wins; else Keystone's verify.md; else none (counts as wrong)."""
+    """The reply's last VERDICT line wins; else Sattva's verify.md; else none (counts as wrong)."""
     m = VERDICT_RE.findall(reply or "") or VERIFY_MD_RE.findall(verify_md or "")
     return m[-1] if m else "none"
 
@@ -127,7 +127,7 @@ def score(tid, arm, model, ws):
     except Exception as e:
         return {**row, "error": f"no JSON: {e}"[:200], "verdict": "none", "correct": 0}
     reply = j.get("result") or ""
-    vm = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in ws.glob("docs/keystone/*/verify.md"))
+    vm = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in ws.glob("docs/sattva/*/verify.md"))
     v, ok = judge(TASKS[tid], reply, vm)
     out = sum((m or {}).get("outputTokens") or 0 for m in (j.get("modelUsage") or {}).values()) or None
     return {**row, "verdict": v, "correct": int(ok), "wrote_verify_md": bool(vm), "out": out,
@@ -253,13 +253,13 @@ def selftest():
     ok(judge(clean, "VERDICT: FAIL", "") == ("FAIL", False), "judge  clean FAIL -> false alarm")
     with tempfile.TemporaryDirectory() as d:
         ok(score("clean", "baseline", "m", d)["correct"] == 0, "score  crashed cell (no JSON) counts as wrong")
-    by = defaultdict(list, {("t1", "baseline"): [{"cost": 2, "correct": 1}], ("t1", "keystone"): [{"cost": 4, "correct": 0}],
-                            ("t2", "baseline"): [{"cost": 4, "correct": 1}], ("t2", "keystone"): [{"cost": 2, "correct": 1}]})
-    ok(abs(arm_summary(by, ["baseline", "keystone"], ["t1", "t2"], "cost")["keystone"] - 1.0) < 1e-9,
+    by = defaultdict(list, {("t1", "baseline"): [{"cost": 2, "correct": 1}], ("t1", "sattva"): [{"cost": 4, "correct": 0}],
+                            ("t2", "baseline"): [{"cost": 4, "correct": 1}], ("t2", "sattva"): [{"cost": 2, "correct": 1}]})
+    ok(abs(arm_summary(by, ["baseline", "sattva"], ["t1", "t2"], "cost")["sattva"] - 1.0) < 1e-9,
        "stats  geomean of ratios 2.0 and 0.5 is 1.0")
-    ok(arm_summary(by, ["baseline", "keystone"], ["t1", "t2"], "correct") == {"baseline": 1.0, "keystone": 0.5},
+    ok(arm_summary(by, ["baseline", "sattva"], ["t1", "t2"], "correct") == {"baseline": 1.0, "sattva": 0.5},
        "stats  right share over all cells")
-    lo, hi = bootstrap(by, ["baseline", "keystone"], ["t1", "t2"], "cost", n=200)["keystone"]
+    lo, hi = bootstrap(by, ["baseline", "sattva"], ["t1", "t2"], "cost", n=200)["sattva"]
     ok(abs(lo - 1.0) < 1e-9 and abs(hi - 1.0) < 1e-9, "stats  bootstrap of one cell per group is a point")
     noisy = defaultdict(list, {("t", "baseline"): [{"correct": 1}, {"correct": 0}] * 5})
     lo, hi = bootstrap(noisy, ["baseline"], ["t"], "correct", n=2000)["baseline"]
@@ -268,34 +268,34 @@ def selftest():
     _tree_kill(p)
     try: ok(p.wait(timeout=10) is not None, "kill   tree-kill ends a timed-out cell")
     except subprocess.TimeoutExpired: p.kill(); ok(False, "kill   tree-kill ends a timed-out cell")
-    ok((ROOT / ".claude-plugin" / "plugin.json").exists(), "arms   --plugin-dir points at a Keystone checkout")
+    ok((ROOT / ".claude-plugin" / "plugin.json").exists(), "arms   --plugin-dir points at a Sattva checkout")
     with tempfile.TemporaryDirectory() as d:
-        meta = {"date": "x", "model": "m", "claude": "c", "keystone": "k"}
+        meta = {"date": "x", "model": "m", "claude": "c", "sattva": "k"}
         (Path(d) / "results.json").write_text(json.dumps({**meta, "results": []}), encoding="utf-8")
         (Path(d) / "clean__baseline__m__0").mkdir()                      # one crashed cell is enough
         with contextlib.redirect_stdout(io.StringIO()): rescore(d)
         kept = json.loads((Path(d) / "results.json").read_text(encoding="utf-8"))
         ok(all(kept.get(k) == v for k, v in meta.items()) and kept.get("rescored") and (Path(d) / "table.md").exists(),
-           "rescore keeps the run's model/claude/keystone record and rewrites table.md")
+           "rescore keeps the run's model/claude/sattva record and rewrites table.md")
     with tempfile.TemporaryDirectory() as d:
         seed(Path(d) / "a", TASKS["clean"], "good")
         move(Path(d) / "a", Path(d) / "b")
         ok((Path(d) / "b" / ".git").is_dir() and not (Path(d) / "a").exists(), "move   a cell with a read-only .git moves out")
     ok(not plugin_dir_ok(None) and not plugin_dir_ok(str(ROOT / "nowhere")) and plugin_dir_ok(str(ROOT)),
-       "arms   keystone-base needs a real Keystone checkout")
-    ok(arm_summary(by, ["baseline", "keystone"], ["t1", "t2"], "cost", ref="keystone")["baseline"] == 1.0,
-       "stats  --ref keystone: baseline/keystone ratios 0.5 and 2.0 give 1.0")
+       "arms   sattva-base needs a real Sattva checkout")
+    ok(arm_summary(by, ["baseline", "sattva"], ["t1", "t2"], "cost", ref="sattva")["baseline"] == 1.0,
+       "stats  --ref sattva: baseline/sattva ratios 0.5 and 2.0 give 1.0")
     with tempfile.TemporaryDirectory() as d:
         (Path(d) / "_claude.json").write_text(json.dumps({"result": "VERDICT: PASS", "total_cost_usd": 1,
             "modelUsage": {"claude-opus-5-5": {"outputTokens": 300}, "claude-sonnet-5-5": {"outputTokens": 200}}}), encoding="utf-8")
-        ok(score("clean", "keystone", "m", d)["out"] == 500, "score  out sums output tokens over every model")
+        ok(score("clean", "sattva", "m", d)["out"] == 500, "score  out sums output tokens over every model")
     chain_selftest(ok)
     print(f"\nselftest: {'all instruments valid' if not fails else f'{fails} BROKEN'}")
     return fails
 
 # ---------------------------------------------------------------- chain mode (--chain): Approve → verdict, chain vs rush
 # chain: separate `claude -p` processes — implement, verify, then up to two (fix verify, verify) pairs until PASS /
-# PASS-UNPROVEN. rush: one `claude -p "/keystone:implement <plan>"` on a plan with `Pace: rush`. No --max-budget-usd
+# PASS-UNPROVEN. rush: one `claude -p "/sattva:implement <plan>"` on a plan with `Pace: rush`. No --max-budget-usd
 # (rush has no spending ceiling, I-18) and no VERDICT_ASK (the chain changes code).
 CHAIN_ARMS = ("chain", "rush")
 CHAIN_TIMEOUT = 3600                        # seconds per process of the chain arm; one rush process gets the whole arm's
@@ -311,8 +311,8 @@ def chain_timeout(arm):
 
 def chain_env(ws, feedback="off"):
     # `claude -p` stops background subagents 10 min after the last turn: a stage or a verifier longer than that is killed
-    e = {**ENV, "KEYSTONE_FEEDBACK": feedback, "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "0"}
-    if feedback == "on": e["KEYSTONE_FEEDBACK_DIR"] = str(Path(ws) / "_feedback")
+    e = {**ENV, "SATTVA_FEEDBACK": feedback, "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "0"}
+    if feedback == "on": e["SATTVA_FEEDBACK_DIR"] = str(Path(ws) / "_feedback")
     return e
 
 def chain_cmd(prompt, model, fast=False):
@@ -323,11 +323,11 @@ def chain_cmd(prompt, model, fast=False):
 
 def build_chain_cmds(plan, arm, model, fast=False):
     """The first commands of a cell; the chain arm adds fix_pair() rounds in run_chain while there is no pass."""
-    prompts = [f"/keystone:implement {plan}"] + ([f"/keystone:verify {plan}"] if arm == "chain" else [])
+    prompts = [f"/sattva:implement {plan}"] + ([f"/sattva:verify {plan}"] if arm == "chain" else [])
     return [chain_cmd(p, model, fast) for p in prompts]
 
 def fix_pair(plan, model, fast=False):
-    return [chain_cmd("/keystone:fix verify", model, fast), chain_cmd(f"/keystone:verify {plan}", model, fast)]
+    return [chain_cmd("/sattva:fix verify", model, fast), chain_cmd(f"/sattva:verify {plan}", model, fast)]
 
 def _exclude(ws):
     p = Path(ws) / ".git" / "info" / "exclude"
@@ -345,7 +345,7 @@ def seed_chain(ws, task, rush):
 
 def _ceiling_verify(base, plan, i):
     return (f"# Verify: x\nDate: 2026-11-0{i} · Base: {base} · Verdict: FAIL\n\n## Checks\n- base: {base}\n\n## Carried\n\n"
-            f"## Report\nKeystone verify: {plan} · base {base}\n- Task 2 — missing — truncate not written ({i}). Repro: "
+            f"## Report\nSattva verify: {plan} · base {base}\n- Task 2 — missing — truncate not written ({i}). Repro: "
             f"`grep truncate src/textutil.py` → nothing\n\n## Verdict\nFAIL\n")
 
 def seed_ceiling(ws):
@@ -488,9 +488,9 @@ def chain_selftest(ok):
     ok(chain_tids("all") == ["missing-task", "weak-test", "rule-break"], "chain  --task all = the three chain tasks")
     cmds = build_chain_cmds("p/plan.md", "chain", "opus")
     flat = [x for c in cmds + fix_pair("p/plan.md", "opus") for x in c]
-    ok([c[2] for c in cmds] == ["/keystone:implement p/plan.md", "/keystone:verify p/plan.md"]
-       and [c[2] for c in build_chain_cmds("p/plan.md", "rush", "opus")] == ["/keystone:implement p/plan.md"]
-       and [c[2] for c in fix_pair("p/plan.md", "opus")] == ["/keystone:fix verify", "/keystone:verify p/plan.md"],
+    ok([c[2] for c in cmds] == ["/sattva:implement p/plan.md", "/sattva:verify p/plan.md"]
+       and [c[2] for c in build_chain_cmds("p/plan.md", "rush", "opus")] == ["/sattva:implement p/plan.md"]
+       and [c[2] for c in fix_pair("p/plan.md", "opus")] == ["/sattva:fix verify", "/sattva:verify p/plan.md"],
        "chain  commands: chain = implement, verify (+ fix pairs); rush = implement")
     ok(VERDICT_ASK not in flat and "--max-budget-usd" not in flat and "stream-json" in flat and "--settings" not in flat,
        "chain  no VERDICT_ASK, no --max-budget-usd, stream-json")
@@ -498,10 +498,10 @@ def chain_selftest(ok):
     ok(fc[fc.index("--settings") + 1] == '{"fastMode": true}', "chain  --fast adds --settings {\"fastMode\": true}")
     with tempfile.TemporaryDirectory() as d:
         e = chain_env(d, "on")
-        ok(e["KEYSTONE_FEEDBACK"] == "on" and Path(e["KEYSTONE_FEEDBACK_DIR"]).parent == Path(d)
-           and chain_env(d)["KEYSTONE_FEEDBACK"] == "off" and "KEYSTONE_FEEDBACK_DIR" not in chain_env(d)
+        ok(e["SATTVA_FEEDBACK"] == "on" and Path(e["SATTVA_FEEDBACK_DIR"]).parent == Path(d)
+           and chain_env(d)["SATTVA_FEEDBACK"] == "off" and "SATTVA_FEEDBACK_DIR" not in chain_env(d)
            and chain_env(d)["CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"] == "0",
-           "chain  --feedback on: KEYSTONE_FEEDBACK=on, KEYSTONE_FEEDBACK_DIR inside the cell; off by default")
+           "chain  --feedback on: SATTVA_FEEDBACK=on, SATTVA_FEEDBACK_DIR inside the cell; off by default")
     ok(chain_timeout("rush") == 6 * CHAIN_TIMEOUT and chain_timeout("chain") == CHAIN_TIMEOUT, "chain  rush timeout = 6 x CHAIN_TIMEOUT")
     with tempfile.TemporaryDirectory() as d:
         seed_chain(Path(d), TASKS["missing-task"], True)
@@ -516,7 +516,7 @@ def chain_selftest(ok):
         ok(pace.strip() == "pace: rush" and "ceiling: reached" in hist, "chain  fixture ceiling: pace: rush, ceiling: reached")
     with tempfile.TemporaryDirectory() as d:
         src, ws = Path(d) / "src", Path(d) / "ws"
-        rel = "docs/keystone/2026-01-01-r/plan.md"
+        rel = "docs/sattva/2026-01-01-r/plan.md"
         _write(src, {"a.txt": "a"}); _git(src, "init", "-q", "-b", "main"); _commit(src, "start")
         _write(src, {rel: "# Plan: r\n\nLevel: M · Mode: feature · Status: approved\nDone means: x\n\n## Tasks\n- [ ] 1. a\n\n"
                           "## Release\n- [ ] R1. echo release — check: true\n\n## Implementation notes\n"})
@@ -571,11 +571,11 @@ def chain_main(a):
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     out = RUNS_DIR / f"{stamp}-chain"
     out.mkdir(parents=True, exist_ok=True)
-    scratch = Path(tempfile.mkdtemp(prefix=f"keystone-chain-{stamp}-"))
+    scratch = Path(tempfile.mkdtemp(prefix=f"sattva-chain-{stamp}-"))
     cells = [(t, arm, a.model, r) for t in tids for arm in arms for r in range(a.runs)]
     meta = {"date": stamp, "mode": "chain", "model": MODELS.get(a.model, a.model), "claude": _claude_version(), "fast": a.fast,
             "feedback": a.feedback, "replay": a.replay,
-            "keystone": json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]}
+            "sattva": json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]}
     results = []
     def one(spec):
         ws = scratch / "__".join(map(str, spec))
@@ -620,7 +620,7 @@ def rescore(d, ref="baseline"):
                if ws.is_dir() and len(ws.name.split("__")) == 4 and ws.name.split("__")[0] in TASKS]
     try: old = json.loads((d / "results.json").read_text(encoding="utf-8"))
     except Exception: old = {}
-    meta = {k: v for k, v in old.items() if k not in ("results", "rescored")}   # keep the run's model/claude/keystone
+    meta = {k: v for k, v in old.items() if k not in ("results", "rescored")}   # keep the run's model/claude/sattva
     (d / "results.json").write_text(json.dumps({**meta, "rescored": True, "results": results}, indent=2), encoding="utf-8")
     table = report(results, ref)
     (d / "table.md").write_text(f"{json.dumps(meta)}\n\n{table}\n", encoding="utf-8")
@@ -634,7 +634,7 @@ def main():
     ap.add_argument("--rescore")
     ap.add_argument("--task", help="comma list or 'all'")
     ap.add_argument("--arms", default=DEFAULT_ARMS)
-    ap.add_argument("--base-plugin-dir", help="Keystone checkout for the keystone-base arm")
+    ap.add_argument("--base-plugin-dir", help="Sattva checkout for the sattva-base arm")
     ap.add_argument("--ref", default="baseline", help="arm the ratios are taken against")
     ap.add_argument("--model", default="opus")
     ap.add_argument("--runs", type=int, default=1)
@@ -644,7 +644,7 @@ def main():
     ap.add_argument("--replay", help="--chain only: <repo path>@<sha>:<plan> — a real plan from that repo's history")
     ap.add_argument("--replay-check", help="--replay only: a shell command that must exit 0 in the cell")
     ap.add_argument("--fast", action="store_true", help="--chain only: --settings {\"fastMode\": true}")
-    ap.add_argument("--feedback", choices=("on", "off"), default="off", help="--chain only: KEYSTONE_FEEDBACK of the cells")
+    ap.add_argument("--feedback", choices=("on", "off"), default="off", help="--chain only: SATTVA_FEEDBACK of the cells")
     a = ap.parse_args()
     global BASE_PLUGIN_DIR
     BASE_PLUGIN_DIR = a.base_plugin_dir
@@ -655,8 +655,8 @@ def main():
     arms = [x.strip() for x in a.arms.split(",")]
     if not tids or any(t not in TASKS for t in tids) or any(x not in ARMS for x in arms):
         sys.exit(f"--task from {list(TASKS)} or all; --arms from {list(ARMS)}")
-    if "keystone-base" in arms and not plugin_dir_ok(BASE_PLUGIN_DIR):
-        sys.exit(f"keystone-base needs --base-plugin-dir <a Keystone checkout>, got {BASE_PLUGIN_DIR!r}")
+    if "sattva-base" in arms and not plugin_dir_ok(BASE_PLUGIN_DIR):
+        sys.exit(f"sattva-base needs --base-plugin-dir <a Sattva checkout>, got {BASE_PLUGIN_DIR!r}")
     if a.dry_run:
         for t in tids:
             for arm in arms: print(t, arm, TASKS[t]["plan"], "\n  ", " ".join(build_cmd(TASKS[t], arm, a.model)))
@@ -669,11 +669,11 @@ def main():
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     out = RUNS_DIR / stamp
     out.mkdir(parents=True, exist_ok=True)
-    scratch = Path(tempfile.mkdtemp(prefix=f"keystone-bench-{stamp}-"))   # outside any git checkout
+    scratch = Path(tempfile.mkdtemp(prefix=f"sattva-bench-{stamp}-"))   # outside any git checkout
     cells = [(t, arm, a.model, r) for t in tids for arm in arms for r in range(a.runs)]
     meta = {"date": stamp, "model": MODELS.get(a.model, a.model), "claude": _claude_version(),
-            "keystone": json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"],
-            "keystone-base": json.loads((Path(BASE_PLUGIN_DIR) / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
+            "sattva": json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"],
+            "sattva-base": json.loads((Path(BASE_PLUGIN_DIR) / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
                              if plugin_dir_ok(BASE_PLUGIN_DIR) else None}
     results = []
 

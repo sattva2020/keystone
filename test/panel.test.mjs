@@ -10,7 +10,7 @@ import { panelRows, registryStates, FACTS_MAX, BUDGET_MS } from '../skills/sessi
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = join(ROOT, 'skills', 'sessions', 'scripts', 'panel.mjs');
-const P = 'docs/keystone/2026-11-04-x/plan.md';
+const P = 'docs/sattva/2026-11-04-x/plan.md';
 
 const roots = [];
 after(() => { for (const r of roots) try { rmSync(r, { recursive: true, force: true }); } catch { /* Windows file locks */ } });
@@ -69,7 +69,7 @@ test('waiting rows carry code and arg', () => {
     ['release', 'R1, R2', F({ plans: [pl({ status: 'verified', release: ['R1', 'R2'] })] })],
     ['dirty', 'a, b, c', F({ merged: true, dirty: true, files: ['a', 'b', 'c', 'd'] })],
     ['ignored', '.env', F({ ignored: ['.env'] })],
-    ['intent', undefined, F({ plans: [{ name: 'y', path: 'docs/keystone/y/plan.md', intentOnly: true }] })],
+    ['intent', undefined, F({ plans: [{ name: 'y', path: 'docs/sattva/y/plan.md', intentOnly: true }] })],
     ['merge', 'claude/c → main', F({})],
     ['unrecognised', 'abandoned', F({ plans: [pl({ status: 'abandoned' })] })],
   ];
@@ -87,7 +87,7 @@ test('waiting rows carry code and arg', () => {
   assert.equal(one('odd').code, 'state');
   assert.equal(one('idle', { factsOf: () => { throw new Error('boom'); } }).code, 'git');
   const open = () => F({ plans: [pl({ open: 1 })] });
-  const step = `/keystone:implement ${P}`;
+  const step = `/sattva:implement ${P}`;
   assert.deepEqual((({ code, arg }) => [code, arg])(one('idle', { factsOf: open, sent: { c: { step } } })), ['stuck', step]);
   assert.equal(one('idle', { factsOf: () => F({ plans: [pl({ open: 1, path: 'x/plan.md' })] }) }).code, 'path');
   const owner = { place: 'pc · /w', branch: 'b', since: 't' };
@@ -160,20 +160,20 @@ test('ready, unknown and the code table', () => {
   const one = (f, o = {}, deps = {}) => rows([kid('c', o)], { c: f }, deps)[0];
   const pick = (r) => [r.code, r.arg, r.next, r.wait, r.ready];
   assert.deepEqual(pick(one(READY)), [null, '', null, false, true]);
-  assert.deepEqual(pick(one(F({ plans: [pl({ status: 'draft' })] }))), ['approve', '', `/keystone:plan ${P}`, true, false]);
-  assert.deepEqual(pick(one(F({ plans: [pl({ verdict: 'PASS-UNPROVEN' })] }))), ['accept', '', `/keystone:verify accept ${P}`, true, false]);
+  assert.deepEqual(pick(one(F({ plans: [pl({ status: 'draft' })] }))), ['approve', '', `/sattva:plan ${P}`, true, false]);
+  assert.deepEqual(pick(one(F({ plans: [pl({ verdict: 'PASS-UNPROVEN' })] }))), ['accept', '', `/sattva:verify accept ${P}`, true, false]);
   assert.deepEqual(pick(one(F({ plans: [pl({ blocked: 'db' })] }))), ['blocked', 'db', null, true, false]);
-  assert.deepEqual(pick(one(F({ plans: [pl({ status: 'verified', release: ['R1'] })] }))), ['release', 'R1', `/keystone:implement ${P}`, true, false]);
-  assert.deepEqual(pick(one(F({ plans: [{ name: 'y', path: 'docs/keystone/y/plan.md', intentOnly: true }] }))), ['intent', '', '/keystone:plan docs/keystone/y/intent.md', true, false]);
+  assert.deepEqual(pick(one(F({ plans: [pl({ status: 'verified', release: ['R1'] })] }))), ['release', 'R1', `/sattva:implement ${P}`, true, false]);
+  assert.deepEqual(pick(one(F({ plans: [{ name: 'y', path: 'docs/sattva/y/plan.md', intentOnly: true }] }))), ['intent', '', '/sattva:plan docs/sattva/y/intent.md', true, false]);
   // an intent-only folder before the draft: the command names the draft's plan
-  assert.equal(one(F({ plans: [{ name: 'y', path: 'docs/keystone/y/plan.md', intentOnly: true }, pl({ status: 'draft' })] })).next, `/keystone:plan ${P}`);
+  assert.equal(one(F({ plans: [{ name: 'y', path: 'docs/sattva/y/plan.md', intentOnly: true }, pl({ status: 'draft' })] })).next, `/sattva:plan ${P}`);
   assert.deepEqual(pick(one(F({}))), ['merge', 'claude/c → main', null, true, false]);
   assert.deepEqual(pick(one(F({ merged: true, dirty: true, files: ['a'] }))), ['dirty', 'a', null, true, false]);
-  assert.deepEqual(pick(one(F({ plans: [pl({ open: 1 })] }))), ['step', '', `/keystone:implement ${P}`, false, false]);
-  const step = `/keystone:implement ${P}`;
+  assert.deepEqual(pick(one(F({ plans: [pl({ open: 1 })] }))), ['step', '', `/sattva:implement ${P}`, false, false]);
+  const step = `/sattva:implement ${P}`;
   assert.deepEqual(pick(one(F({ plans: [pl({ open: 1 })] }), {}, { sent: { c: { step } } })), ['stuck', step, step, true, false]);
   const waiting = { states: new Map([['c', 'waiting']]) };
-  for (const [p, next] of [[pl({ status: 'draft' }), `/keystone:plan ${P}`], [pl({ status: 'approved' }), step], [pl({ open: 1 }), step], [pl({}), `/keystone:verify ${P}`], [pl({ status: 'verified', release: ['R1'] }), step]])
+  for (const [p, next] of [[pl({ status: 'draft' }), `/sattva:plan ${P}`], [pl({ status: 'approved' }), step], [pl({ open: 1 }), step], [pl({}), `/sattva:verify ${P}`], [pl({ status: 'verified', release: ['R1'] }), step]])
     assert.deepEqual(pick(one(F({ plans: [p] }), {}, waiting)), ['answer', '', next, true, false]);
   assert.deepEqual(pick(one(READY, {}, waiting)), ['answer', '', null, true, false]);
   assert.deepEqual(pick(one(F({ plans: [pl({ open: 1 })] }), {}, { states: new Map([['c', 'busy']]) })), [null, '', null, false, false]);
@@ -248,7 +248,7 @@ test('the script: a draft plan in a worktree, no texts, no index lock', () => {
   const before = readFileSync(index);
   const r = run({ self: 'me', originCwd: main, sessions: [session] }, [{ hostSessionId: 'c', status: 'idle', name: 'SECRET-NAME', waitingFor: 'SECRET-WAIT' }]);
   assert.equal(r.status, 0, r.stderr);
-  assert.deepEqual(JSON.parse(r.stdout).rows, [{ id: 'c', title: 'child', state: 'idle', ready: false, stage: 'draft', done: 1, total: 2, code: 'approve', arg: '', next: `/keystone:plan ${P}`, wait: true }]);
+  assert.deepEqual(JSON.parse(r.stdout).rows, [{ id: 'c', title: 'child', state: 'idle', ready: false, stage: 'draft', done: 1, total: 2, code: 'approve', arg: '', next: `/sattva:plan ${P}`, wait: true }]);
   assert.doesNotMatch(r.stdout, /SECRET/);
   assert.ok(before.equals(readFileSync(index)), 'no index lock: the index is untouched');
 });
@@ -259,7 +259,7 @@ test('the script: outside git, a broken sent store, bad input', () => {
   let r = run({ self: 'me', originCwd: outside, sessions: [session] }, [], outside);
   assert.equal(r.status, 0, r.stderr);
   assert.equal(JSON.parse(r.stdout).rows.length, 1);
-  writeFileSync(join(main, '.git', 'keystone-sessions.json'), '{ broken');
+  writeFileSync(join(main, '.git', 'sattva-sessions.json'), '{ broken');
   r = run({ self: 'me', originCwd: main, sessions: [session] });
   assert.equal(JSON.parse(r.stdout).rows[0].code, 'approve');
   for (const bad of ['nonsense', '{"sessions":[]}']) {

@@ -1,6 +1,6 @@
 ---
 name: dockerize
-description: "Keystone: analyze the project and generate Docker configuration — multi-stage Dockerfile (dev/prod), compose.yml, compose.override.yml (dev), hardened compose.production.yml, .dockerignore, deploy scripts — or enhance / audit an existing setup, with a production security score. Reverse proxy is an option, not a default. Nothing is written until you have seen the files and said yes. Use for 'dockerize', 'add docker', 'docker compose', 'containerize', 'setup docker'."
+description: "Sattva: analyze the project and generate Docker configuration — multi-stage Dockerfile (dev/prod), compose.yml, compose.override.yml (dev), hardened compose.production.yml, .dockerignore, deploy scripts — or enhance / audit an existing setup, with a production security score. Reverse proxy is an option, not a default. Nothing is written until you have seen the files and said yes. Use for 'dockerize', 'add docker', 'docker compose', 'containerize', 'setup docker'."
 argument-hint: "[--audit]"
 allowed-tools: Read Edit Glob Grep Write Bash(git *) Bash(docker *) Bash(mkdir *) AskUserQuestion WebSearch WebFetch
 model: sonnet
@@ -21,7 +21,7 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -30,7 +30,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -43,7 +43,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -172,10 +172,10 @@ health-check,rollback,backup}.sh` from the templates per `references/DEPLOY-SCRI
 
 ## Step 9 — Summary
 
-Summarize created and updated files in the format of `references/SUMMARY-FORMAT.md`; offer, in one line, `/keystone:docs`
-(document the setup) and `/keystone:ci` (pipeline); if the project deploys on Dokploy and `.mcp.json` has no `dokploy`
+Summarize created and updated files in the format of `references/SUMMARY-FORMAT.md`; offer, in one line, `/sattva:docs`
+(document the setup) and `/sattva:ci` (pipeline); if the project deploys on Dokploy and `.mcp.json` has no `dokploy`
 server, mention the Dokploy MCP (`npx -y @sattva/dokploy-mcp@latest`, https://github.com/sattva2020/dokploy-mcp) that
-`/keystone:setup` adds after a yes. Do not invoke them. End with `Blocked on me:` · `Changed:` · `Found:`.
+`/sattva:setup` adds after a yes. Do not invoke them. End with `Blocked on me:` · `Changed:` · `Found:`.
 
 ## Ownership
 

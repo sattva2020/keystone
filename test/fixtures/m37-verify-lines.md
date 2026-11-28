@@ -22,20 +22,20 @@ carried: I-19 — ok — carried from verify 2cabbed — see Row 20.
 ## Report
 
 ```text
-Keystone verify: docs/keystone/2026-11-04-seo-cabinet-m37/plan.md · base be12a9d
-Decisions: none (intent D27 explicitly supersedes D1 of `docs/keystone/2026-10-31-seo-ai-bot-checks/intent.md`; the weekly-letter replacement is recorded in `docs/notes/2026-11-05-seo-кабинет-m37-еженедельное-письмо-…`; nothing in accepted intents or `docs/notes` covers SEO cache invalidation)
+Sattva verify: docs/sattva/2026-11-04-seo-cabinet-m37/plan.md · base be12a9d
+Decisions: none (intent D27 explicitly supersedes D1 of `docs/sattva/2026-10-31-seo-ai-bot-checks/intent.md`; the weekly-letter replacement is recorded in `docs/notes/2026-11-05-seo-кабинет-m37-еженедельное-письмо-…`; nothing in accepted intents or `docs/notes` covers SEO cache invalidation)
 Done means 1 — ok — typecheck `npx tsc -p frontend/tsconfig.typecheck.json` returned 0 errors and build passed; `npx vitest run backend/src/seo shared/__tests__` gave 109 files / 1360 passed (the verify-6 commit touched no backend or shared file); `frontend/components/seo` and `lib/hooks` from `frontend/` gave 140 files / 742 passed (from the repo root the `@/` alias is missing, see plan.md:295).
 Done means 2 — not proven — all 10 menu items open on site-a.example and site-b.example under a real production login: this is release step R3, not run.
-rule .claude/rules/keystone.md:5 — pass — red on revert reported for the new `it.each` (empty helper → 10 failed) and the source guard (1 failed) at plan.md:346
-rule .claude/rules/keystone.md:9 — pass — same report
-rule .claude/rules/keystone.md:10 — fail — `frontend/lib/hooks/use-site-backups.ts:45-57`; `frontend/lib/hooks/use-site-backups.ts:90-95`. The fix added an SEO cache reset to `useRequestSiteBackupExport` (`use-site-backups.ts:84-85`) because it "writes an event to «Журнал»", but missed two siblings in the same file with the same effect:
+rule .claude/rules/sattva.md:5 — pass — red on revert reported for the new `it.each` (empty helper → 10 failed) and the source guard (1 failed) at plan.md:346
+rule .claude/rules/sattva.md:9 — pass — same report
+rule .claude/rules/sattva.md:10 — fail — `frontend/lib/hooks/use-site-backups.ts:45-57`; `frontend/lib/hooks/use-site-backups.ts:90-95`. The fix added an SEO cache reset to `useRequestSiteBackupExport` (`use-site-backups.ts:84-85`) because it "writes an event to «Журнал»", but missed two siblings in the same file with the same effect:
   - `useSetSiteBackupSchedule` writes a `site_updated` event into `seo_site_events` through `seo_site_change` (`backend/src/seo/seo-backups.service.ts:169-180`);
   - `useSiteBackupDownload` writes `backup_export_downloaded` (`backend/src/seo/site-backup-exports.service.ts:207`).
   The journal reads every kind of `seo_site_events` (`backend/src/seo/seo-cabinet.service.ts:423`). The guard in `use-seo-cabinet.test.ts` scans only `use-seo.ts`, so it cannot catch this. Repro: open `/seo/<id>/journal`, then within 30 s change the backup interval or download an archive on `/settings/site-backups` and go back to the journal; the new event does not show until `staleTime` runs out.
-rule .claude/rules/keystone.md:11 — n/a — no channel or DB diagnosis in this fix
-Keystone verify: 58 rows — ok 45, missing 0, wrong 0, not proven 13, BLOCKED 0, pending 0; unrequested 0
+rule .claude/rules/sattva.md:11 — n/a — no channel or DB diagnosis in this fix
+Sattva verify: 58 rows — ok 45, missing 0, wrong 0, not proven 13, BLOCKED 0, pending 0; unrequested 0
 ```
 
 ## Verdict
 
-FAIL — Rules gate keystone.md:10: в `use-site-backups.ts` смена расписания бэкапа и скачивание архива пишут события в «Журнал», но кеш SEO не сбрасывают (сброс есть только у запроса выгрузки, и он без теста). Строк `wrong` нет; 13 not proven (prod R2–R4, «403 без seo.edit» без теста, миграция на одноразовом Postgres — только запись в плане).
+FAIL — Rules gate sattva.md:10: в `use-site-backups.ts` смена расписания бэкапа и скачивание архива пишут события в «Журнал», но кеш SEO не сбрасывают (сброс есть только у запроса выгрузки, и он без теста). Строк `wrong` нет; 13 not proven (prod R2–R4, «403 без seo.edit» без теста, миграция на одноразовом Postgres — только запись в плане).

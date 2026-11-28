@@ -1,10 +1,10 @@
-// Keystone handoff, the pure part: when to offer moving the task to a clean session, and what the agent is asked to do.
+// Sattva handoff, the pure part: when to offer moving the task to a clean session, and what the agent is asked to do.
 // The plan already holds the task's state, so there is no separate handoff document.
 import { strings, type Lang, type Strings } from './i18n.ts'
 
 export type Thresholds = { soft: number; firm: number; last: number }
 
-export const MARKER = 'KEYSTONE HANDOFF READY'
+export const MARKER = 'SATTVA HANDOFF READY'
 
 export const thresholdsFor = (window: number): Thresholds =>
   window >= 500000 ? { soft: 350000, firm: 600000, last: 800000 } : { soft: 100000, firm: 150000, last: 170000 }
@@ -34,7 +34,7 @@ export const coldText = (ms: number, tokens: number, lang: Lang = 'en') => {
 
 // for the agent, not for people: English whatever the interface language
 export const handoffPrompt = (planFile: string) =>
-  `Keystone handoff: the context has grown, the task continues in a clean session. In \`${planFile}\` tick [x] the finished tasks; ` +
+  `Sattva handoff: the context has grown, the task continues in a clean session. In \`${planFile}\` tick [x] the finished tasks; ` +
   'under `## Implementation notes` add dated lines: decisions of this session that are not in the plan; uncommitted files ' +
   '(`git status --short`); background processes and servers still running; the next action. Do not commit or push. ' +
   `Answer with one line: ${MARKER}.`

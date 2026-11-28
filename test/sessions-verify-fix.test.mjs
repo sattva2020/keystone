@@ -1,4 +1,4 @@
-// Regression checks for the FAIL findings of docs/keystone/2026-11-04-child-sessions-lifecycle/verify.md
+// Regression checks for the FAIL findings of docs/sattva/2026-11-04-child-sessions-lifecycle/verify.md
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { classify, decide, facts } from '../skills/sessions/scripts/triage.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const P = 'docs/keystone/2026-11-04-x/plan.md';
+const P = 'docs/sattva/2026-11-04-x/plan.md';
 const pl = (o) => ({ name: '2026-11-04-x', path: P, status: 'implementing', open: 0, blocked: null, release: [], verify: false, verdict: null, fixedAfterFail: false, ...o });
 const F = (o) => ({ own: true, merged: false, ownCommits: true, dirty: false, files: [], plans: [], ...o });
 const S = { sessionId: 'c', title: 'child', branch: 'b', sourceBranch: 'main' };

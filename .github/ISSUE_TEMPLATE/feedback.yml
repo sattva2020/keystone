@@ -1,5 +1,5 @@
 name: Feedback
-description: Tell us how Keystone worked for you
+description: Tell us how Sattva worked for you
 labels: [feedback]
 body:
   - type: dropdown

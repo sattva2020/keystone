@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { collect, findBase, taskFiles, git, parseRows, history, trend, releaseRefs, findings, parseAccepted, lateWatch } from '../skills/verify/scripts/collect.mjs';
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'verify', 'scripts', 'collect.mjs');
-const PLAN = 'docs/keystone/2026-10-18-x/plan.md';
+const PLAN = 'docs/sattva/2026-10-18-x/plan.md';
 
 const roots = [];
 after(() => { for (const r of roots) try { rmSync(r, { recursive: true, force: true }); } catch { /* Windows file locks */ } });
@@ -166,7 +166,7 @@ test('collect: the CLI prints the lines, and an unknown plan is an error with ex
   const ok = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8' });
   assert.equal(ok.status, 0);
   assert.match(ok.stdout, /^base: [0-9a-f]{7} — P — no commit after the plan/m);
-  const bad = spawnSync(process.execPath, [SCRIPT, 'docs/keystone/none/plan.md'], { cwd: root, encoding: 'utf8' });
+  const bad = spawnSync(process.execPath, [SCRIPT, 'docs/sattva/none/plan.md'], { cwd: root, encoding: 'utf8' });
   assert.equal(bad.status, 1);
   assert.match(bad.stdout, /^error: /m);
 });
@@ -179,7 +179,7 @@ test('collect: a pass is reused only while the code is unchanged; a failure is m
   commit(root, { 'src/a.js': '2' }, 'feat: a');
   assert.ok(runs(collect(root, PLAN)), 'first run measures');
   assert.match(collect(root, PLAN), /^test: npm test → pass \(reused: code unchanged since that run\)/m);
-  commit(root, { 'docs/keystone/2026-10-18-x/verify.md': 'x', 'docs/notes/n.md': 'x' }, 'docs: verify');
+  commit(root, { 'docs/sattva/2026-10-18-x/verify.md': 'x', 'docs/notes/n.md': 'x' }, 'docs: verify');
   assert.match(collect(root, PLAN), /^test: npm test → pass \(reused/m, 'task folder and docs do not count');
   writeFileSync(join(root, 'src/a.js'), '3');
   assert.ok(runs(collect(root, PLAN)), 'an uncommitted code change drops it');
@@ -192,16 +192,16 @@ test('collect: a check over the time limit is "not run", not a failure', () => {
   const root = repo();
   commit(root, { 'src/a.js': '1', 'package.json': JSON.stringify({ scripts: { test: 'node -e "setTimeout(()=>{},4000)"' } }) }, 'start');
   commit(root, { [PLAN]: plan() }, 'docs(plan)');
-  const r = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8', env: { ...process.env, KEYSTONE_CHECK_TIMEOUT_MS: '500' } });
-  assert.match(r.stdout, /^test: npm test → not run \(timeout after 0\.5 s — raise KEYSTONE_CHECK_TIMEOUT_MS\)$/m);
+  const r = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8', env: { ...process.env, SATTVA_CHECK_TIMEOUT_MS: '500' } });
+  assert.match(r.stdout, /^test: npm test → not run \(timeout after 0\.5 s — raise SATTVA_CHECK_TIMEOUT_MS\)$/m);
 });
 
 // --- Between runs (verify → fix convergence): carried rows, full runs, history ---
-const VERIFY = 'docs/keystone/2026-10-18-x/verify.md';
-const INTENT = 'docs/keystone/2026-10-18-x/intent.md';
+const VERIFY = 'docs/sattva/2026-10-18-x/verify.md';
+const INTENT = 'docs/sattva/2026-10-18-x/intent.md';
 const taskPlan = (extra = '') => `# Plan: x\n\nLevel: M · Mode: feature · Status: implementing\nAuthority: intent.md — \`${INTENT}\` (accepted)\nSettings: tests — yes\n\n## Tasks\n- [ ] 1. a — files: src/a.js — check: npm test\n- [ ] 2. b — files: src/b.js — check: npm test\n${extra}`;
 const vmd = (base, report, { checks = '', carried = '', verdict = 'FAIL' } = {}) =>
-  `# Verify: x\nDate: 2026-11-01 · Base: ${base.slice(0, 7)} · Verdict: ${verdict}\n\n## Checks\n- base: ${base.slice(0, 7)}\n${checks}\n## Carried\n${carried}\n## Report\nKeystone verify: ${PLAN} · base ${base.slice(0, 7)}\n${report}\n\n## Verdict\n${verdict}\n`;
+  `# Verify: x\nDate: 2026-11-01 · Base: ${base.slice(0, 7)} · Verdict: ${verdict}\n\n## Checks\n- base: ${base.slice(0, 7)}\n${checks}\n## Carried\n${carried}\n## Report\nSattva verify: ${PLAN} · base ${base.slice(0, 7)}\n${report}\n\n## Verdict\n${verdict}\n`;
 const REPORT = '- Task 1 — ok — src/a.js:1 does it\n- Task 2 — ok — the call works\n- Task 3 — wrong — the thing is missing. Repro: x\n- Task 4 — ok — b.js:3 checks it\n- Task 5 — ok — fine\n  see src/b.js for more\n';
 function looped() {
   const root = repo();
@@ -421,7 +421,7 @@ test('collect: a failing test stops the run before the verifier; a timed-out tes
   assert.match(stop, /^verifier: not called — test failed$/m);
   assert.doesNotMatch(stop, /^delta: /m);
   commit(root, { 'package.json': JSON.stringify({ scripts: { test: 'node -e "setTimeout(()=>{},4000)"' } }) }, 'slow test');
-  const r = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8', env: { ...process.env, KEYSTONE_CHECK_TIMEOUT_MS: '500' } });
+  const r = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8', env: { ...process.env, SATTVA_CHECK_TIMEOUT_MS: '500' } });
   assert.match(r.stdout, /^test: npm test → not run \(timeout/m);
   assert.match(r.stdout, /^delta: since /m);
   assert.ok(line(r.stdout, /^judge: /).includes('Task 9'));
@@ -437,7 +437,7 @@ test('collect: test-backed evidence in other spellings goes to judge when the te
   const rows = ['- Task 1 — ok — src/a.js:1', '- Task 6 — ok — covered by tests/test_api.py::test_x, passed', '- Task 7 — ok — handler_test.go:40 TestCreate passes', '- Task 8 — ok — pytest green'];
   commit(root, { [VERIFY]: vmd(base, rows.join('\n') + '\n') }, 'docs: verify');
   commit(root, { 'src/b.js': '1' }, 'feat: b');
-  const r = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8', env: { ...process.env, KEYSTONE_CHECK_TIMEOUT_MS: '500' } });
+  const r = spawnSync(process.execPath, [SCRIPT, PLAN], { cwd: root, encoding: 'utf8', env: { ...process.env, SATTVA_CHECK_TIMEOUT_MS: '500' } });
   const judge = line(r.stdout, /^judge: /);
   for (const id of ['Task 6', 'Task 7', 'Task 8']) assert.ok(judge.includes(id), `${id} in ${judge}`);
   assert.match(r.stdout, /^carried: Task 1 — ok/m);
@@ -584,7 +584,7 @@ test('collect: Authority is read from the header line only — a body mention of
 test('collect: only fixed row ids are rows — no line of the verifier template becomes a row or a finding', () => {
   const template = ['Original goal: met — x', 'Unconfirmed — missing sample — looked in the repo', 'Settings: violated — missing tests',
     'Weakened test: t.js:3 — wrong assert', 'Security gate: warn — ok for now', 'Rules gate: pass', 'Leftovers / env: none',
-    'Advisory: a.js:1 — wrong name', 'Minor: a.js:2 — missing comma', 'Keystone verify: 3 rows — ok 1, missing 1',
+    'Advisory: a.js:1 — wrong name', 'Minor: a.js:2 — missing comma', 'Sattva verify: 3 rows — ok 1, missing 1',
     'Task 2: ok — fine', '- Task 1 — wrong — y', 'I-12 — missing — z', 'Row "logo chevron" — ok — w', 'Done means 2 — not proven — v'];
   assert.deepEqual(parseRows(template.join('\n')).map((r) => r.id), ['Task 1', 'I-12', 'Row "logo chevron"', 'Done means 2']);
   const { root, base } = looped();
@@ -854,15 +854,15 @@ test('0.9.28 history: places after sites to cover: / Class: on a rule line are n
 test('0.9.28 history: the real M37 verify.md lines parse — fenced report, glued Checks, `file.ts:45-57` places', () => {
   const real = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'm37-verify-lines.md'), 'utf8');
   const keys = findings(real);
-  assert.deepEqual([...keys].sort(), ['rule .claude/rules/keystone.md:10 frontend/lib/hooks/use-site-backups.ts:45',
-    'rule .claude/rules/keystone.md:10 frontend/lib/hooks/use-site-backups.ts:90']);
+  assert.deepEqual([...keys].sort(), ['rule .claude/rules/sattva.md:10 frontend/lib/hooks/use-site-backups.ts:45',
+    'rule .claude/rules/sattva.md:10 frontend/lib/hooks/use-site-backups.ts:90']);
   assert.deepEqual(lateWatch(real), ['Done means 2']);
-  const acc = parseAccepted('Accepted violation by t 2026-11-06: rule .claude/rules/keystone.md:10 — `frontend/lib/hooks/use-site-backups.ts:45`; frontend/lib/hooks/use-site-backups.ts:90');
+  const acc = parseAccepted('Accepted violation by t 2026-11-06: rule .claude/rules/sattva.md:10 — `frontend/lib/hooks/use-site-backups.ts:45`; frontend/lib/hooks/use-site-backups.ts:90');
   assert.equal(findings(real, acc).size, 0, 'the accepted places match the backticked, ranged ones');
   // judged: the fenced report after a blank line is a judged run; `not judged` inside the fence is a stop run
   const failed = real.replace(/\r\n/g, '\n').replace('→ pass', '→ fail');
   assert.ok(!findings(failed).has('check: build failed'), 'a judged run has no check: key');
-  assert.ok(findings(failed.replace('```text\nKeystone verify:', '```text\nnot judged — build failed\nKeystone verify:')).has('check: build failed'));
+  assert.ok(findings(failed.replace('```text\nSattva verify:', '```text\nnot judged — build failed\nSattva verify:')).has('check: build failed'));
 });
 
 test('0.9.28 history: an accept-violation commit is not a run; accepted places are not findings, a new place is', () => {

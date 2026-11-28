@@ -2,10 +2,10 @@ import { test, expect, mock } from 'claude-code/testing'
 import { bench } from '../test/panel-bench.ts'
 
 // The band's «panel» button (next.tsx) and the panel: false clean-up (panel.tsx).
-const PANE = 'keystone-panel'
-const PF = 'docs/keystone/2026-10-12-reminders/plan.md'
+const PANE = 'sattva-panel'
+const PF = 'docs/sattva/2026-10-12-reminders/plan.md'
 const files: Record<string, string> = { [PF]: 'Level: L · Mode: feature · Status: implementing\n\n## Tasks\n- [x] 1. a\n- [ ] 2. b\n' }
-const rel = (x: string) => String(x).split('\\').join('/').replace(/^.*?(?=docs\/keystone)/, '')
+const rel = (x: string) => String(x).split('\\').join('/').replace(/^.*?(?=docs\/sattva)/, '')
 const world = (on: any, o: any = {}) => {
   const w: any = { open: false, opened: 0, closed: 0, sent: [] as string[], turns: 0, toasts: [] as string[], surfaces: ['terminal'], store: { 'bound:sess-1': ['2026-10-12-reminders'] }, ...o }
   on('fs.exists', ($: any, e: any) => { const x = rel(e.path); return { value: x in files || Object.keys(files).some((f) => f.startsWith(x + '/')) } })
@@ -22,7 +22,7 @@ const world = (on: any, o: any = {}) => {
   on('turn.start', ($: any, e: any) => { w.turns++; return e })
   on('prompt.submit', ($: any, e: any) => { w.sent.push(e.text); return { drop: 'test' } })
   on('mcp.call', () => ({ deny: 'no server' }))
-  on('ui.panes', () => ({ value: w.open ? [{ id: PANE, title: 'Keystone', isShown: true, isFocused: false, isPlaced: true }] : [] }))
+  on('ui.panes', () => ({ value: w.open ? [{ id: PANE, title: 'Sattva', isShown: true, isFocused: false, isPlaced: true }] : [] }))
   on('ui.open', () => { w.opened++; w.open = true; return { value: w.unplaced ? { isPlaced: false, reason: 'no-surface: none' } : { isPlaced: true } } })
   on('ui.close', () => { w.closed++; w.open = false; return { value: undefined } })
   on('store.get', ($: any, e: any) => ({ value: w.store[e.key] }))
@@ -31,7 +31,7 @@ const world = (on: any, o: any = {}) => {
   on('ui.render', ($: any, e: any) => h($.ui.resolve(e).Box, { key: 'engine' }))
   return w
 }
-const BAND = { plugin: 'keystone', surface: 'desktop', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80 } } as any
+const BAND = { plugin: 'sattva', surface: 'desktop', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80 } } as any
 const button = async ($: any) => {
   const ui = await $.ui.mount(BAND)
   const b = (await ui.find({ key: 'panel-open' })) as any
@@ -64,7 +64,7 @@ test('the pane waits for a surface: the command answer goes to a toast, the butt
   await ui.press({ key: 'panel-open' })
   await ui.unmount()
   await clock.settle()
-  expect(w.toasts).toEqual(['Панель Keystone пока не видна: no-surface: none'])
+  expect(w.toasts).toEqual(['Панель Sattva пока не видна: no-surface: none'])
   expect(await button($)).toBe('панель')
 })
 

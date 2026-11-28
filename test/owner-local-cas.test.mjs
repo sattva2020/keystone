@@ -1,4 +1,4 @@
-// Class: a write of the local keystone/owners branch must CAS against the tip the decision was made on.
+// Class: a write of the local sattva/owners branch must CAS against the tip the decision was made on.
 // Another worktree that writes between the decision and the write makes this one decide again (I-6 × I-9).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,9 +8,9 @@ import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { take, show } from '../skills/implement/scripts/owner.mjs';
 
-const X = 'docs/keystone/2026-11-01-x/plan.md';
-const Y = 'docs/keystone/2026-11-02-y/plan.md';
-const ENV = { ...process.env, CLAUDE_CODE_REMOTE: '', KEYSTONE_GATES: '' };
+const X = 'docs/sattva/2026-11-01-x/plan.md';
+const Y = 'docs/sattva/2026-11-02-y/plan.md';
+const ENV = { ...process.env, CLAUDE_CODE_REMOTE: '', SATTVA_GATES: '' };
 const roots = [];
 after(() => { for (const r of roots) try { rmSync(r, { recursive: true, force: true }); } catch { /* Windows file locks */ } });
 const git = (cwd, ...a) => {

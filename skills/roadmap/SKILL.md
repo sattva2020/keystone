@@ -1,6 +1,6 @@
 ---
 name: roadmap
-description: "Keystone: create or update docs/roadmap.md — a strategic checklist of milestones with stable IDs (M-1, M-2, …) that intents can reference (Roadmap: M-[n]). Modes: create, update, check progress (reads task folders to propose ticks). Writes only after you see the diff and say yes. Use for 'roadmap', 'milestones', 'what to build next'."
+description: "Sattva: create or update docs/roadmap.md — a strategic checklist of milestones with stable IDs (M-1, M-2, …) that intents can reference (Roadmap: M-[n]). Modes: create, update, check progress (reads task folders to propose ticks). Writes only after you see the diff and say yes. Use for 'roadmap', 'milestones', 'what to build next'."
 argument-hint: "[check | project vision or requirements]"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion
 model: opus
@@ -9,10 +9,10 @@ disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-roadmap/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone · roadmap — strategic project planning
+# Sattva · roadmap — strategic project planning
 
 Create and maintain a high-level project roadmap with major milestones in `docs/roadmap.md`. A milestone is a goal worth many
-tasks; one task is `/keystone:intent` or `/keystone:plan`. This skill plans only — it never edits code.
+tasks; one task is `/sattva:intent` or `/sattva:plan`. This skill plans only — it never edits code.
 Arguments: `$ARGUMENTS`.
 
 **Output rendering.** Report and summary templates in code blocks below show structure only. Render them as Markdown —
@@ -21,7 +21,7 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -30,7 +30,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -43,7 +43,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -92,12 +92,12 @@ suggest milestones · 3. Both: I describe, you add what is missing. For 1 and 3 
 or deadlines?" — 1. Yes, let me specify · 2. No, order by logical sequence · 3. Skip, I will reprioritize later.
 
 **1.2 Explore the codebase.** Scan what is already built: `Glob` for the structure (key directories, modules), `Grep` for implemented
-features (routes, models, services), `git log --oneline -20` for completed work. Also list `docs/keystone/*/intent.md` — intents
+features (routes, models, services), `git log --oneline -20` for completed work. Also list `docs/sattva/*/intent.md` — intents
 with `Status: accepted` and a verified plan are evidence of done work.
 
 **1.3 Draft.** Build the file in the format above.
 
-- Each milestone is a **high-level goal**, not a granular task (that is `/keystone:plan`).
+- Each milestone is a **high-level goal**, not a granular task (that is `/sattva:plan`).
 - 5–15 milestones is the sweet spot — fewer is too vague, more is too granular.
 - Order by logical sequence, dependencies first.
 - Mark already-completed milestones `[x]`, add them to the Completed table with today's date.
@@ -119,17 +119,17 @@ progress — check what is done, tick completed milestones · 2. Add new milesto
 - **Rewrite** → new vision/milestones allowed, but existing IDs keep their meaning; replaced ones become tombstones.
 
 **2.3 Save** (see Writing), then print: `Total milestones: N · Completed: X/N · Next up: M-<n> <name>` and
-`To start on it: /keystone:intent <milestone outcome>` (put `Roadmap: M-<n>` into the intent) or `/keystone:plan <milestone>` for a
+`To start on it: /sattva:intent <milestone outcome>` (put `Roadmap: M-<n>` into the intent) or `/sattva:plan <milestone>` for a
 small one.
 
 ## Mode 3 — check progress (`check`)
 
 Read-only scan; proposes ticks, changes nothing until confirmed. Requires `docs/roadmap.md` — if absent, tell the user to run
-`/keystone:roadmap` first.
+`/sattva:roadmap` first.
 
 **3.1 Read** the roadmap and project context. **3.2 Collect evidence** for every `- [ ]` milestone:
 
-1. Task folders: `docs/keystone/*/intent.md` that carry a line `Roadmap: M-<n>`, and the
+1. Task folders: `docs/sattva/*/intent.md` that carry a line `Roadmap: M-<n>`, and the
    `plan.md` beside each. Read the plan header `Status:`. **`verified` = done** for that task; `implementing` / `approved` / `draft` =
    in progress. A milestone is **done** when every task folder pointing at it is `verified` (an `abandoned` one does not block if
    the rest are verified) and at least one of them is `verified` — abandoned-only means not done. A checked task box alone is not evidence — only the Status counts.
@@ -143,9 +143,9 @@ Score each milestone: **done** (strong evidence), **partial** (some work started
 ```
 ## Roadmap progress check
 ✅ Done (ready to tick):
-- M-1 <name> — evidence: docs/keystone/2026-10-01-auth/plan.md verified; src/auth/ exists
+- M-1 <name> — evidence: docs/sattva/2026-10-01-auth/plan.md verified; src/auth/ exists
 🔨 In progress:
-- M-2 <name> — docs/keystone/2026-10-09-payments/plan.md implementing; Stripe webhook handler missing
+- M-2 <name> — docs/sattva/2026-10-09-payments/plan.md implementing; Stripe webhook handler missing
 ⏳ Not started:
 - M-3 <name>
 Tick the done milestones? (1)
@@ -162,7 +162,7 @@ Every write to `docs/roadmap.md` (create, update, tick) goes through the same ga
 2. Ask for an explicit yes. Changes requested → redraft, show again. No answer = nothing written.
 3. After the yes: `mkdir -p docs`, write; on update use Edit and touch only the changed lines.
 
-Closing note: `/keystone:intent` can record `Roadmap: M-<n>`; when a task bound to a milestone is accepted in `/keystone:verify`, this
+Closing note: `/sattva:intent` can record `Roadmap: M-<n>`; when a task bound to a milestone is accepted in `/sattva:verify`, this
 skill's `check` mode is how the milestone gets ticked.
 
 ## Critical rules
@@ -172,5 +172,5 @@ skill's `check` mode is how the milestone gets ticked.
 3. **Never remove milestones silently — always confirm with user before removing** (and leave the tombstone, the ID stays taken).
 4. **Completed table tracks history** — every ticked milestone gets a date entry.
 5. **IDs never change** — no renumbering, no reuse.
-6. **NO implementation** — this skill only plans; `/keystone:plan` starts a task, `/keystone:implement` executes it.
+6. **NO implementation** — this skill only plans; `/sattva:plan` starts a task, `/sattva:implement` executes it.
 7. **Ownership boundary** — this skill owns the roadmap's structure and content; other skills may only propose a tick.

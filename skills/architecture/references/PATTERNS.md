@@ -157,7 +157,7 @@ direct database access between services is forbidden; an API gateway/BFF is the 
 Anti-patterns: distributed monolith; shared database; chatty synchronous chains; no observability; premature decomposition;
 nano-services; cascading failures.
 
-## Dependency rules — how to write them so `/keystone:verify` can grep them
+## Dependency rules — how to write them so `/sattva:verify` can grep them
 
 Write each rule as one line, source and target as path prefixes, with a grep that returns nothing when the rule holds:
 

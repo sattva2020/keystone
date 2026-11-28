@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Keystone · worktree-check — static, read-only check for runtime resources that clash between git worktrees
+// Sattva · worktree-check — static, read-only check for runtime resources that clash between git worktrees
 // (host ports, container_name, Compose project, named volumes and networks). Reads files, runs only `git`.
 // CLI:  worktree-check.mjs [--json] [--linked-only] [--cwd <dir>]  → report on stdout; exit 0, or 1 on an internal error.
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';

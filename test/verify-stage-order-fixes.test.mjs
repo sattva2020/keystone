@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { collect, findBase, git, ceiling } from '../skills/verify/scripts/collect.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const DIR = 'docs/keystone/2026-11-09-x';
+const DIR = 'docs/sattva/2026-11-09-x';
 const PLAN = `${DIR}/plan.md`;
 const VERIFY = `${DIR}/verify.md`;
 const roots = [];
@@ -33,7 +33,7 @@ function setup({ level = 'L' } = {}) {
 }
 // a verify.md; `sweep` adds a ## Sweep section, `extra` goes after ## Verdict
 const vmd = (base, rows, { sweep = '', verdict = 'FAIL', extra = '', carried = 'none' } = {}) =>
-  `# Verify: x\nDate: 2026-11-15 · Base: ${base} · Verdict: ${verdict}\n\n## Checks\n- base: ${base}\n\n## Carried\n${carried}\n## Report\nKeystone verify: ${PLAN} · base ${base}\n${rows}\n\n${sweep ? `## Sweep\n${sweep}\n\n` : ''}## Verdict\n${verdict}\n${extra}`;
+  `# Verify: x\nDate: 2026-11-15 · Base: ${base} · Verdict: ${verdict}\n\n## Checks\n- base: ${base}\n\n## Carried\n${carried}\n## Report\nSattva verify: ${PLAN} · base ${base}\n${rows}\n\n${sweep ? `## Sweep\n${sweep}\n\n` : ''}## Verdict\n${verdict}\n${extra}`;
 const out = (root, o) => collect(root, PLAN, undefined, o);
 const lineOf = (o, re) => o.split('\n').find((l) => re.test(l));
 const OK = '- Task 1 — ok — src/a.js:1\n- Task 2 — ok — src/b.js:1';

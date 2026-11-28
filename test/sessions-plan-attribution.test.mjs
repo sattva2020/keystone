@@ -31,7 +31,7 @@ function repo() {
   commit(root, { 'README.md': 'x' }, 'start', OLD);
   return root;
 }
-const PLAN = 'docs/keystone/2026-11-05-c/plan.md';
+const PLAN = 'docs/sattva/2026-11-05-c/plan.md';
 const plan = (status, tasks, release = '') => `# Plan: c\n\nLevel: L · Mode: feature · Status: ${status}\n\n## Tasks\n${tasks}\n${release ? `\n## Release\n${release}\n` : ''}`;
 const session = (id, worktreePath, originCwd, branch, state = 'idle') => ({ sessionId: id, parentSessionId: 'root', state, worktreePath, originCwd, branch, sourceBranch: 'main' });
 
@@ -49,7 +49,7 @@ test('D19 (б): shared folder on main, an uncommitted implementing plan → mess
   const root = repo();
   put(root, { [PLAN]: plan('implementing', '- [ ] 1. a') });
   const out = classify([session('c', root, root, 'main')], { self: 'root' });
-  assert.deepEqual(out.message.map((m) => m.step), [`/keystone:implement ${PLAN}`], JSON.stringify(out));
+  assert.deepEqual(out.message.map((m) => m.step), [`/sattva:implement ${PLAN}`], JSON.stringify(out));
 });
 
 test('D19 (в): own worktree, unmerged plan verified with open R2 → waiting «релиз»', () => {
@@ -82,5 +82,5 @@ test('I-4 on git: own worktree with open tasks → message, even when a sibling 
   const ws = join(tmp(), 's');
   git(root, {}, 'worktree', 'add', '-q', '-b', 'claude/s', ws, 'claude/c');
   const out = classify([session('c', wc, root, 'claude/c'), session('s', ws, root, 'claude/s', 'working')], { self: 'root' });
-  assert.deepEqual(out.message.map((m) => m.step), [`/keystone:implement ${PLAN}`], JSON.stringify(out));
+  assert.deepEqual(out.message.map((m) => m.step), [`/sattva:implement ${PLAN}`], JSON.stringify(out));
 });

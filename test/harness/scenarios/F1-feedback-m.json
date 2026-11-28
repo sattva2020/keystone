@@ -3,17 +3,17 @@
  "cwd": "C:/Users/Admin/AppData/Local/Temp/claude/a3de09f8db28985a/27ed6a79-d9cd-4006-84c1-4ec9ab34a49e/scratchpad/m-repo",
  "persona": "Руслан, единственный разработчик маленькой библиотеки текстовых помощников. Пишет коротко, на «ты».",
  "env": {
-  "KEYSTONE_FEEDBACK": "on",
-  "KEYSTONE_FEEDBACK_DIR": "C:/Users/Admin/AppData/Local/Temp/claude/a3de09f8db28985a/27ed6a79-d9cd-4006-84c1-4ec9ab34a49e/scratchpad/fb-m"
+  "SATTVA_FEEDBACK": "on",
+  "SATTVA_FEEDBACK_DIR": "C:/Users/Admin/AppData/Local/Temp/claude/a3de09f8db28985a/27ed6a79-d9cd-4006-84c1-4ec9ab34a49e/scratchpad/fb-m"
  },
- "extraSys": "Это тестовый стенд маленькой библиотеки без сети и без origin. Коммиты — только локальные, git push не делай. Выполняй ровно ту команду, которую тебе дали, и после её финального отчёта остановись — не запускай следующие команды по своей инициативе. Если контекст содержит строку Keystone feedback: on — пиши самоотчёт так, как она велит.",
+ "extraSys": "Это тестовый стенд маленькой библиотеки без сети и без origin. Коммиты — только локальные, git push не делай. Выполняй ровно ту команду, которую тебе дали, и после её финального отчёта остановись — не запускай следующие команды по своей инициативе. Если контекст содержит строку Sattva feedback: on — пиши самоотчёт так, как она велит.",
  "hidden": "Нужна функция truncate(s, n) в lib/text.mjs: обрезает строку до n символов и добавляет «…», если обрезала; если строка не длиннее n — возвращает её без изменений. Тест рядом с существующим в test/text.test.mjs. Уровень M — согласен. Approve плана — да, если он про это. Коммиты — да, локально. Без README и без новых файлов, кроме плана.",
  "steps": [
-  { "prompt": "/keystone:start добавить функцию truncate(s, n) в lib/text.mjs с тестом", "newSession": true, "maxRounds": 4 },
-  { "prompt": "/keystone:plan M добавить функцию truncate(s, n) в lib/text.mjs с тестом", "newSession": true, "maxRounds": 6 },
-  { "prompt": "/keystone:implement", "newSession": true, "maxRounds": 5 },
-  { "prompt": "/keystone:verify", "newSession": true, "maxRounds": 3 },
-  { "prompt": "/keystone:feedback judge", "maxRounds": 2, "noUser": true },
-  { "prompt": "/keystone:feedback judge <путь к plan.md самой свежей папки docs/keystone>", "newSession": true, "maxRounds": 2, "noUser": true }
+  { "prompt": "/sattva:start добавить функцию truncate(s, n) в lib/text.mjs с тестом", "newSession": true, "maxRounds": 4 },
+  { "prompt": "/sattva:plan M добавить функцию truncate(s, n) в lib/text.mjs с тестом", "newSession": true, "maxRounds": 6 },
+  { "prompt": "/sattva:implement", "newSession": true, "maxRounds": 5 },
+  { "prompt": "/sattva:verify", "newSession": true, "maxRounds": 3 },
+  { "prompt": "/sattva:feedback judge", "maxRounds": 2, "noUser": true },
+  { "prompt": "/sattva:feedback judge <путь к plan.md самой свежей папки docs/sattva>", "newSession": true, "maxRounds": 2, "noUser": true }
  ]
 }

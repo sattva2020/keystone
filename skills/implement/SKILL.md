@@ -1,13 +1,13 @@
 ---
 name: implement
-description: "Keystone: execute an approved plan task by task — requirement consistency gate, checkbox after every task, resume after /clear, plan drift edited in the same commit, literal BLOCKED:, line-by-line evidence report. Use only via explicit /keystone:implement [plan path]."
+description: "Sattva: execute an approved plan task by task — requirement consistency gate, checkbox after every task, resume after /clear, plan drift edited in the same commit, literal BLOCKED:, line-by-line evidence report. Use only via explicit /sattva:implement [plan path]."
 argument-hint: "[path to plan.md]"
 allowed-tools: Read Write Edit Glob Grep Bash AskUserQuestion Skill TaskCreate TaskUpdate Agent Bash(node *feedback.mjs*)
 disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-implement/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone · implement — execute the plan, keep it true
+# Sattva · implement — execute the plan, keep it true
 
 Execute the tasks of an approved plan one at a time, tick each box immediately, and keep the plan equal to what was
 built. Progress lives in the plan's checkboxes and in git, so a new session can continue after `/clear`.
@@ -18,18 +18,18 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
-**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `implement`).
+**Feedback.** If the context has a `Sattva feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `implement`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -42,7 +42,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -52,17 +52,17 @@ Keep going without asking while the next step needs no human decision; stop only
 
 ## Step 0: Find the plan and load context
 
-1. **Plan:** the argument is a path to `plan.md`. Without it, take the active plan. Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing — or `verified` with open `- [ ] R<n>.` lines in `## Release`. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument.
-   Plan outside docs/keystone/ → the gates and the band do not see it, so push is not closed: say so once and offer to move its folder under docs/keystone/ before going on.
-   No plan found → say "No plan." and ask with AskUserQuestion: `Size the task and plan it — /keystone:start <task>`
+1. **Plan:** the argument is a path to `plan.md`. Without it, take the active plan. Active plan = the plan.md of the newest task folder under docs/sattva/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing — or `verified` with open `- [ ] R<n>.` lines in `## Release`. A plan elsewhere (an older task folder outside docs/sattva) is used only when its path is given explicitly as the argument.
+   Plan outside docs/sattva/ → the gates and the band do not see it, so push is not closed: say so once and offer to move its folder under docs/sattva/ before going on.
+   No plan found → say "No plan." and ask with AskUserQuestion: `Size the task and plan it — /sattva:start <task>`
    (Recommended) · `Quick change without a plan (level S)` — only when the change fits in one sentence; then follow
-   `${CLAUDE_SKILL_DIR}/../start/SKILL.md` for level S · `Show status — /keystone-status` · `Stop here`.
+   `${CLAUDE_SKILL_DIR}/../start/SKILL.md` for level S · `Show status — /sattva-status` · `Stop here`.
 2. **Status** (header line `Level: … · Mode: … · Status: …`):
    - **Take the plan first.** For `approved`, `implementing` and release mode, right after reading Status and before
      any write to `plan.md` (the `approved → implementing` edit included):
      `node "${CLAUDE_SKILL_DIR}/scripts/owner.mjs" take <plan> --stage implement` — see "One session per plan".
      Exit 3 → stop here, before any edit.
-   - `draft` → STOP: "Approve the plan first (`/keystone:plan <plan path>`), then run implement."
+   - `draft` → STOP: "Approve the plan first (`/sattva:plan <plan path>`), then run implement."
    - `approved` → set `Status: implementing` now (this edit goes into the baseline commit below).
    - `implementing` → continue (resume, Step 0.1).
    - `verified` with open `- [ ] R<n>.` lines in `## Release` → **release mode**: run only those steps, in order. Each
@@ -85,8 +85,8 @@ Keep going without asking while the next step needs no human decision; stop only
      `node "${CLAUDE_SKILL_DIR}/scripts/owner.mjs" release --any <plan>` (drops a record a crashed run left), then STOP
      and say so.
    - `Pace: rush` in the header, `Status: approved` or `implementing` (never `verified` — release mode stays as it is),
-     and the first line of your prompt is not `Keystone rush stage:` → read `${CLAUDE_SKILL_DIR}/references/RUSH.md`
-     and follow it instead of Steps 1–2. A prompt that starts with `Keystone rush stage:` makes you a stage: skip this
+     and the first line of your prompt is not `Sattva rush stage:` → read `${CLAUDE_SKILL_DIR}/references/RUSH.md`
+     and follow it instead of Steps 1–2. A prompt that starts with `Sattva rush stage:` makes you a stage: skip this
      item and follow this file under RUSH.md § Stage rules.
 3. **Runtime resources (worktree).** Only for `approved` / `implementing` (not release mode), once per session, as a
    command of its own: `node "${CLAUDE_SKILL_DIR}/scripts/worktree-check.mjs" --linked-only` — a static, read-only
@@ -103,7 +103,7 @@ Keep going without asking while the next step needs no human decision; stop only
    - `commits — task` (or no `commits` key): commit per task / `## Commit Plan` (2.6). `commits — end`: no commit
      per task; one commit after the last task, tests and docs (2.6 rules apply to it).
    - `logging — minimal|standard|verbose`: read `${CLAUDE_SKILL_DIR}/references/LOGGING.md` only if it is not `minimal`.
-   - `docs — yes`: the documentation step before the final report is `/keystone:docs update <affected topics>`.
+   - `docs — yes`: the documentation step before the final report is `/sattva:docs update <affected topics>`.
 5. **Project context:** read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`;
    `.claude/rules/**/*.md` (a rule with `paths:` applies only to matching files); `AGENTS.md`.
    MUST / MUST NOT lines there override general habits. Follow the stack, import patterns, file
@@ -112,7 +112,7 @@ Keep going without asking while the next step needs no human decision; stop only
    the plan stays the source of *what* and *how*. The intent is read-only here.
 7. **Baseline first.** Run `git status`. If the plan file or the cited `intent.md` is untracked or modified and no code
    has changed yet, commit them on their own first (e.g. `docs(plan): <slug>` by the project's convention; ask the user
-   once if commits need approval) — otherwise the baseline plan is lost and `/keystone:verify` cannot measure drift. If
+   once if commits need approval) — otherwise the baseline plan is lost and `/sattva:verify` cannot measure drift. If
    code already changed, say so in one line and continue; the `Status: implementing` edit then goes into the first
    task's commit. Other uncommitted changes (not this plan's): warn in one line and continue; never stash or discard
    them. Sessions in other worktrees are not in `git status`: when the user says sessions run in parallel, run
@@ -173,7 +173,7 @@ corrected. No `TaskCreate` (`claude -p`, CI) → skip the list; the progress dis
    restriction on one dimension from a rule about another.
 5. A behaviour fixed by an accepted decision of an earlier task (an I-n or Decisions-log line of its `intent.md`, a
    `docs/notes` record) that this plan does not supersede by name is a cited requirement too: look such decisions up
-   for the files the task touches (`search_decisions`, or a grep of `docs/keystone/*/intent.md` and `docs/notes/`) and
+   for the files the task touches (`search_decisions`, or a grep of `docs/sattva/*/intent.md` and `docs/notes/`) and
    treat a clash as in 3.
 
 If an old plan lacks `## Requirements Reconciliation`, perform this gate from the task, the Original Request, project
@@ -202,7 +202,7 @@ A pre-commit hook that fails or rewrites files (line endings, formatting) leaves
 the rewritten files and commit again; never skip the hook.
 **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
 `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
-if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(plan)`, `docs(release)`).
+if the rule allows it; never a scope the hook rejects. No scope list → keep the Sattva scope (`docs(plan)`, `docs(release)`).
 
 ## Drift → plan in the same commit (hard rule)
 
@@ -239,7 +239,7 @@ A plan task with a step only a human can do (an interactive session, a design ro
 ## One session per plan
 
 implement takes the plan so that a second session (another worktree, another machine, the cloud) cannot run it at the
-same time. The record lives on the service branch `keystone/owners` (`<plan folder>.json`, pushed to origin by the
+same time. The record lives on the service branch `sattva/owners` (`<plan folder>.json`, pushed to origin by the
 script); the work tree, HEAD and the plan folder are not touched. Script:
 `node "${CLAUDE_SKILL_DIR}/scripts/owner.mjs" take|beat|release <plan> [--stage implement] [--force] [--any]` — one JSON
 line; exit 0 = go on, 3 = stop, 1 = error (say it in one line and go on: the guard never blocks the work by itself).
@@ -249,7 +249,7 @@ work (`;`, `&&`).
 - `take` exit 3 → print `План <folder> ведёт <place> · ветка <branch> · <stage> с <since>, последний признак жизни
   <beat>` and ask (AskUserQuestion): a live owner (`stale: false`) → `Стоп (Recommended)` · `Забрать план`; a stale one
   (no beat for 2 h, `stale: true`) → `Забрать план (Recommended)` · `Стоп`. `Забрать план` → `take --force`; `Стоп` →
-  STOP, `Next:` = the same `/keystone:implement <plan>` for later. No AskUserQuestion (`claude -p`, CI) → STOP with the
+  STOP, `Next:` = the same `/sattva:implement <plan>` for later. No AskUserQuestion (`claude -p`, CI) → STOP with the
   owner message for a live and a stale owner alike: `--force` only on a human's explicit pick.
 - `beat` exit 3 (`taken: true`) → STOP: `План забрала <place> в <since> — эта сессия останавливается`; no edit, no
   tick, no commit. Same place (folder or cloud session) and branch = the same owner, so `/clear` and resume pass.
@@ -260,7 +260,7 @@ work (`;`, `&&`).
 - Exit 1 → say it once and go on; do not retry the call: the next `beat` writes the record again when no other session
   holds the plan.
 - `remote: "local"` with a `warning` (no origin, offline, push refused) → the mark is seen only on this machine; say
-  the warning once and go on. `KEYSTONE_GATES=off` → `{ "off": true }`, nothing is guarded.
+  the warning once and go on. `SATTVA_GATES=off` → `{ "off": true }`, nothing is guarded.
 - The final report gets the line `Владелец: <remote>; <warning>` (`Владелец: off` when off).
 
 ## Final report — one line per table row
@@ -277,7 +277,7 @@ recount if it does not. If the plan has no reconciliation section, say so in one
 
 Before the report, run the project's full test command once (the one `Settings:` names, else the project's test
 script) and report a red run as `fail` on the rows it covers. If `docs — yes`, run the documentation step
-`/keystone:docs update <affected topics>` and commit the result — unless a task of the plan already wrote the
+`/sattva:docs update <affected topics>` and commit the result — unless a task of the plan already wrote the
 documentation `Settings:` names; then say so in one line.
 
 **Project rules learned (optional).** If the work exposed a convention the project does not state yet, you may propose up
@@ -296,17 +296,17 @@ Before ending the turn, write every question you asked the user that is still un
 `## Open questions (implement)` (one bullet each); remove the section when none remain.
 
 Do not run verify yourself. If boxes remain `[ ]` without `BLOCKED:`, the Stop hook will remind you once per turn, not while a background agent runs (lift:
-`Status: abandoned` in the plan header or `KEYSTONE_GATES=off`). No summary document, no report file.
+`Status: abandoned` in the plan header or `SATTVA_GATES=off`). No summary document, no report file.
 
 End the report with a fixed three-heading summary, short, on top of the line-by-line report (not instead of it). It is
 followed only by the `Next:` line: decisions for a human go inside `Blocked on me:`, and the last line is
-`Next: /clear, then /keystone:verify <plan path>` (or `Next: /keystone:implement <plan path>` when tasks remain).
+`Next: /clear, then /sattva:verify <plan path>` (or `Next: /sattva:implement <plan path>` when tasks remain).
 Before it, the menu (see Choice at the end): all tasks done → `Verify in a clean session — /clear, then
-/keystone:verify <plan>` (Recommended) · `Verify now in this session` (small plan, small context) · `Stop here`;
+/sattva:verify <plan>` (Recommended) · `Verify now in this session` (small plan, small context) · `Stop here`;
 tasks remain → `Continue with task <n>` · `Pause here`. Release mode done → `Stop here` only, no menu.
 
 ```text
-Blocked on me: <what needs a human decision or action; next step: /keystone:verify <plan path> in a new session | none>
+Blocked on me: <what needs a human decision or action; next step: /sattva:verify <plan path> in a new session | none>
 Changed: <files / commits / status set | none>
 Found: <defects, surprises, open questions | none>
 ```
@@ -333,7 +333,7 @@ If you deliberately interrupt the session (a pause, a question to the user), say
 <why>"; the Stop hook allows an announced interruption.
 
 Session continuity: the plan's checkboxes and the git log are the state. The user may stop at any time; in a new
-session `/keystone:implement` resumes at the first `[ ]` (Step 0.1). Suggest `/clear` rather than `/compact` between
+session `/sattva:implement` resumes at the first `[ ]` (Step 0.1). Suggest `/clear` rather than `/compact` between
 sessions on a long plan.
 
 ## Execution rules

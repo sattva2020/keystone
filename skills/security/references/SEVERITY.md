@@ -1,4 +1,4 @@
-<!-- original Keystone file (MIT) -->
+<!-- original Sattva file (MIT) -->
 
 # Severity rubric (decides disputes; the same issue gets the same rating on every run)
 

@@ -1,4 +1,4 @@
-"""Seeded repositories for the Keystone agentic benchmark.
+"""Seeded repositories for the Sattva agentic benchmark.
 
 Every task is a tiny stdlib-Python repo whose plan says "all done" (every box checked). Three hide a gap the test
 suite does not catch; `clean` hides none, so an arm that always answers FAIL is caught as a false alarm.
@@ -15,7 +15,7 @@ Per task:
 import importlib.util, re, sys
 from pathlib import Path
 
-PLAN_DIR = "docs/keystone/2026-10-15-{slug}"
+PLAN_DIR = "docs/sattva/2026-10-15-{slug}"
 
 CLAUDE_MD = """# shop-utils
 
@@ -27,7 +27,7 @@ Stack: Python 3, stdlib only. Tests: `python -m unittest` from the repo root.
 """
 
 def plan(title, request, tasks, done):
-    """A plan.md in Keystone's format. done=False: approved, empty boxes (base); True: implementing, all checked."""
+    """A plan.md in Sattva's format. done=False: approved, empty boxes (base); True: implementing, all checked."""
     status, box = ("implementing", "x") if done else ("approved", " ")
     rows = "\n".join(f"| {t} | request | task {i} |" for i, (t, _) in enumerate(tasks, 1))
     items = "\n".join(f"- [{box}] {i}. {t} — files: {f} — check: `python -m unittest`\n  - Depends on: none"

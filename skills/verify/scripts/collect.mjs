@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Keystone verify — the mechanical steps in one call: the diff base, this task's commits and files, and the
+// Sattva verify — the mechanical steps in one call: the diff base, this task's commits and files, and the
 // build / test / lint checks of references/CHECKS.md, which rows of the last verify carry over, and the run history.
 // No model spends tokens on them.
 // Usage (from the repo root): node collect.mjs <plan path> [base ref] [--full] | node collect.mjs <plan path> --history
@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-const TIMEOUT_MS = Number(process.env.KEYSTONE_CHECK_TIMEOUT_MS) || 600_000;
+const TIMEOUT_MS = Number(process.env.SATTVA_CHECK_TIMEOUT_MS) || 600_000;
 
 export function git(cwd, ...args) {
   const r = spawnSync('git', ['-c', 'core.quotePath=false', ...args], { cwd, encoding: 'utf8' });
@@ -99,7 +99,7 @@ function run(cwd, kind, argv) {
     ? spawnSync([argv[0].replace(/\//g, '\\'), ...argv.slice(1)].map(q).join(' '), { cwd, encoding: 'utf8', timeout: TIMEOUT_MS, shell: true })
     : spawnSync(argv[0], argv.slice(1), { cwd, encoding: 'utf8', timeout: TIMEOUT_MS });
   if (r.error?.code === 'ENOENT') return `${kind}: ${shown} → not run (${argv[0]} not found)`;
-  if (r.error?.code === 'ETIMEDOUT' || r.signal) return `${kind}: ${shown} → not run (timeout after ${TIMEOUT_MS / 1000} s — raise KEYSTONE_CHECK_TIMEOUT_MS)`;
+  if (r.error?.code === 'ETIMEDOUT' || r.signal) return `${kind}: ${shown} → not run (timeout after ${TIMEOUT_MS / 1000} s — raise SATTVA_CHECK_TIMEOUT_MS)`;
   const out = lines(`${r.stdout || ''}\n${r.stderr || ''}`);
   // a missing tool is caught by toolExists; only `npx --no-install` with a package that is not installed gets here
   if (r.status !== 0 && argv[0] === 'npx' && out.some((l) => /could not determine executable|npm error canceled/i.test(l)) && out.length < 8)
@@ -123,7 +123,7 @@ function codeKey(cwd, plan) {
 
 // A pass on the same code is not run again. Only passes are kept: a failure or a timeout is always measured afresh.
 function checks(cwd, plan) {
-  const file = join(cwd, git(cwd, 'rev-parse', '--git-path', 'keystone-checks.json'));
+  const file = join(cwd, git(cwd, 'rev-parse', '--git-path', 'sattva-checks.json'));
   const key = codeKey(cwd, plan);
   let seen = {};
   try { seen = JSON.parse(readFileSync(file, 'utf8')); } catch { /* first run */ }
@@ -139,7 +139,7 @@ function checks(cwd, plan) {
   return { once, save: () => { try { writeFileSync(file, JSON.stringify({ key, passes })); } catch { /* the cache is optional */ } } };
 }
 
-// Architecture gate: each `MUST NOT:` line written by /keystone:architecture carries `check: <grep>`.
+// Architecture gate: each `MUST NOT:` line written by /sattva:architecture carries `check: <grep>`.
 export function architecture(cwd, changed) {
   const doc = read(cwd, 'docs/architecture.md');
   if (!doc) return ['Architecture gate: n/a — no docs/architecture.md'];

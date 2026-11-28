@@ -1,13 +1,13 @@
 // The panel's own registration on a hand-made engine, for the hooks/panel*.test.ts files.
 import { onStart, onTurn, register as registerPanel } from '../hooks/panel.tsx'
 
-const PANE = 'keystone-panel'
-const PLAN_FILE = 'docs/keystone/2026-10-12-reminders/plan.md'
+const PANE = 'sattva-panel'
+const PLAN_FILE = 'docs/sattva/2026-10-12-reminders/plan.md'
 export const files: Record<string, string> = {
   [PLAN_FILE]: '# Plan: reminders\n\nLevel: L · Mode: feature · Status: implementing\n\n## Tasks\n- [x] 1. a\n- [ ] 2. b\n',
 }
 const KID = { sessionId: 'kid', title: 'Kid', branch: 'b', isArchived: false, isRunning: false, startedBy: 'me', originCwd: 'E:/proj', worktreePath: 'E:/wt', sourceBranch: 'main' }
-const ROW = { id: 'kid', title: 'Kid', state: 'idle', ready: false, stage: 'implementing', done: 1, total: 3, code: 'approve', arg: '', next: '/keystone:plan p', wait: true }
+const ROW = { id: 'kid', title: 'Kid', state: 'idle', ready: false, stage: 'implementing', done: 1, total: 3, code: 'approve', arg: '', next: '/sattva:plan p', wait: true }
 
 // The kit cannot raise a person's ui.close (only the plugin reaches that event), so the closing cases run the panel's own
 // registration on a hand-made `on` and `$`: one store, one queue of timers. `restart` registers again, as a reload does.
@@ -22,7 +22,7 @@ export const bench = (store: Record<string, unknown>, o: any = {}) => {
     store: { get: async (k: string) => store[k], set: async (k: string, v: unknown) => { store[k] = v }, delete: async (k: string) => { delete store[k] } },
     state: { get: async (r: any) => ({ value: state[r.key] }), set: async (r: any, v: unknown) => { state[r.key] = v } },
     session: { id: async () => w.sid, surfaces: async () => ['desktop'], usage: async () => { if (w.ownFails) throw new Error('no usage'); return { context: {} } } },
-    fs: { exists: async (p: string) => p === 'docs/keystone' || p in files, list: async () => [{ name: '2026-10-12-reminders', kind: 'dir' }], stat: async () => ({ mtimeMs: 1 }), read: async (p: string) => files[p] },
+    fs: { exists: async (p: string) => p === 'docs/sattva' || p in files, list: async () => [{ name: '2026-10-12-reminders', kind: 'dir' }], stat: async () => ({ mtimeMs: 1 }), read: async (p: string) => files[p] },
     command: { register: async (c: any) => { w.commands.push(c.name) } },
     clock: {
       now: async () => w.now,

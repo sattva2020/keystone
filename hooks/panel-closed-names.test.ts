@@ -70,6 +70,6 @@ test('an app restart drops the session state: the store still holds the close, a
 test('the command does not wait for a silent app', async () => {
   const b = bench({})
   b.$.mcp.call = () => new Promise(() => {})
-  expect(await b.command()).toBe('Панель Keystone открыта.')
+  expect(await b.command()).toBe('Панель Sattva открыта.')
   expect(b.w.opened).toBe(1)
 })

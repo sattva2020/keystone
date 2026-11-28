@@ -8,8 +8,8 @@ import * as fb from '../skills/feedback/scripts/feedback.mjs';
 
 const tmp = () => mkdtempSync(join(tmpdir(), 'ks-fbc-'));
 const envOf = (store) => {
-  const e = { ...process.env, KEYSTONE_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store };
-  for (const k of Object.keys(e)) if (/^(KEYSTONE_FEEDBACK$|CLAUDE_PLUGIN_OPTION_)/.test(k)) delete e[k];
+  const e = { ...process.env, SATTVA_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store };
+  for (const k of Object.keys(e)) if (/^(SATTVA_FEEDBACK$|CLAUDE_PLUGIN_OPTION_)/.test(k)) delete e[k];
   return e;
 };
 const put = (store, recs) => {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Keystone · sessions — classify the child sessions of a main session: archive / message / waiting.
+// Sattva · sessions — classify the child sessions of a main session: archive / message / waiting.
 // The decision is mechanical (git + plan files); the model only gathers the input and carries out the result.
 // CLI:  triage.mjs classify <sessions.json> --self <sessionId>   → JSON { archive, message, waiting, working }
 //       triage.mjs git                                          → read-only table for the worktrees of this repo
@@ -10,8 +10,8 @@ import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { show } from '../../implement/scripts/owner.mjs';
 
-const PLAN_PATH = /^docs\/keystone\/[A-Za-z0-9._-]+\/plan\.md$/;
-const text = (step) => `Keystone: осталось — ${step}. Сделай этот шаг и закончи ход.`;
+const PLAN_PATH = /^docs\/sattva\/[A-Za-z0-9._-]+\/plan\.md$/;
+const text = (step) => `Sattva: осталось — ${step}. Сделай этот шаг и закончи ход.`;
 
 // Paths are compared only normalized: resolve, forward slashes, lower case on win32.
 export const norm = (p) => {
@@ -84,13 +84,13 @@ export function facts(s) {
   const { files, ignored } = status(dir, own); // the archive removes only an own worktree
   const folders = new Set();
   // план сессии — её невлитые коммиты (D19); влитое уже в базовой ветке
-  const logArgs = ['log', '--no-merges', '--name-only', '--format=', `${base}..${ref}`, '--', 'docs/keystone'];
+  const logArgs = ['log', '--no-merges', '--name-only', '--format=', `${base}..${ref}`, '--', 'docs/sattva'];
   for (const f of [...gitOk(dir, ...logArgs).split('\n'), ...files]) {
-    const m = f.replace(/\\/g, '/').match(/^docs\/keystone\/([^/]+)\//);
+    const m = f.replace(/\\/g, '/').match(/^docs\/sattva\/([^/]+)\//);
     if (m) folders.add(m[1]);
   }
   const plans = [...folders].sort().reverse().flatMap((name) => {
-    const rel = `docs/keystone/${name}`;
+    const rel = `docs/sattva/${name}`;
     const abs = join(dir, rel);
     const planFile = join(abs, 'plan.md');
     if (!existsSync(planFile)) return existsSync(join(abs, 'intent.md')) ? [{ name, path: `${rel}/plan.md`, intentOnly: true }] : [];
@@ -116,12 +116,12 @@ const done = (p) => !p.intentOnly && p.status === 'verified' && p.release.length
 // Rows 7–14 of the plan's rule table for one plan; null = this plan gives no result.
 function planRow(p) {
   if (p.intentOnly) return null;
-  if (p.fixedAfterFail) return { group: 'message', step: `/keystone:verify ${p.path}`, plan: p.path };
-  if (p.verdict === 'FAIL') return { group: 'message', step: '/keystone:fix verify', plan: p.path };
+  if (p.fixedAfterFail) return { group: 'message', step: `/sattva:verify ${p.path}`, plan: p.path };
+  if (p.verdict === 'FAIL') return { group: 'message', step: '/sattva:fix verify', plan: p.path };
   if (p.verdict === 'PASS-UNPROVEN' && p.status !== 'verified') return { group: 'waiting', reason: 'ждёт accept', code: 'accept' };
   if (p.status === 'implementing' && p.blocked) return { group: 'waiting', reason: `BLOCKED: ${p.blocked}`, code: 'blocked', arg: p.blocked };
-  if ((p.status === 'approved' || p.status === 'implementing') && p.open > 0) return { group: 'message', step: `/keystone:implement ${p.path}`, plan: p.path };
-  if (p.status === 'implementing' && p.open === 0 && !p.verify) return { group: 'message', step: `/keystone:verify ${p.path}`, plan: p.path };
+  if ((p.status === 'approved' || p.status === 'implementing') && p.open > 0) return { group: 'message', step: `/sattva:implement ${p.path}`, plan: p.path };
+  if (p.status === 'implementing' && p.open === 0 && !p.verify) return { group: 'message', step: `/sattva:verify ${p.path}`, plan: p.path };
   if (p.status === 'draft') return { group: 'waiting', reason: 'план ждёт Approve', code: 'approve' };
   if (p.status === 'verified' && p.release.length) return { group: 'waiting', reason: `релиз: ${p.release.join(', ')} — ваш шаг`, code: 'release', arg: p.release.join(', ') };
   return null;
@@ -137,7 +137,7 @@ export function decide(s, f) {
   if (f.dirty) return { group: 'waiting', reason: `незакоммиченные файлы: ${f.files.slice(0, 10).join(', ')}`, files: f.files.slice(0, 50), code: 'dirty', arg: f.files.slice(0, 3).join(', ') };
   if (f.ignored?.length) return { group: 'waiting', reason: `игнорируемые файлы удалятся с worktree: ${f.ignored.slice(0, 10).join(', ')}`, files: f.ignored.slice(0, 50), code: 'ignored', arg: f.ignored.slice(0, 3).join(', ') };
   const intent = f.plans.find((p) => p.intentOnly);
-  if (intent) return { group: 'waiting', reason: 'intent без плана — `/keystone:plan`', code: 'intent' };
+  if (intent) return { group: 'waiting', reason: 'intent без плана — `/sattva:plan`', code: 'intent' };
   // a plan that is not verified-without-R<n> and gave no step above is never archived (I-2, I-3)
   if (f.plans.every(done)) {
     if (!f.own || !f.ownCommits || f.merged) return { group: 'archive' };
@@ -197,7 +197,7 @@ export function classify(sessions, { self, sent = {}, factsOf = facts, ownerOf =
     if (r.group === 'message') {
       if (r.plan && !PLAN_PATH.test(r.plan)) r = { group: 'waiting', reason: 'путь плана не прошёл проверку', code: 'path' };
       else if (sent[s.sessionId]?.step === r.step) r = { group: 'waiting', reason: `не продвинулась после «${r.step}»`, code: 'stuck', arg: r.step };
-      else if (ownerOf && r.plan && /^\/keystone:(implement|fix) /.test(r.step)) {
+      else if (ownerOf && r.plan && /^\/sattva:(implement|fix) /.test(r.step)) {
         let o = null;
         try { o = ownerOf(sessionDir(s), r.plan); } catch { /* no answer → the step stays: better an extra step than a stuck session */ }
         if (o?.live && !o.mine) r = { group: 'waiting', reason: `план ведёт ${o.owner.place} · ветка ${o.owner.branch} с ${o.owner.since}`, code: 'owner', arg: `${o.owner.place} · ${o.owner.branch}` };
@@ -226,7 +226,7 @@ export function gitSessions(root) {
 
 function storeFile(cwd = process.cwd()) {
   const dir = gitOk(cwd, 'rev-parse', '--git-common-dir').trim();
-  return join(isAbsolute(dir) ? dir : resolve(cwd, dir), 'keystone-sessions.json');
+  return join(isAbsolute(dir) ? dir : resolve(cwd, dir), 'sattva-sessions.json');
 }
 export const readSent = (cwd) => {
   const f = storeFile(cwd);

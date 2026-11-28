@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: "Keystone: recommend an architecture pattern from the project's real stack and code, check the existing structure against it, and write docs/architecture.md (folder structure, dependency rules in a form /keystone:verify can grep, anti-patterns) after you confirm the diff. Re-running updates the file, never overwrites silently. Use for 'which architecture', 'document the architecture', after /keystone:setup, or before a structural refactor."
+description: "Sattva: recommend an architecture pattern from the project's real stack and code, check the existing structure against it, and write docs/architecture.md (folder structure, dependency rules in a form /sattva:verify can grep, anti-patterns) after you confirm the diff. Re-running updates the file, never overwrites silently. Use for 'which architecture', 'document the architecture', after /sattva:setup, or before a structural refactor."
 argument-hint: "[microservices|layers|structured|structured-layers|structured-vertical|explicit|explicit-layers|explicit-vertical|explicit-flat] (legacy aliases: clean, ddd, monolith, vertical)"
 allowed-tools: Read Write Edit Glob Grep Bash(git ls-files*) Bash(mkdir *) AskUserQuestion
 model: opus
@@ -9,7 +9,7 @@ disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-architecture/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone · architecture — pick a pattern, write `docs/architecture.md`
+# Sattva · architecture — pick a pattern, write `docs/architecture.md`
 
 Writes only: `docs/architecture.md`, and one pointer line in `CLAUDE.md` — each after the diff is shown and the user said yes.
 Never touches code. Arguments: `$ARGUMENTS`.
@@ -20,7 +20,7 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
@@ -29,7 +29,7 @@ its path relative to it; a file you wrote in another repository or folder (after
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -42,7 +42,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -127,7 +127,7 @@ only rules that affect day-to-day development.
 - ❌ [what NOT to do in this architecture]  - ❌ [common mistake]
 ```
 
-The `Dependency Rules` lines are the contract with `/keystone:verify`: `MUST NOT: A imports B` plus a `check:` grep that prints nothing when
+The `Dependency Rules` lines are the contract with `/sattva:verify`: `MUST NOT: A imports B` plus a `check:` grep that prints nothing when
 the rule holds. Use the project's real import syntax; do not invent folders that do not exist (Option 1 documents real paths).
 
 ## Step 4 — confirm, write, point
@@ -136,11 +136,11 @@ the rule holds. Use the project's real import syntax; do not invent folders that
 2. After the yes, `mkdir -p docs` and write `docs/architecture.md`. On update use Edit, only the changed sections.
 3. Pointer: if `CLAUDE.md` exists and has no line mentioning `docs/architecture.md`, propose exactly one line, e.g.
    `Architecture: docs/architecture.md (pattern: <name>) — follow its Dependency Rules.`, show the diff, add it only on a yes.
-   Keep `CLAUDE.md` within 60 lines; if it would exceed that, say so instead of adding. No `CLAUDE.md` → suggest `/keystone:setup`, write nothing.
+   Keep `CLAUDE.md` within 60 lines; if it would exceed that, say so instead of adding. No `CLAUDE.md` → suggest `/sattva:setup`, write nothing.
 4. Report: `Blocked on me:` (none, or the open question) · `Changed:` (files, new or updated sections) · `Found:` (pattern chosen, mode
    documented-reality vs strict-ideal, number of grep-checkable rules, number of `check: review` rules).
 
-Closing note to the user: plans (`/keystone:plan`) and `/keystone:verify` read `docs/architecture.md`; verify runs each `check:` grep and
+Closing note to the user: plans (`/sattva:plan`) and `/sattva:verify` read `docs/architecture.md`; verify runs each `check:` grep and
 treats a hit as an architecture violation.
 
 ## Rules

@@ -1,6 +1,6 @@
 ---
 name: plan
-description: "Keystone: plan an M or L change into docs/keystone/[date]-[slug]/plan.md — reconnaissance, Requirements Reconciliation Gate against intent.md (I-n) and project rules, Rules check, Risks, tasks with files and checks, a pre-approval interrogation round, and on L an independent /keystone:check. Settings are inferred from the repo, never asked. Explicit /keystone:plan only."
+description: "Sattva: plan an M or L change into docs/sattva/[date]-[slug]/plan.md — reconnaissance, Requirements Reconciliation Gate against intent.md (I-n) and project rules, Rules check, Risks, tasks with files and checks, a pre-approval interrogation round, and on L an independent /sattva:check. Settings are inferred from the repo, never asked. Explicit /sattva:plan only."
 argument-hint: "<path to intent.md or its folder | task text> [S | M | L] [--rush]"
 allowed-tools: Read Write Edit Glob Grep Bash(git *) AskUserQuestion Task Skill Agent Bash(node *rush.mjs*) Bash(node *feedback.mjs*)
 model: opus
@@ -9,7 +9,7 @@ disable-model-invocation: true
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-plan/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone · plan — a plan an engineer can implement without this conversation
+# Sattva · plan — a plan an engineer can implement without this conversation
 
 Chain: `intent.md` → **plan** → code → verify (Anthropic AI-native SDLC playbook, adapted: the plan is the spec, there
 is no separate spec document). Output: `plan.md` with `Status: draft`, then `approved` on the human's Approve.
@@ -22,18 +22,18 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
-**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `plan`).
+**Feedback.** If the context has a `Sattva feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `plan`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -46,7 +46,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -56,27 +56,27 @@ Do not skip a step: re-read the step list before you finish and confirm each app
 
 ## Step 0: Level, input, project context
 
-**Level.** Take it from the argument (`S` / `M` / `L`) or from what `/keystone:start` decided in this conversation.
-If it is not set, propose one by the `/keystone:start` signs and confirm once (AskUserQuestion, recommended first):
+**Level.** Take it from the argument (`S` / `M` / `L`) or from what `/sattva:start` decided in this conversation.
+If it is not set, propose one by the `/sattva:start` signs and confirm once (AskUserQuestion, recommended first):
 `Level: <S|M|L> — <one-line reason>. OK / S / M / L?` Any single L sign (several user decisions, data/schema/migration,
 security/auth/payments, a module owned by others, unclear "done") makes it L.
 
-- **S — no plan.** Say: "this is S — make the change directly and run the check, or use `/keystone:fix` for a bug",
+- **S — no plan.** Say: "this is S — make the change directly and run the check, or use `/sattva:fix` for a bug",
   and STOP. Do not write a plan file.
-- **M.** Task text in, plan out, in a new folder `docs/keystone/<YYYY-MM-DD>-<slug>/` (a new folder only on M). No
-  intent required, no `/keystone:check`.
-- **L.** Intent mode (below). No intent given → recommend `/keystone:intent` first and stop unless the user says
+- **M.** Task text in, plan out, in a new folder `docs/sattva/<YYYY-MM-DD>-<slug>/` (a new folder only on M). No
+  intent required, no `/sattva:check`.
+- **L.** Intent mode (below). No intent given → recommend `/sattva:intent` first and stop unless the user says
   "Plan anyway".
 
-**Task folder.** `docs/keystone/<YYYY-MM-DD>-<slug>/` (slug: lowercase, hyphenated, ≤ 50 characters).
-Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name,
+**Task folder.** `docs/sattva/<YYYY-MM-DD>-<slug>/` (slug: lowercase, hyphenated, ≤ 50 characters).
+Active plan = the plan.md of the newest task folder under docs/sattva/ — newest by the date prefix of the folder name,
 ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older
-task folder outside docs/keystone) is used only when its path is given explicitly as the argument. A new plan always goes
-under docs/keystone/ — also when its intent or an older plan lies elsewhere: the gates and the band see only that folder.
+task folder outside docs/sattva) is used only when its path is given explicitly as the argument. A new plan always goes
+under docs/sattva/ — also when its intent or an older plan lies elsewhere: the gates and the band see only that folder.
 
 **Existing plan (one plan per task).** If the argument is a path to an existing `plan.md` (or its folder) with
 `Status: draft`, do not create a folder or rewrite the plan: go straight to § Before approval → § On Approve (used by
-`/keystone:fix` M, `/keystone:implement` draft-stop, `/keystone:check`, and a plan with open questions). If a plan for
+`/sattva:fix` M, `/sattva:implement` draft-stop, `/sattva:check`, and a plan with open questions). If a plan for
 this intent/task already exists (in the task folder), refine it
 instead of creating a second one.
 
@@ -115,11 +115,11 @@ present it — a plan that breaks a project rule is a bug.
 The line binds the rest of the work: no test tasks when `tests — no`; log instructions in tasks follow `logging`.
 
 **Intent status gate (L).** Read the `Status:` line of `intent.md`. If it is not `accepted`, emit
-`WARN [keystone] <file> is <status>, not accepted — the human has not signed it off`, ask once (AskUserQuestion:
-"Plan anyway" / "Stop — I'll review and run /keystone:intent accept first"; recommend Stop) and continue only on an
+`WARN [sattva] <file> is <status>, not accepted — the human has not signed it off`, ask once (AskUserQuestion:
+"Plan anyway" / "Stop — I'll review and run /sattva:intent accept first"; recommend Stop) and continue only on an
 explicit "Plan anyway". Record it in the header as `(planned from <status> intent — accepted by user at planning time)`.
 Do not edit the intent while planning; if a resolved conflict narrows an outcome, tell the user to update it
-(`/keystone:intent`) and record the narrowing in the reconciliation row. Open questions in the intent that block a
+(`/sattva:intent`) and record the narrowing in the reconciliation row. Open questions in the intent that block a
 decision you need are user-owned decisions → § Clarifications.
 
 ## Step 1: Reconnaissance
@@ -147,7 +147,7 @@ to handle. If requirements are ambiguous, ask clarifying questions before planni
 ### Clarifications
 
 If the open user-owned decisions contain a dependency edge (answer B depends on answer A), clarify by the
-`/keystone:grill` contract instead of scattered questions; a single fork or a batch of independent questions stays an
+`/sattva:grill` contract instead of scattered questions; a single fork or a batch of independent questions stays an
 ordinary question. Facts from the codebase are looked up, never asked. Confirmed decisions go to the intent's
 `## Decisions log` only by telling the user to update the intent — the plan does not edit it.
 With `Pace: rush` all questions of this stage go in one round (one message or one AskUserQuestion); after Approve the
@@ -183,7 +183,7 @@ product. For each material combination specify:
 When repository data, configuration, fixtures, schemas, or content define the real contract, include at least one
 representative existing artifact in an end-to-end verification path instead of validating only synthetic fixtures.
 
-**Keystone rows.** Every intent `Desired outcome` line and every `Constraint` line is its own row of the table in the
+**Sattva rows.** Every intent `Desired outcome` line and every `Constraint` line is its own row of the table in the
 plan's `## Requirements Reconciliation`, cited `intent — I-n` — including "must not break" constraints (prove them with
 a check that the protected code/path is untouched). An intent without IDs: cite `Desired outcome #n` / `Constraint #n`.
 Other material rules cite `<path> — <section>`. An outcome only a release step can prove (a publish, a deploy, a
@@ -234,7 +234,7 @@ focused session; tasks are ordered by dependency (do X before Y). Run the Requir
 every task: no "handle / support / wire up / as needed / etc."; an undecidable point becomes a blocking open question.
 
 **Rules check.** One line after the reconciliation table (after `Settings:` when there is none):
-`Project rules check: read <files> — MUST violations: none` (`/keystone:check` later adds its `Coverage:` line directly
+`Project rules check: read <files> — MUST violations: none` (`/sattva:check` later adds its `Coverage:` line directly
 after it). Check the **text of every task** — including its Logging and Testing lines — against each MUST/MUST NOT (e.g. rule
 "log only rows/leads/code" vs a task "log { code, message }" is a violation: fix the plan before Approve). List every
 MUST/MUST NOT the plan would break as
@@ -246,9 +246,9 @@ forbidden direction is a MUST violation like any other.
 **Risks.** `## Risks` after the Rules check line: `Could break:` / `Riskiest step:` / `Rejected alternatives:` — three
 lines on M, more allowed on L.
 
-**L touching security / auth / payments / PII** (the L sign from `/keystone:start`): add a `Threats:` block to Risks — one
+**L touching security / auth / payments / PII** (the L sign from `/sattva:start`): add a `Threats:` block to Risks — one
 line per threat (what an attacker or a mistake could do, where, and the task that closes it) — and add a task
-`Run /keystone:security <scope> — files: … — check: Security gate pass|warn` before the final verify. Not security → no
+`Run /sattva:security <scope> — files: … — check: Security gate pass|warn` before the final verify. Not security → no
 block, no task.
 
 ## Important rules
@@ -269,7 +269,7 @@ block, no task.
 1. Answer against the draft and fix it: **What could this change break? Which step is the riskiest? What did you
    reject, and why?** Apply the **readiness bar**: an engineer who never saw this conversation can implement from the
    plan alone — every task names files, nothing says "as discussed", every reconciliation row has evidence.
-2. **L only — independent check.** Invoke the Skill tool with `keystone:check` and the arguments
+2. **L only — independent check.** Invoke the Skill tool with `sattva:check` and the arguments
    `<intent path> <plan path>`. It orchestrates fresh-context Opus agents from the main context. Fix every `missing`,
    `unrequested` and rule violation it reports and run it again; keep its final `Coverage: … verdict` line. Never
    self-check in this context instead.
@@ -282,16 +282,16 @@ Set `Status: approved` in the plan header. Make the baseline commit of intent an
 convention (the chain is the audit trail; stage only the task folder). Then tell the user:
 **Commit scope.** If the project has commitlint (`.commitlintrc*`, `commitlint.config.*`, or a `commitlint` key in
 `package.json`) with a `scope-enum` rule, use only a scope from that list — the closest one (e.g. `docs`), or no scope
-if the rule allows it; never a scope the hook rejects. No scope list → keep the Keystone scope (`docs(plan)`).
+if the rule allows it; never a scope the hook rejects. No scope list → keep the Sattva scope (`docs(plan)`).
 
 **`Pace: rush`** → after the approval commit read `${CLAUDE_SKILL_DIR}/../implement/references/RUSH.md` and run the
 chain now, in this turn, instead of the advice below (no fresh session, no `/clear`).
 
 - implement in a **fresh session** — a new conversation or `/clear` (not `/compact`) — with
-  `/keystone:implement <plan path>`; Sonnet is enough for a plan this explicit;
-- finish with `/keystone:verify`;
-- while the plan is `draft`, a hook refuses code edits outside `docs/keystone/`; lift it with `Status: abandoned` in the
-  header or the env var `KEYSTONE_GATES=off`.
+  `/sattva:implement <plan path>`; Sonnet is enough for a plan this explicit;
+- finish with `/sattva:verify`;
+- while the plan is `draft`, a hook refuses code edits outside `docs/sattva/`; lift it with `Status: abandoned` in the
+  header or the env var `SATTVA_GATES=off`.
 
 STOP after planning; the user decides when to implement — unless `Pace: rush`: then the chain runs (RUSH.md). If the plan is not ready for implementation (a blocking open
 question remains), say so, leave it `draft`, and list the questions.

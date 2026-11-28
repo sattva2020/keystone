@@ -14,12 +14,12 @@ const mode = readFileSync(join(root, 'skills/evolve/SKILL.md'), 'utf8').replace(
 const steps = Object.fromEntries(mode.split(/\n(?=\d+\. \*\*)/).slice(1).map((s) => [s.match(/\*\*([^.*]+)/)[1], s.replace(/\s+/g, ' ')]));
 const has = (name, ...ss) => { for (const s of ss) assert.ok((steps[name] ?? '').includes(s), `step ${name}: ${s} — ${steps[name]}`); };
 const tmp = () => mkdtempSync(join(tmpdir(), 'ks-evo-'));
-const run = (args, { store, cwd = root }) => spawnSync(process.execPath, [script, ...args], { cwd, encoding: 'utf8', env: { ...process.env, KEYSTONE_FEEDBACK: "", KEYSTONE_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store } }).stdout.trim();
+const run = (args, { store, cwd = root }) => spawnSync(process.execPath, [script, ...args], { cwd, encoding: 'utf8', env: { ...process.env, SATTVA_FEEDBACK: "", SATTVA_FEEDBACK_DIR: store, CLAUDE_CONFIG_DIR: store } }).stdout.trim();
 
 test('a crash of evolve answers with the prefix of evolve', () => {
   const store = tmp();
   mkdirSync(join(store, 'zz-000000', 'feedback.jsonl'), { recursive: true });
-  assert.match(run(['evolve', '--skill', 'verify'], { store }), /^Keystone evolve: error — [^\n]+$/);
+  assert.match(run(['evolve', '--skill', 'verify'], { store }), /^Sattva evolve: error — [^\n]+$/);
 });
 
 test('an open finding: note "section not found" and "not checked" and an edit in references/ come back; an edited section does not', () => {
@@ -27,7 +27,7 @@ test('an open finding: note "section not found" and "not checked" and an edit in
   const git = (...a) => assert.equal(spawnSync('git', ['-C', repo, '-c', 'user.name=t', '-c', 'user.email=t@t', ...a]).status, 0);
   const sk = join(repo, 'skills/verify/SKILL.md'), ref = join(repo, 'skills/verify/references/X.md');
   mkdirSync(join(repo, '.claude-plugin')); mkdirSync(dirname(ref), { recursive: true });
-  writeFileSync(join(repo, '.claude-plugin/plugin.json'), '{"name":"keystone","version":"0.9.1"}');
+  writeFileSync(join(repo, '.claude-plugin/plugin.json'), '{"name":"sattva","version":"0.9.1"}');
   writeFileSync(sk, '## Step 1 — a\nold\n\n## Step 2 — b\nold\n'); writeFileSync(ref, 'old\n');
   git('init', '-q'); git('add', '-A'); git('commit', '-qm', 'x'); git('tag', 'v0.9.1');
   const item = (section) => ({ skill: 'verify', section, cause: 'skill-text', source: 'added', cls: 'c', text: 't', evidence: 'e' });
@@ -42,7 +42,7 @@ test('an open finding: note "section not found" and "not checked" and an edit in
 });
 
 test('every call and every check of the mode has a route for each way it can end', () => {
-  has('Findings', '## Keystone evolve', 'Anything else');
+  has('Findings', '## Sattva evolve', 'Anything else');
   has('Read', 'does not exist');
   has('Draft', 'another skill');
   has('Ask', 'in other words');

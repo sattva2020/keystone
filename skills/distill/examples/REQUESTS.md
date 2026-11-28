@@ -5,7 +5,7 @@
 ## Create a Skill from One Book
 
 ```text
-/keystone:distill ./books/domain-driven-design.pdf --name ddd-practices
+/sattva:distill ./books/domain-driven-design.pdf --name ddd-practices
 ```
 
 Expected output:
@@ -18,7 +18,7 @@ Expected output:
 ## Create a Skill from Programming Material
 
 ```text
-/keystone:distill ./books/code-quality.pdf --name code-quality-practices
+/sattva:distill ./books/code-quality.pdf --name code-quality-practices
 ```
 
 Expected behavior:
@@ -34,7 +34,7 @@ Expected behavior:
 ## Create Several Focused Skills from One Material Set
 
 ```text
-/keystone:distill ./books/code-quality.pdf ./examples --split --name code-quality
+/sattva:distill ./books/code-quality.pdf ./examples --split --name code-quality
 ```
 
 Expected behavior:
@@ -50,7 +50,7 @@ Expected behavior:
 ## Save to a Custom Output Root
 
 ```text
-/keystone:distill ./books/domain-driven-design.pdf --name ddd-practices --path ./distilled-skills
+/sattva:distill ./books/domain-driven-design.pdf --name ddd-practices --path ./distilled-skills
 ```
 
 Expected output:
@@ -63,7 +63,7 @@ Expected output:
 ## Split into a Custom Output Root
 
 ```text
-/keystone:distill ./books/code-quality.pdf --split --name code-quality --path ./distilled-skills
+/sattva:distill ./books/code-quality.pdf --split --name code-quality --path ./distilled-skills
 ```
 
 Expected behavior:
@@ -75,7 +75,7 @@ Expected behavior:
 ## Split by a Specific Strategy
 
 ```text
-/keystone:distill ./docs/review-playbook --split-by workflow --name review
+/sattva:distill ./docs/review-playbook --split-by workflow --name review
 ```
 
 Expected behavior:
@@ -89,7 +89,7 @@ Expected behavior:
 ## Split Non-Code Material by User Goals
 
 ```text
-/keystone:distill ./books/decision-making.pdf --split-by goal --name decisions
+/sattva:distill ./books/decision-making.pdf --split-by goal --name decisions
 ```
 
 Expected behavior:
@@ -102,7 +102,7 @@ Expected behavior:
 ## Redact Source Map Paths and Links
 
 ```text
-/keystone:distill ./books/internal-review-guide.pdf --name review-guide --redact-source-map
+/sattva:distill ./books/internal-review-guide.pdf --name review-guide --redact-source-map
 ```
 
 Expected behavior:
@@ -116,7 +116,7 @@ Expected behavior:
 ## Create a Skill from a Docs Folder
 
 ```text
-/keystone:distill ./docs/internal-platform --name platform-operator
+/sattva:distill ./docs/internal-platform --name platform-operator
 ```
 
 Expected behavior:
@@ -130,24 +130,24 @@ Expected behavior:
 ## Reject Unsafe Skill Names
 
 ```text
-/keystone:distill ./docs --name ../foo
-/keystone:distill ./docs --name keystone-review
-/keystone:distill ./docs --name .hidden
-/keystone:distill ./docs --name C:\temp\skill
-/keystone:distill ./docs --name clean/code
+/sattva:distill ./docs --name ../foo
+/sattva:distill ./docs --name sattva-review
+/sattva:distill ./docs --name .hidden
+/sattva:distill ./docs --name C:\temp\skill
+/sattva:distill ./docs --name clean/code
 ```
 
 Expected behavior:
 
 - reject the request before writing files
 - explain that skill names must match `^[a-z0-9]+(?:-[a-z0-9]+)*$`
-- reject `keystone-*` names and names that shadow an existing skill
+- reject `sattva-*` names and names that shadow an existing skill
 - confirm the resolved target path would stay under the resolved output root (`.claude/skills` by default, or `--path` when present)
 
 ## Update an Existing Skill
 
 ```text
-/keystone:distill ./new-material ./examples --name platform-operator --update
+/sattva:distill ./new-material ./examples --name platform-operator --update
 ```
 
 Expected behavior:
@@ -160,7 +160,7 @@ Expected behavior:
 ## Create a Skill from URLs
 
 ```text
-/keystone:distill https://example.com/guide https://example.com/reference --name example-api
+/sattva:distill https://example.com/guide https://example.com/reference --name example-api
 ```
 
 Expected behavior:

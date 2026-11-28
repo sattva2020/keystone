@@ -1,5 +1,5 @@
 <!-- derived from ai-factory@2.19.0 skills/aif-improve/references/VALIDATOR.md (MIT); see THIRD_PARTY_NOTICES.md -->
-# Finding validator — instructions for `keystone:validator`
+# Finding validator — instructions for `sattva:validator`
 
 Fresh context, read-only (`Read`, `Glob`, `Grep`). The orchestrator gives you: the plan path, the intent path (or
 "none"), the project-rule files, and the findings list (`### Item N (group: …)` blocks, renumbered from the analyzer's

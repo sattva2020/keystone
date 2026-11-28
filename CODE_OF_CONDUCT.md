@@ -25,7 +25,7 @@ Maintainers are responsible for clarifying and enforcing these standards and may
 commits, issues and other contributions that do not follow them.
 
 Report unacceptable behavior to the maintainers via
-[GitHub Security Advisories](https://github.com/sattva2020/keystone/security/advisories/new) (private) or through the
+[GitHub Security Advisories](https://github.com/sattva2020/sattva-plugin/security/advisories/new) (private) or through the
 maintainers' GitHub profiles. All reports are reviewed promptly and kept confidential.
 
 ## Attribution

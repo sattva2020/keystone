@@ -10,7 +10,7 @@
 Check for the file `<qa_dir>/change-summary.md`.
 
 **If the file is NOT found — STOP:** AskUserQuestion: explain that the `change-summary.md` artifact was not found and a test
-plan cannot be created without it — run `/keystone:qa change-summary` first / cancel. Do not continue until the artifact is created.
+plan cannot be created without it — run `/sattva:qa change-summary` first / cancel. Do not continue until the artifact is created.
 
 **If the file is found** — read it and use it as the basis for the test plan. Proceed to Step 2.
 
@@ -74,4 +74,4 @@ Save the result to `<qa_dir>/test-plan.md`.
 
 **If `all_mode = true`** — do NOT show the prompt. Proceed directly to `${CLAUDE_SKILL_DIR}/references/TEST-CASES.md`.
 
-**Otherwise:** AskUserQuestion: the test plan was saved — proceed to writing test cases (`/keystone:qa test-cases`) or stop here.
+**Otherwise:** AskUserQuestion: the test plan was saved — proceed to writing test cases (`/sattva:qa test-cases`) or stop here.

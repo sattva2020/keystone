@@ -10,8 +10,8 @@ import { take, show } from '../skills/implement/scripts/owner.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TRIAGE = join(ROOT, 'skills', 'sessions', 'scripts', 'triage.mjs');
-const P = 'docs/keystone/2026-11-01-x/plan.md';
-const ENV = { ...process.env, CLAUDE_CODE_REMOTE: '', KEYSTONE_GATES: '' };
+const P = 'docs/sattva/2026-11-01-x/plan.md';
+const ENV = { ...process.env, CLAUDE_CODE_REMOTE: '', SATTVA_GATES: '' };
 const SINCE = '2026-11-15T10:00:00.000Z';
 
 const roots = [];
@@ -32,16 +32,16 @@ test('I-7: a plan held by another live session → waiting with the owner; other
   const held = run(() => ({ owner: owner(), mine: false, live: true }));
   assert.deepEqual(held.message, []);
   assert.equal(held.waiting[0].reason, `план ведёт local a · ветка x с ${SINCE}`);
-  assert.equal(run(() => ({ owner: owner(), mine: true, live: true })).message[0].step, `/keystone:implement ${P}`, 'mine');
+  assert.equal(run(() => ({ owner: owner(), mine: true, live: true })).message[0].step, `/sattva:implement ${P}`, 'mine');
   assert.equal(run(() => ({ owner: null, mine: false, live: false })).message.length, 1, 'no owner');
   assert.equal(run(() => ({ owner: owner(), mine: false, live: false })).message.length, 1, 'stale owner');
-  assert.equal(run(() => ({ ok: true, off: true })).message.length, 1, 'KEYSTONE_GATES=off');
+  assert.equal(run(() => ({ ok: true, off: true })).message.length, 1, 'SATTVA_GATES=off');
   assert.equal(run(() => { throw new Error('boom'); }).message.length, 1, 'error → the step stays');
   assert.equal(classify(child(), { self: 'p', factsOf: facts([pl()]) }).message.length, 1, 'no ownerOf → as before');
   const fix = run(() => ({ owner: owner(), mine: false, live: true }), [pl({ verdict: 'FAIL', verify: true })]);
-  assert.match(fix.waiting[0].reason, /^план ведёт local a/, '/keystone:fix verify is checked too');
+  assert.match(fix.waiting[0].reason, /^план ведёт local a/, '/sattva:fix verify is checked too');
   let asked = 0;
-  run(() => { asked++; return null; }, [pl({ open: 0 })]); // /keystone:verify — not an owner stage
+  run(() => { asked++; return null; }, [pl({ open: 0 })]); // /sattva:verify — not an owner stage
   assert.equal(asked, 0);
 });
 
@@ -75,7 +75,7 @@ test('I-7 on real git: the session that holds the plan itself gets its step; a f
   assert.match(out.waiting[0]?.reason ?? '', /^план ведёт local b · ветка main с /);
 });
 
-test('triage git mode stays read-only: no fetch of keystone/owners', () => {
+test('triage git mode stays read-only: no fetch of sattva/owners', () => {
   const w = world();
   assert.equal(take(P, { cwd: w.b, env: ENV, stage: 'implement' }).ok, true); // the branch exists on origin
   const wt = join(w.root, 'wt');
@@ -84,6 +84,6 @@ test('triage git mode stays read-only: no fetch of keystone/owners', () => {
   git(wt, 'commit', '-qam', 'task');
   const r = spawnSync(process.execPath, [TRIAGE, 'git'], { cwd: w.a, encoding: 'utf8', env: ENV });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /wt · осталось · \/keystone:implement/);
-  assert.equal(spawnSync('git', ['-C', w.a, 'rev-parse', '-q', '--verify', 'refs/remotes/origin/keystone/owners']).status, 1);
+  assert.match(r.stdout, /wt · осталось · \/sattva:implement/);
+  assert.equal(spawnSync('git', ['-C', w.a, 'rev-parse', '-q', '--verify', 'refs/remotes/origin/sattva/owners']).status, 1);
 });

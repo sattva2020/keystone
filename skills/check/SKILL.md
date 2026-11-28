@@ -1,13 +1,13 @@
 ---
 name: check
-description: "Keystone: independent check of a plan before Approve — deep codebase analysis, a fresh validator, and a line for every intent line (I-1…) with Coverage % and PASS/FAIL. Finds missing or vague tasks, wrong dependencies, duplicates, unrequested work and project-rule violations; edits the plan only after the human confirms. Never edits code. Use before Approve on an L change, after a retrospective intent, or when intent.md changed after the plan."
+description: "Sattva: independent check of a plan before Approve — deep codebase analysis, a fresh validator, and a line for every intent line (I-1…) with Coverage % and PASS/FAIL. Finds missing or vague tasks, wrong dependencies, duplicates, unrequested work and project-rule violations; edits the plan only after the human confirms. Never edits code. Use before Approve on an L change, after a retrospective intent, or when intent.md changed after the plan."
 argument-hint: "[<intent path>] [<plan path>] [<request — what to change in the plan>]"
 allowed-tools: Read Edit Glob Grep Agent AskUserQuestion Bash(git *) Bash(node *feedback.mjs*)
 model: opus
 effort: high
 ---
 <!-- derived from ai-factory@2.19.0 skills/aif-improve/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
-# Keystone · check — refine the plan with fresh eyes
+# Sattva · check — refine the plan with fresh eyes
 
 The plan was written by one context; this skill re-checks it with two other contexts (an analyzer and a validator) and
 shows the human only what survives. It is read-only for code: it never edits source files, only the plan, and only after
@@ -19,18 +19,18 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
-**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `check`).
+**Feedback.** If the context has a `Sattva feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `check`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -43,7 +43,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -53,14 +53,14 @@ text, without backticks. Link only a file you checked exists.
 
 (Cost: two Opus agents. The validator is mandatory here; in upstream AI Factory it was the optional `+check`.)
 
-1. `keystone:analyzer` re-reads the codebase deeper than the planner did and lists findings.
-2. `keystone:validator` (always, fresh context) re-reads the plan and the cited files and keeps, modifies or drops each.
+1. `sattva:analyzer` re-reads the codebase deeper than the planner did and lists findings.
+2. `sattva:validator` (always, fresh context) re-reads the plan and the cited files and keeps, modifies or drops each.
 3. You show the report and `Coverage: … · verdict`, ask, and only then edit the plan.
 
 ## Step 1 — resolve the inputs
 
 `$ARGUMENTS` = `<intent path> <plan path>`, or `<plan path>` only, or nothing — then, optionally, a free-text
-**request**: what the user wants changed in the plan (`/keystone:check <plan> add a migration rollback task`). The
+**request**: what the user wants changed in the plan (`/sattva:check <plan> add a migration rollback task`). The
 leading words that are existing files or folders are the paths; everything from the first word that is not one is the
 request. No such text → `Request: none`.
 - Two paths: use them. A path may be a task folder — then `intent.md` / `plan.md` inside it.
@@ -68,8 +68,8 @@ request. No such text → `Request: none`.
   say so, skip `intent-gap` and the I-n lines (Coverage then reads `n/a`). **Decisions instead of an intent file:** when
   Authority or `## Original Request` points to a numbered grill decision list (`D1…`) rather than a file, check that
   list as the intent (`D1 covered — …`), and head the report `Intent: reconstructed from the plan's D-list, not a signed
-  intent.md` — the verdict is then advisory, and recommend `/keystone:intent` to record it.
-- Nothing: the active plan. It is: the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/keystone) is used only when its path is given explicitly as the argument. Its intent from Authority.
+  intent.md` — the verdict is then advisory, and recommend `/sattva:intent` to record it.
+- Nothing: the active plan. It is: the plan.md of the newest task folder under docs/sattva/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. A plan elsewhere (an older task folder outside docs/sattva) is used only when its path is given explicitly as the argument. Its intent from Authority.
 - No plan found: print `FAIL: plan not found` and stop.
 - On an **approved** plan the report only reports: changes to the plan are applied after the user's answer (Step 4),
   never directly.
@@ -82,7 +82,7 @@ status not `accepted`, or intent.md changed after the plan's first commit (`git 
 
 ## Step 2 — analyze
 
-Launch one agent: `subagent_type: "keystone:analyzer"`. Its prompt names, as absolute paths: the plan, the intent (or
+Launch one agent: `subagent_type: "sattva:analyzer"`. Its prompt names, as absolute paths: the plan, the intent (or
 "none"), the rule files, the request (or "none"), whether memlab MCP tools are available in this session, and the instructions `${CLAUDE_SKILL_DIR}/references/ANALYZE.md` ("read it completely and
 follow it"). It returns findings `F1…` (groups `missing`, `improvements`, `removals`, `out_of_scope`, `intent-gap`,
 `goal-drift`, `rule-violation`), dependency lines `D1…`, and the `I-n status:` lines.
@@ -96,7 +96,7 @@ Number the findings `Item 1…` in group order (goal-drift, missing, improvement
 intent-gap, rule-violation), keeping the F-id and the group in each heading. If the list is empty, skip the validator: hidden = 0,
 adjusted = 0.
 
-Launch a **fresh** agent: `subagent_type: "keystone:validator"`. Pass the plan path, the intent path, the rule files, the request,
+Launch a **fresh** agent: `subagent_type: "sattva:validator"`. Pass the plan path, the intent path, the rule files, the request,
 `${CLAUDE_SKILL_DIR}/references/VALIDATOR.md` and the items — not the analyzer's reasoning. Parse by `### Item N`
 headings. The group is always the original one; a differing `Group:` makes the block malformed.
 - `keep` → unchanged. `modify` → replace the text with `Modified-text`, adjusted += 1. `drop` → remove, hidden += 1.
@@ -151,7 +151,7 @@ the plan stays as is; (2) optional note — a short code citation `path:line`; (
 for new tasks); (4) suggested edit — concrete. Dependencies use the short form
 `Task #X should depend on Task #Y. Reason: …`. Omit empty groups. `verdict` is `PASS` only with no `missing` I-n, no
 kept rule violation, no kept `goal-drift` and Coverage ≥ 90 %; otherwise `FAIL`. A kept `goal-drift` is shown first:
-"The plan delivers <Y>, you asked for <X>" — the fix is `/keystone:intent`, not a plan edit. With no intent: drop the I-n lines and write
+"The plan delivers <Y>, you asked for <X>" — the fix is `/sattva:intent`, not a plan edit. With no intent: drop the I-n lines and write
 `Coverage: n/a · verdict:` by the other two conditions.
 
 No findings at all: `Plan looks solid — no significant gaps.` plus the I-n lines and the Coverage line.
@@ -197,6 +197,6 @@ append ` · not re-checked` to that line.
 
 ## After the report
 
-PASS and the human agrees → `Approve plan`, then `/keystone:implement`. FAIL → apply the fixes (or edit the plan by
-hand) and run `/keystone:check` again. The gate on code edits stays until the plan is approved (lift: `Status: abandoned`
-in the plan header, or env `KEYSTONE_GATES=off`).
+PASS and the human agrees → `Approve plan`, then `/sattva:implement`. FAIL → apply the fixes (or edit the plan by
+hand) and run `/sattva:check` again. The gate on code edits stays until the plan is approved (lift: `Status: abandoned`
+in the plan header, or env `SATTVA_GATES=off`).

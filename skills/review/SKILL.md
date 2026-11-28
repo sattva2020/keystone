@@ -1,6 +1,6 @@
 ---
 name: review
-description: "Keystone: read-only code review of staged changes, a pull request (gh pr diff) or everything since a git ref — correctness, security, performance, project rules and architecture. Every finding carries severity, file:line, a Repro and a fix; an independent validator in a clean context ALWAYS re-checks them (keep / modify / drop, severity changes), unproven ones go to Unconfirmed. `rules [ref]` checks only the project's MUST / MUST NOT rules over the diff, without a plan (S changes), one line per rule with every violating file:line, plus suggested rule updates for /keystone:evolve. Use for 'review code', 'check my code', 'review PR', 'is this code okay', 'check the rules', and on L changes after /keystone:verify."
+description: "Sattva: read-only code review of staged changes, a pull request (gh pr diff) or everything since a git ref — correctness, security, performance, project rules and architecture. Every finding carries severity, file:line, a Repro and a fix; an independent validator in a clean context ALWAYS re-checks them (keep / modify / drop, severity changes), unproven ones go to Unconfirmed. `rules [ref]` checks only the project's MUST / MUST NOT rules over the diff, without a plan (S changes), one line per rule with every violating file:line, plus suggested rule updates for /sattva:evolve. Use for 'review code', 'check my code', 'review PR', 'is this code okay', 'check the rules', and on L changes after /sattva:verify."
 argument-hint: "[PR number | PR url | branch/commit/tag | rules [ref] | empty = staged]"
 allowed-tools: Read Glob Grep Agent AskUserQuestion Bash(git *) Bash(gh *) Bash(node *feedback.mjs*)
 model: opus
@@ -20,18 +20,18 @@ and commands in `inline code`. The closing `Blocked on me:` / `Changed:` / `Foun
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
-**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `review`).
+**Feedback.** If the context has a `Sattva feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `review`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -44,7 +44,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -53,7 +53,7 @@ text, without backticks. Link only a file you checked exists.
 ## Step 0 — Project context
 
 Read, in this order, what exists: `CLAUDE.md` and `.claude/CLAUDE.md`; `docs/architecture.md`; `.claude/rules/**/*.md`
-(rules with `paths:` apply only to matching files); `AGENTS.md`. MUST / MUST NOT lines are project rules. If an active plan exists (newest `docs/keystone/*/plan.md` with Status draft,
+(rules with `paths:` apply only to matching files); `AGENTS.md`. MUST / MUST NOT lines are project rules. If an active plan exists (newest `docs/sattva/*/plan.md` with Status draft,
 approved or implementing), read it and its intent — the review is also judged against what was asked.
 
 ## Step 1 — Get the diff
@@ -87,9 +87,9 @@ A branch literally named like a PR number is read as a PR — an accepted compro
 characters that `git rev-parse --verify <arg>^{commit}` resolves locally are an abbreviated commit hash → ref (say so
 in one line); `#N` and URLs stay PRs. Empty diff → `Nothing to review.`
 
-## Called from /keystone:verify (sweep)
+## Called from /sattva:verify (sweep)
 
-On an L plan, `/keystone:verify` runs this review once, as a finder agent, beside its verifier (its
+On an L plan, `/sattva:verify` runs this review once, as a finder agent, beside its verifier (its
 `references/SWEEP.md`). The prompt names a base (and maybe `-- <files>`). Then: do Step 0, then Step 2 and Step 3 over
 `git diff <base>` (committed + uncommitted) — with `-- <files>` only over those files. Return only the
 `### Item N (section: critical|suggestion)` blocks of Step 4 (behavioural impact, `file:line`, Repro, fix, severity,
@@ -97,7 +97,7 @@ the confidence marker) and the Context gates lines. Do not run the validator (ve
 write no Step 5 report, show no menu and no `Next:`, start no agents, write no files. The verifier's output is never
 passed to you, and yours never reaches it. The rest of this skill is unchanged.
 
-## Step R — Rules check without a plan (`/keystone:review rules [ref]`)
+## Step R — Rules check without a plan (`/sattva:review rules [ref]`)
 
 For an S change, which has no plan and so no verify: only the project rules, nothing else. Read-only like the rest.
 
@@ -106,7 +106,7 @@ For an S change, which has no plan and so no verify: only the project rules, not
    still nothing → the branch against its base (`git merge-base HEAD main`, or `master`). Empty → `Nothing to check.`
 2. **Rules.** The MUST / MUST NOT lines from Step 0 (`CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`
    dependency rules, `.claude/rules/**/*.md` with their `paths:`, `AGENTS.md`; fallback files only for AI Factory
-   projects). None found → `Rules gate: not checkable — no MUST / MUST NOT rules`, suggest `/keystone:setup`, stop.
+   projects). None found → `Rules gate: not checkable — no MUST / MUST NOT rules`, suggest `/sattva:setup`, stop.
 3. **Check — the same way as the Rules gate of `agents/verifier.md`.** List the rules first, then check each rule
    across every changed file before moving to the next. One line per rule:
    `rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`; **every** violating `file:line` goes
@@ -115,7 +115,7 @@ For an S change, which has no plan and so no verify: only the project rules, not
 4. **Suggested rule updates.** What the diff shows the rules miss or get wrong: a convention the change follows that no
    rule states, a rule the change contradicts on purpose, a rule too vague to check. One line each:
    `<add | clarify | drop> — <rule text or source:line> — why: <file:line>`. They are proposals for
-   `/keystone:evolve`; this skill never edits a rule file.
+   `/sattva:evolve`; this skill never edits a rule file.
 
 Report (no validator — every line already carries its `file:line`):
 
@@ -136,7 +136,7 @@ Found: <k violations in r rules; s suggested rule updates>
 
 Menu (see Choice at the end): `fail` → `Fix the violations here` (Recommended; read `${CLAUDE_SKILL_DIR}/../fix/SKILL.md`
 and follow it with the failing rule lines as the problem — all of them in one pass) · with suggestions → `Turn the
-suggested updates into rules — /keystone:evolve` (it reads them from this session; every rule still needs its own
+suggested updates into rules — /sattva:evolve` (it reads them from this session; every rule still needs its own
 yes) · `Stop here`. A `pass` with no suggestions → no menu; `Next: commit`.
 
 ## Step 2 — Review
@@ -146,9 +146,9 @@ commit (PR source, step 2). Checklist:
 
 - **Correctness** — logic errors, edge cases, null/undefined, error handling, type safety, off-by-one, state and ordering.
 - **Security** — injection (SQL, command, XSS), auth/authorization, CSRF, sensitive data in code or logs, input
-  validation, secrets. For a deep pass on L/auth/payments suggest `/keystone:security`.
+  validation, secrets. For a deep pass on L/auth/payments suggest `/sattva:security`.
 - **Performance** — N+1 queries, memory leaks, inefficient algorithms, missing indexes, unbounded payloads/loops.
-  A performance finding can be handed to `/keystone:optimize perf <the spot>` to measure and fix it.
+  A performance finding can be handed to `/sattva:optimize perf <the spot>` to measure and fix it.
 - **Project rules and best practice** — MUST/MUST NOT from Step 0, duplication, dead code, naming, magic values.
 - **Tests** — new behaviour without a check, edge cases untested.
 
@@ -186,7 +186,7 @@ Number findings `Item 1…` — critical first, then suggestions — under `### 
 `Unconfirmed`, open questions, positive notes, context gates and commit-structure findings (commit message, atomicity) are
 not validated. Empty list → skip the validator (hidden = adjusted = reclassified = 0).
 
-Launch a **fresh** agent: `subagent_type: "keystone:review-validator"`. The prompt carries, inline: the instructions path
+Launch a **fresh** agent: `subagent_type: "sattva:review-validator"`. The prompt carries, inline: the instructions path
 `${CLAUDE_SKILL_DIR}/references/VALIDATOR.md` ("read it completely and follow it exactly"), the severity rules path
 `${CLAUDE_SKILL_DIR}/references/SEVERITY.md`, the project-rule files, the reviewed diff verbatim, the items — **not** your
 reasoning. In PR mode add the pinned `headRefOid` and, verbatim, the excerpts from that commit the findings rely on (the
@@ -229,7 +229,7 @@ Validated: <hidden> hidden · <adjusted> adjusted · <reclassified> reclassified
 Blocked on me: <ERROR gates, decisions only the user can take | none>
 Changed: none (read-only)
 Found: <n critical, m suggestions, k unconfirmed>
-Next: fail → fix the critical items (`/keystone:fix` or by hand) and re-run; warn/pass → commit.
+Next: fail → fix the critical items (`/sattva:fix` or by hand) and re-run; warn/pass → commit.
 ```
 
 ## Style
@@ -240,5 +240,5 @@ importance; ask questions instead of assuming. Output in the user's language.
 ## Gates
 
 An active draft plan blocks code edits — this skill edits nothing, so it runs under any gate. To lift a gate set
-`Status: abandoned` or `KEYSTONE_GATES=off`. If GitHub MCP is configured, posting review comments is a separate step the
+`Status: abandoned` or `SATTVA_GATES=off`. If GitHub MCP is configured, posting review comments is a separate step the
 user asks for; this skill never posts anything. Context is heavy after a review — suggest `/clear` or `/compact`.

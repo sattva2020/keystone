@@ -1,11 +1,11 @@
 ---
 name: start
-description: "Keystone: size a change as S, M or L and route it — S (diff in one sentence) → code + check, no intent, no plan; M (one clear approach) → short plan with 3-line Risks; L (several decisions, data, security, other teams' modules) → intent → plan → implement → verify. Picks the model per stage, caps exploration, and asks for the cost line in the report. Use at the start of any task: 'start', 'what level is this', 'how should we do this'."
+description: "Sattva: size a change as S, M or L and route it — S (diff in one sentence) → code + check, no intent, no plan; M (one clear approach) → short plan with 3-line Risks; L (several decisions, data, security, other teams' modules) → intent → plan → implement → verify. Picks the model per stage, caps exploration, and asks for the cost line in the report. Use at the start of any task: 'start', 'what level is this', 'how should we do this'."
 argument-hint: "[--rush] <task in your own words>"
 allowed-tools: Read Glob Grep Bash(git *) AskUserQuestion Task Bash(node *feedback.mjs*)
 ---
 
-# Keystone · start — balance quality, tokens and time
+# Sattva · start — balance quality, tokens and time
 
 Ceremony must match the change. Anthropic's best practices: "If you could describe the diff in one sentence, skip the
 plan." The playbook's full chain (intent → plan → code → verify) pays off only when decisions are open.
@@ -16,18 +16,18 @@ and commands in `inline code`.
 
 **Next step (mandatory).** End the answer with a `Next:` line that names the step in a few words, then put the exact
 command on its own, on the following line(s), inside a fenced code block **with no language tag** — the app shows a
-copy button on a code block. Never tag it ```bash: a `/keystone:*` command is not a shell command, and the bash tag
+copy button on a code block. Never tag it ```bash: a `/sattva:*` command is not a shell command, and the bash tag
 adds a Run button that would fail. When nothing runs now, write `Next: nothing now — waiting for <event>` and put the
 later command in that fenced block. Never end on a caveat or an open-ended question. A path in that command must open
 from the session's working directory, because the next session (after `/clear`) starts there: a file inside it →
 its path relative to it; a file you wrote in another repository or folder (after `cd`) → its absolute path.
 
-**Feedback.** If the context has a `Keystone feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `start`).
+**Feedback.** If the context has a `Sattva feedback: on` line, write the self-report it describes before the closing summary — required, also on S (skill: `start`).
 
 **Choice at the end (menu).** When the stage leaves more than one sensible next step, end with one AskUserQuestion
 menu instead of a single command, as AI Factory does: 2–4 options, the recommended one first with `(Recommended)`,
 and `Stop here` last. Print the report and the summary first, then ask. On a pick, **carry it out**: an option that
-continues in this session runs now — for another Keystone skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
+continues in this session runs now — for another Sattva skill, read `${CLAUDE_SKILL_DIR}/../<skill>/SKILL.md` and
 follow it with the chosen arguments; an option that needs a clean session (`/clear` first), an irreversible external
 step (push, deploy, production) or a human action outside the chat is not run — it becomes the `Next:` command. With
 one sensible next step, or when AskUserQuestion is unavailable (`claude -p`, CI), skip the menu. The `Next:` line
@@ -40,7 +40,7 @@ always closes the answer.
 
 **File links.** Every file you write or point the user to lives inside the session's working directory
 (the folder Claude Code runs in — in a worktree, the worktree, never the main checkout), and its link is relative to
-that directory: `[intent.md](wordpress-plugin/x/docs/keystone/<task>/intent.md)`, not relative to a nested repo or a
+that directory: `[intent.md](wordpress-plugin/x/docs/sattva/<task>/intent.md)`, not relative to a nested repo or a
 subproject. Check the link before showing it: the app opens links only from the working directory. A file outside
 it (Claude's memory under `~/.claude`, another repository, a temp folder) is **never a link** — the app cannot open
 it and shows "file not found", and a path in `code` becomes such a link too: give its absolute path as plain
@@ -52,25 +52,25 @@ Look only at what you can see cheaply (the task text, file names, one or two sea
 
 | Level | Signs | Route |
 |---|---|---|
-| **S** — light mode | the diff fits in one sentence; one file or a few lines; no decision for the user; behaviour is covered by an existing check | do it directly, run the check, report. No intent, no plan file. A bug → `/keystone:fix` (S mode) |
-| **M** | one obvious approach; several files; no open user decisions; no data migration, no auth/security, no other team's module | `/keystone:plan <task>` → Approve → `/keystone:implement` → `/keystone:verify` (bug: `/keystone:fix`, plan-first mode) |
-| **L** | several decisions the user owns, **or** data/schema/migration, **or** security/auth/payments, **or** a module owned by others, **or** an unclear "done" | `/keystone:intent` → `/keystone:plan <intent>` (runs `/keystone:check`) → Approve → fresh session → `/keystone:implement` → `/keystone:verify` |
+| **S** — light mode | the diff fits in one sentence; one file or a few lines; no decision for the user; behaviour is covered by an existing check | do it directly, run the check, report. No intent, no plan file. A bug → `/sattva:fix` (S mode) |
+| **M** | one obvious approach; several files; no open user decisions; no data migration, no auth/security, no other team's module | `/sattva:plan <task>` → Approve → `/sattva:implement` → `/sattva:verify` (bug: `/sattva:fix`, plan-first mode) |
+| **L** | several decisions the user owns, **or** data/schema/migration, **or** security/auth/payments, **or** a module owned by others, **or** an unclear "done" | `/sattva:intent` → `/sattva:plan <intent>` (runs `/sattva:check`) → Approve → fresh session → `/sattva:implement` → `/sattva:verify` |
 
 Any single L sign makes it L. Unsure between two levels → propose the higher one and say why in one line. Decisions
 already closed in a grill still count as "several decisions the user owns" — they belong in a signed intent, so the
 level stays L. Production, secrets and other people's access are L however small the code change is.
 
-No `CLAUDE.md` in the project (root or `.claude/`)? Add one line to the answer: "No CLAUDE.md — `/keystone:setup`
+No `CLAUDE.md` in the project (root or `.claude/`)? Add one line to the answer: "No CLAUDE.md — `/sattva:setup`
 creates it (stack, commands, rules) after your yes." Do not block and do not run it; on S add nothing else.
 
 Ask once: `Level: M — <one-line reason>. OK / S / L?` (AskUserQuestion, recommended first). The human's answer wins;
 record the level in the plan header or the report.
 
-**An active plan already exists.** Active plan = the plan.md of the newest task folder under docs/keystone/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. If this is a different task → ask once: continue that plan, or mark it `Status: abandoned` and start
+**An active plan already exists.** Active plan = the plan.md of the newest task folder under docs/sattva/ — newest by the date prefix of the folder name, ties broken by the plan.md modification time — whose Status is draft, approved or implementing. If this is a different task → ask once: continue that plan, or mark it `Status: abandoned` and start
 this one (after `abandoned`: `node "${CLAUDE_SKILL_DIR}/../implement/scripts/owner.mjs" release --any <that plan>`). Its gates (no edits while draft, no push before verify) apply until you choose.
 
 **The task already has an intent or a plan.** Only record the level; create no new artifacts. If the user picked M while
-an intent exists for the task and then runs `/keystone:intent`, warn that this is an L route and offer L.
+an intent exists for the task and then runs `/sattva:intent`, warn that this is an L route and offer L.
 
 **External irreversible actions** (submitting an application or a domain, live payment settings, deploy, DNS, mailings)
 only after their prerequisites are explicitly checked (e.g. legal pages, test mode passed). Repeat the warning even if
@@ -84,7 +84,7 @@ the user picked the risky option (lesson: a domain was submitted to a payment pr
 | Model | session model, low effort | judge (strongest — Opus) plans · orchestrator (mid — Sonnet) implements · mechanics: a script or command for fixed steps, the cheapest model (Haiku) when an LLM must read or look up | judge (Opus): grill, intent, plan, check, the verifier · orchestrator (Sonnet): implement, the verify run · mechanics: scripts; Haiku for Explore and fact lookup |
 | Artifacts | none — the commit message is the record | `plan.md` | `intent.md`, `plan.md`, check report |
 | Effort | low | plan, fix: high · implement: low–medium | grill, intent, plan, check, verify: high · implement: low–medium · fix: high |
-| Review | the check's output | `/keystone:verify` | `/keystone:check` before approve + `/keystone:verify` |
+| Review | the check's output | `/sattva:verify` | `/sattva:check` before approve + `/sattva:verify` |
 
 Roles, not model names: in Claude Code judge = Opus, orchestrator = Sonnet, cheapest = Haiku; the `model:` frontmatter
 carries these aliases.
@@ -98,23 +98,23 @@ from the higher row appears — say so; never re-size down silently.
 ## 3. Route
 
 - **S** — no files. Make the change, run the check named in the table, report. A bug that needs a regression test is
-  `/keystone:fix` (S mode).
-- **M** — `/keystone:plan <task in your words>`: it writes `docs/keystone/<YYYY-MM-DD>-<slug>/plan.md`, infers the
+  `/sattva:fix` (S mode).
+- **M** — `/sattva:plan <task in your words>`: it writes `docs/sattva/<YYYY-MM-DD>-<slug>/plan.md`, infers the
   Settings (tests, logging, docs) from the repo instead of asking, asks the three risk questions and Approve / Adjust.
-- **L** — `/keystone:intent <idea>` (grill → intent.md → human reads and accepts), then `/keystone:plan <intent path>`,
-  which runs `/keystone:check` (analyzer + validator in clean contexts) before Approve.
+- **L** — `/sattva:intent <idea>` (grill → intent.md → human reads and accepts), then `/sattva:plan <intent path>`,
+  which runs `/sattva:check` (analyzer + validator in clean contexts) before Approve.
 - **`--rush`** (deadline mode: after Approve the chain implement → verify → fix → verify runs by itself, stages on the
-  judge model with high effort — `../implement/references/RUSH.md`): M → `/keystone:plan <task> --rush`; L →
-  `/keystone:intent --rush <idea>`; S → one line "rush не нужен на S" and the S route. The level question stays one;
+  judge model with high effort — `../implement/references/RUSH.md`): M → `/sattva:plan <task> --rush`; L →
+  `/sattva:intent --rush <idea>`; S → one line "rush не нужен на S" and the S route. The level question stays one;
   the flag is not part of the task text.
 - **Where the other skills switch on.** Not separate steps — each is pulled in by the stage that needs it: L with
-  security/auth/payments/PII → `/keystone:plan` adds a threat block and a `/keystone:security <scope>` task, and
-  `/keystone:verify` requires its result; `docs — yes` → `/keystone:implement` runs `/keystone:docs update`;
-  `docs/architecture.md` exists → `/keystone:verify` runs the architecture gate (`/keystone:architecture` creates that
-  file); L → `/keystone:verify` recommends `/keystone:review` before push; a new project → `/keystone:setup`,
-  later `/keystone:dockerize` and `/keystone:ci` on request. S gets none of these.
-- After Approve: commit, then a **fresh session** (`/clear`, not `/compact`) → `/keystone:implement <plan>` on Sonnet →
-  `/keystone:verify <plan>` in a fresh session. Until verify passes, `git push` / `gh pr create` are closed by the hook (a cloud session may push its work branch).
+  security/auth/payments/PII → `/sattva:plan` adds a threat block and a `/sattva:security <scope>` task, and
+  `/sattva:verify` requires its result; `docs — yes` → `/sattva:implement` runs `/sattva:docs update`;
+  `docs/architecture.md` exists → `/sattva:verify` runs the architecture gate (`/sattva:architecture` creates that
+  file); L → `/sattva:verify` recommends `/sattva:review` before push; a new project → `/sattva:setup`,
+  later `/sattva:dockerize` and `/sattva:ci` on request. S gets none of these.
+- After Approve: commit, then a **fresh session** (`/clear`, not `/compact`) → `/sattva:implement <plan>` on Sonnet →
+  `/sattva:verify <plan>` in a fresh session. Until verify passes, `git push` / `gh pr create` are closed by the hook (a cloud session may push its work branch).
 
 ## 4. Report — always
 

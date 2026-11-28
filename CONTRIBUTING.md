@@ -1,10 +1,10 @@
-# Contributing to Keystone
+# Contributing to Sattva
 
-Thanks for helping. Keystone is a small plugin: eight skills, three agents and one hook script.
+Thanks for helping. Sattva is a small plugin: eight skills, three agents and one hook script.
 
 ## Before you start
 
-Open an issue or a [Discussion](https://github.com/sattva2020/keystone/discussions) first, especially for new skills,
+Open an issue or a [Discussion](https://github.com/sattva2020/sattva-plugin/discussions) first, especially for new skills,
 new gates or changes to levels. A short agreement up front saves rework.
 
 ## Skills are prompts

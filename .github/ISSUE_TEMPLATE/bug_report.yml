@@ -5,15 +5,15 @@ body:
   - type: input
     id: version
     attributes:
-      label: Keystone and Claude Code versions
-      placeholder: "Keystone 0.6.0, Claude Code 2.1.218"
+      label: Sattva and Claude Code versions
+      placeholder: "Sattva 0.6.0, Claude Code 2.1.218"
     validations:
       required: true
   - type: dropdown
     id: area
     attributes:
       label: Where
-      options: [start, grill, intent, plan, check, implement, fix, verify, hooks (gates), mod (/keystone-status, cost), other]
+      options: [start, grill, intent, plan, check, implement, fix, verify, hooks (gates), mod (/sattva-status, cost), other]
     validations:
       required: true
   - type: dropdown
@@ -43,4 +43,4 @@ body:
     id: repro
     attributes:
       label: Steps to reproduce
-      description: Commands you ran, plan Status at the time, whether `KEYSTONE_GATES` was set.
+      description: Commands you ran, plan Status at the time, whether `SATTVA_GATES` was set.

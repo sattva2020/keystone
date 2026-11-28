@@ -1,9 +1,9 @@
-// Keystone agent feedback. One script, no dependencies, no model: `hook`, `add`, `signals`, `summary`, and in the Keystone repository
-// `evolve` / `evolved` for /keystone:evolve skills.
+// Sattva agent feedback. One script, no dependencies, no model: `hook`, `add`, `signals`, `summary`, and in the Sattva repository
+// `evolve` / `evolved` for /sattva:evolve skills.
 // Off by default: the SessionStart hook prints the self-report instruction only when the plugin option `feedback` is true
-// (CLAUDE_PLUGIN_OPTION_FEEDBACK) or KEYSTONE_FEEDBACK=on. KEYSTONE_FEEDBACK=off switches everything off.
-// Records live on this machine only: <KEYSTONE_FEEDBACK_DIR | <CLAUDE_CONFIG_DIR | ~/.claude>/keystone-feedback>/<project>/feedback.jsonl,
-// append-only, never cleaned. Feedback never blocks work: any failure is one `Keystone feedback: error — …` line and exit 0.
+// (CLAUDE_PLUGIN_OPTION_FEEDBACK) or SATTVA_FEEDBACK=on. SATTVA_FEEDBACK=off switches everything off.
+// Records live on this machine only: <SATTVA_FEEDBACK_DIR | <CLAUDE_CONFIG_DIR | ~/.claude>/sattva-feedback>/<project>/feedback.jsonl,
+// append-only, never cleaned. Feedback never blocks work: any failure is one `Sattva feedback: error — …` line and exit 0.
 //
 // One rule runs through the file: every string that comes from outside (the model's text and command line, a transcript, a record
 // on disk) goes through redact() BEFORE it is tested, stored or printed, and a value that is no valid key is never folded into
@@ -27,7 +27,7 @@ const MAX_ADDR = 5; // addresses of one line
 const MAX_TOTAL = 30; // items of one record
 const MAX_FIELD = 300;
 const CHAIN = ['start', 'intent', 'plan', 'check', 'implement', 'verify', 'fix', 'review']; // the skills that write a self-report
-const ON = 'Keystone feedback: on'; // the first line of the instruction: a session that has it started with feedback on
+const ON = 'Sattva feedback: on'; // the first line of the instruction: a session that has it started with feedback on
 const HEAD = 128 * 1024; // bytes at the top of a transcript where the SessionStart rows sit
 // The left boundary matters: «task-runner-improvements», «disk-usage-monitor-service» must stay readable names. A token right after an
 // escape — a JSON \n, \t, \uXXXX or a URL %XX — is no part of a longer word, so those count as a boundary too.
@@ -60,14 +60,14 @@ const sha = (s) => createHash('sha1').update(s).digest('hex').slice(0, 12);
 const slash = (p) => String(p).replace(/\\/g, '/');
 // a session id: a string of word characters that masking leaves as it is; `-` is the sentinel «no session»
 const sidOf = (v) => (typeof v === 'string' && /^[\w.-]{1,80}$/.test(v) && redact(v) === v ? v : '-');
-const off = (env) => String(env.KEYSTONE_FEEDBACK ?? '').toLowerCase() === 'off';
+const off = (env) => String(env.SATTVA_FEEDBACK ?? '').toLowerCase() === 'off';
 const configDir = (env) => env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
 const here = dirname(fileURLToPath(import.meta.url));
 const pluginRootOf = (env) => slash(env.CLAUDE_PLUGIN_ROOT || resolve(here, '../../..'));
 
 export function enabled(env = process.env) {
   if (off(env)) return false;
-  if (String(env.KEYSTONE_FEEDBACK ?? '').toLowerCase() === 'on') return true;
+  if (String(env.SATTVA_FEEDBACK ?? '').toLowerCase() === 'on') return true;
   const v = String(env.CLAUDE_PLUGIN_OPTION_FEEDBACK ?? env.CLAUDE_PLUGIN_OPTION_feedback ?? '').toLowerCase();
   return ['true', '1', 'on'].includes(v);
 }
@@ -79,13 +79,13 @@ export function context(pluginRoot, sessionId = '-') {
   const quoted = `'${script.replace(/'/g, `'\\''`)}'`; // single quotes: a `$` or a backtick in the path is never expanded
   return [
     ON,
-    `Agent feedback is on. Every Keystone chain skill (${CHAIN.join(', ')}) has a REQUIRED last step — also for an S change and a one-line edit: a short self-report about the TEXT OF THAT SKILL (what it told you, not the project), saved with the command below BEFORE your final answer. Do not skip it and do not replace it with a note in the chat.`,
+    `Agent feedback is on. Every Sattva chain skill (${CHAIN.join(', ')}) has a REQUIRED last step — also for an S change and a one-line edit: a short self-report about the TEXT OF THAT SKILL (what it told you, not the project), saved with the command below BEFORE your final answer. Do not skip it and do not replace it with a note in the chat.`,
     'One note per line, at most 10 lines. Kinds:',
     '- unclear — what in the skill text was unclear',
     '- deviated — where you departed from the skill, and why',
     '- guessed — what you had to guess or look up yourself',
     '- extra — what was superfluous',
-    'Line format: `<kind> | <skill> § <section> | <text>` — skill without the `keystone:` prefix, section = the heading or step of that skill. Nothing to report → the single line `none`.',
+    'Line format: `<kind> | <skill> § <section> | <text>` — skill without the `sattva:` prefix, section = the heading or step of that skill. Nothing to report → the single line `none`.',
     'Rules: quote the skill\'s wording, never project code, file contents or secrets (paths and file names are fine). Write in the language of the conversation. In a note never write the literal commands that push to git or create a PR with gh — write "push", "PR": the push gate scans the whole command text, a heredoc body included.',
     'Save it with the Bash tool only (one command; the rule `Bash(node *feedback.mjs*)` covers it):',
     `node ${quoted} add --skill <skill> --task "<task folder name or ->" --session ${session} <<'EOF'`,
@@ -93,7 +93,7 @@ export function context(pluginRoot, sessionId = '-') {
     'EOF',
     'The command prints one line: your final answer MUST contain that line verbatim, on its own line — the only feedback output, no report text. If it prints an error, show that one line and carry on with the work.',
     'This write goes to the local feedback store: it is not an action outside the repository in the sense of the stop rule of implement and fix — do not stop and do not ask.',
-    'Judge: in /keystone:verify on M or L, run it after verify.md is written and the Final report is printed, and before the Step 6 menu — first the self-report of verify, then the Skill `keystone:feedback` with the args `auto <plan path>`. Its line (a second line when the Evolve offer is due) goes into the output, so the `Next:` line and the menu of verify stay last.',
+    'Judge: in /sattva:verify on M or L, run it after verify.md is written and the Final report is printed, and before the Step 6 menu — first the self-report of verify, then the Skill `sattva:feedback` with the args `auto <plan path>`. Its line (a second line when the Evolve offer is due) goes into the output, so the `Next:` line and the menu of verify stay last.',
     `plugin: ${pluginVersion()}`, // read back by coverage(): `summary --since` counts only the sessions of that version and later
     `session: ${session}`,
   ].join('\n');
@@ -109,7 +109,7 @@ const normPath = (p) => {
 // A submodule is named by its checkout (`core.worktree` of its git dir); a bare repo and a repo with a separate git dir are named by the git dir
 // (no pointer from a linked worktree to a checkout exists) — one folder for all their worktrees.
 export function projectDir(cwd = process.cwd(), env = process.env) {
-  const root = env.KEYSTONE_FEEDBACK_DIR || join(configDir(env), 'keystone-feedback');
+  const root = env.SATTVA_FEEDBACK_DIR || join(configDir(env), 'sattva-feedback');
   let path = normPath(cwd);
   const g = (args) => spawnSync('git', ['-C', String(cwd), ...args], { encoding: 'utf8' });
   const r = g(['rev-parse', '--path-format=absolute', '--git-common-dir']);
@@ -138,7 +138,7 @@ export function projectDir(cwd = process.cwd(), env = process.env) {
 const unmark = (t) => t.replace(/^[*_`"'«(\s]+|[*_`"'»)\s]+$/g, '');
 const skillName = (s) => {
   let t = redact(s);
-  for (let i = 0; i < 4; i++) { const u = unmark(t).replace(/^\/+/, '').replace(/^keystone\s*:\s*/i, ''); if (u === t) break; t = u; }
+  for (let i = 0; i < 4; i++) { const u = unmark(t).replace(/^\/+/, '').replace(/^sattva\s*:\s*/i, ''); if (u === t) break; t = u; }
   return unmark(t).toLowerCase();
 };
 // ...and a name this plugin has: the folders of skills/ and the files of agents/ (the pattern alone only if the plugin cannot be listed)
@@ -148,7 +148,7 @@ const known = () => (KNOWN ??= (() => {
 })());
 const isSkill = (s) => (known().size ? known().has(s) : /^[a-z][a-z0-9-]{0,39}$/.test(s));
 
-// The name of a task folder from a path: docs/keystone/x/plan.md, docs/keystone/x/ and x all give x.
+// The name of a task folder from a path: docs/sattva/x/plan.md, docs/sattva/x/ and x all give x.
 export function taskName(t) {
   const parts = slash(t ?? '').split('/').filter(Boolean);
   if (parts.length && /\.md$/i.test(parts[parts.length - 1])) parts.pop();
@@ -184,7 +184,7 @@ const cutLine = (x) => {
 const lines = (text) => dropTail(String(text ?? ''), 2000000).split(/\r?\n/, MAX_LINES * 4)
   .map((l) => cutLine(l.replace(/```/g, '').replace(/\s+/g, ' ').trim().replace(/^[-*]\s+/, ''))).filter(Boolean).slice(0, MAX_LINES);
 
-// «plan § Step 1, keystone:verify § Step 2, verify § , § Step 4»: one line may name several places — one address per place.
+// «plan § Step 1, sattva:verify § Step 2, verify § , § Step 4»: one line may name several places — one address per place.
 // The single place where an address part is read: the self-report and the judge parsers both use it, and every place goes through
 // the same two rules — the same alphabet for a skill (anything but a comma, `§` and `|`) that must then be a skill of this plugin, and the
 // same check of the section (cleaned FIRST, then separators at its ends are cut, and a place without a section is no address). A place
@@ -266,7 +266,7 @@ export function add(opts, stdin, env = process.env, cwd = process.cwd()) {
   if (off(env)) return { line: '' };
   const kind = String(opts.kind ?? 'self').toLowerCase();
   const judge = kind === 'judge';
-  const P = judge ? 'Keystone feedback judge' : 'Keystone feedback';
+  const P = judge ? 'Sattva feedback judge' : 'Sattva feedback';
   try {
     if (kind !== 'self' && !judge) return { line: `${P}: error — unknown kind (self or judge)` };
     const parsed = (judge ? parseJudge : parseSelf)(stdin);
@@ -313,7 +313,7 @@ function cleanRecord(r) {
 }
 
 export function readRecords(env = process.env) {
-  const root = env.KEYSTONE_FEEDBACK_DIR || join(configDir(env), 'keystone-feedback');
+  const root = env.SATTVA_FEEDBACK_DIR || join(configDir(env), 'sattva-feedback');
   const out = [];
   if (!existsSync(root)) return out;
   for (const d of readdirSync(root)) {
@@ -336,9 +336,9 @@ const FREE_SKIP = ['<command-name>', '<local-command', '<task-notification>', '<
 const textOf = (c) => (typeof c === 'string' ? c : Array.isArray(c) ? c.map((b) => (typeof b === 'string' ? b : b?.text ?? '')).join(' ') : '');
 const hint = (input) => cut(input?.command ?? input?.file_path ?? input?.pattern ?? JSON.stringify(input ?? {}), 80);
 // The feedback machinery itself is not part of the trail: otherwise every judge run would change the `hash`.
-const isFeedbackCall = (b) => (b.name === 'Skill' && /^(keystone:)?feedback$/.test(String(b.input?.skill ?? ''))) || JSON.stringify(b.input ?? {}).includes('feedback.mjs');
+const isFeedbackCall = (b) => (b.name === 'Skill' && /^(sattva:)?feedback$/.test(String(b.input?.skill ?? ''))) || JSON.stringify(b.input ?? {}).includes('feedback.mjs');
 
-// What one session did, from its transcript: Keystone skills, tool errors, repeated calls, interrupts, free user messages.
+// What one session did, from its transcript: Sattva skills, tool errors, repeated calls, interrupts, free user messages.
 export function readTrail(file) {
   const t = { skills: new Set(), errors: [], repeats: [], interrupts: 0, userMsgs: [], bad: 0, on: false, version: '0' };
   let raw = '';
@@ -349,7 +349,7 @@ export function readTrail(file) {
   const free = (text) => !FREE_SKIP.some((s) => text.includes(s));
   let firstUser = true; // a rush stage transcript: its first user row is the stage prompt, not the human's words
   for (const line of raw.split('\n')) {
-    if (!(line.includes('tool_use') || line.includes('tool_result') || line.includes('"type":"user"') || line.includes('keystone') || line.includes('queued_command') || line.includes(ON))) continue;
+    if (!(line.includes('tool_use') || line.includes('tool_result') || line.includes('"type":"user"') || line.includes('sattva') || line.includes('queued_command') || line.includes(ON))) continue;
     let row;
     try { row = JSON.parse(line); } catch { t.bad++; continue; }
     if (!row || typeof row !== 'object') continue; // a line that is JSON but not a row (null, a string)
@@ -369,7 +369,7 @@ export function readTrail(file) {
     const c = row.message?.content;
     if (row.type === 'user') {
       const text = textOf(c);
-      for (const m of text.matchAll(/<command-name>\/keystone:([a-z-]+)<\/command-name>/g)) if (m[1] !== 'feedback') t.skills.add(m[1]);
+      for (const m of text.matchAll(/<command-name>\/sattva:([a-z-]+)<\/command-name>/g)) if (m[1] !== 'feedback') t.skills.add(m[1]);
       if (text.includes('[Request interrupted by user')) t.interrupts++;
       if (Array.isArray(c)) {
         for (const b of c) if (b?.type === 'tool_result' && b.is_error === true && !skip.has(b.tool_use_id))
@@ -385,7 +385,7 @@ export function readTrail(file) {
         if (b?.type !== 'tool_use') continue;
         names.set(b.id, b.name);
         if (isFeedbackCall(b)) { skip.add(b.id); continue; }
-        const sk = b.name === 'Skill' ? String(b.input?.skill ?? '').match(/^keystone:([a-z-]+)$/) : null;
+        const sk = b.name === 'Skill' ? String(b.input?.skill ?? '').match(/^sattva:([a-z-]+)$/) : null;
         if (sk) t.skills.add(sk[1]);
         const key = b.name + JSON.stringify(b.input ?? {});
         calls.set(key, { n: (calls.get(key)?.n ?? 0) + 1, tool: cut(b.name, 40), hint: hint(b.input) });
@@ -397,8 +397,8 @@ export function readTrail(file) {
 }
 
 // Rush stages of a main session (`<id>.jsonl`): its subagent transcripts `<id>/subagents/agent-*.jsonl` whose first row is
-// a user prompt that starts with `Keystone rush stage:`. Other subagents (verifier, Explore) are not read.
-const STAGE = /^Keystone rush stage: ([a-z-]+)/;
+// a user prompt that starts with `Sattva rush stage:`. Other subagents (verifier, Explore) are not read.
+const STAGE = /^Sattva rush stage: ([a-z-]+)/;
 export function rushStages(mainFile) {
   const dir = join(dirname(mainFile), basename(mainFile, '.jsonl'), 'subagents');
   let files = [];
@@ -670,7 +670,7 @@ export function summary(opts, env = process.env, cwd = process.cwd()) {
   const covRows = [...cov.by].filter(([, c]) => c.ran);
 
   return [
-    `## Keystone feedback${opts.since ? ` (plugin ≥ ${opts.since})` : ''}`,
+    `## Sattva feedback${opts.since ? ` (plugin ≥ ${opts.since})` : ''}`,
     `${recs.length} record(s) in ${new Set(recs.map((r) => r.project)).size} project(s)`,
     '',
     '### Runs by skill',
@@ -687,24 +687,24 @@ export function summary(opts, env = process.env, cwd = process.cwd()) {
     '',
     '### Other causes (agent / environment)',
     `agent: ${other.agent} · environment: ${other.environment}`,
-    // the Evolve offer counts all records, whatever --since says; only in the Keystone repository
+    // the Evolve offer counts all records, whatever --since says; only in the Sattva repository
     ...((o) => (o ? ['', o] : []))(offerLine(env, cwd)),
   ].join('\n');
 }
 
 // ---- evolve --------------------------------------------------------------------------------------------------------
-// In the Keystone repository only: which judge findings on a skill's text are still to take (for the offer line and
-// `/keystone:evolve skills`), and the log of what the human decided. A finding is keyed `<record id>#<n>`.
+// In the Sattva repository only: which judge findings on a skill's text are still to take (for the offer line and
+// `/sattva:evolve skills`), and the log of what the human decided. A finding is keyed `<record id>#<n>`.
 
-// The Keystone repository: the work tree whose .claude-plugin/plugin.json names `keystone`; null anywhere else.
-export function keystoneRoot(cwd = process.cwd()) {
+// The Sattva repository: the work tree whose .claude-plugin/plugin.json names `sattva`; null anywhere else.
+export function sattvaRoot(cwd = process.cwd()) {
   const r = spawnSync('git', ['-C', String(cwd), 'rev-parse', '--show-toplevel'], { encoding: 'utf8' });
   const top = r.status === 0 ? r.stdout.trim() : '';
   if (!top) return null;
-  try { return JSON.parse(readFileSync(join(top, '.claude-plugin/plugin.json'), 'utf8')).name === 'keystone' ? slash(top) : null; } catch { return null; }
+  try { return JSON.parse(readFileSync(join(top, '.claude-plugin/plugin.json'), 'utf8')).name === 'sattva' ? slash(top) : null; } catch { return null; }
 }
 
-const LOG = 'docs/keystone/evolve-log.md';
+const LOG = 'docs/sattva/evolve-log.md';
 const KEY = /^[\w.-]{1,80}#\d{1,3}$/;
 export function evolveLog(repo) {
   const m = new Map();
@@ -723,12 +723,12 @@ function sectionText(text, anchor) {
   return String(text).split(/\r?\n/).slice(marks[at].i, end ? end.i : undefined).map((l) => l.trimEnd()).join('\n');
 }
 
-// { repo, records, logged: Map<skill, count>, take: Map<skill, finding[]>, fixed: finding[] } — or null outside the Keystone repository.
+// { repo, records, logged: Map<skill, count>, take: Map<skill, finding[]>, fixed: finding[] } — or null outside the Sattva repository.
 // A finding to take: a judge item with cause skill-text and source confirmed|added, not in the log, whose section did not change since the
 // record's version (its text at tag v<version> equals the work tree's). A changed section → `fixed` (possibly fixed already).
 // ponytail: key = position after cleanRecord; a hand-edited record with a non-object item shifts later keys
 export function takeable(env = process.env, cwd = process.cwd()) {
-  const repo = keystoneRoot(cwd);
+  const repo = sattvaRoot(cwd);
   if (!repo) return null;
   const log = evolveLog(repo), recs = readRecords(env);
   const out = { repo, records: recs.length, logged: new Map(), take: new Map(), fixed: [] };
@@ -764,25 +764,25 @@ export function takeable(env = process.env, cwd = process.cwd()) {
   return out;
 }
 
-// The one offer line, or '' (outside the Keystone repository, under the threshold, or on any failure: it never breaks its caller).
+// The one offer line, or '' (outside the Sattva repository, under the threshold, or on any failure: it never breaks its caller).
 export function offerLine(env = process.env, cwd = process.cwd()) {
   try {
     const t = takeable(env, cwd);
     const top = t ? [...t.take].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))[0] : null;
     return top && top[1].length >= T_EVOLVE
-      ? `Keystone feedback: ${top[0]} has ${top[1].length} skill-text findings of the judge to take — run /keystone:evolve skills ${top[0]}` : '';
+      ? `Sattva feedback: ${top[0]} has ${top[1].length} skill-text findings of the judge to take — run /sattva:evolve skills ${top[0]}` : '';
   } catch { return ''; }
 }
 
-const E = 'Keystone evolve';
+const E = 'Sattva evolve';
 const fixedTable = (rows) => ['### Possibly fixed — the section changed after the record\'s version', '| key | address | class | version | changed after |', '|---|---|---|---|---|',
   ...rows.map((f) => `| ${f.key} | ${cell(f.address)} | ${cell(f.cls)} | ${cell(f.version)} | ${f.changedAfter} |`)];
 
-// What `/keystone:evolve skills` works from: the findings of one skill (named, or the one with the most to take). No project or task names.
+// What `/sattva:evolve skills` works from: the findings of one skill (named, or the one with the most to take). No project or task names.
 export function evolveReport(opts, env = process.env, cwd = process.cwd()) {
   if (off(env)) return `${E}: nothing to do — feedback is off`;
   const t = takeable(env, cwd);
-  if (!t) return `${E}: nothing to do — not the Keystone repository`;
+  if (!t) return `${E}: nothing to do — not the Sattva repository`;
   if (!t.records) return `${E}: nothing to do — no feedback records`;
   const named = opts.skill !== undefined ? skillName(opts.skill) : '';
   if (opts.skill !== undefined && !isSkill(named)) return `${E}: error — unknown skill`;
@@ -793,7 +793,7 @@ export function evolveReport(opts, env = process.env, cwd = process.cwd()) {
     return named && fixed.length ? [head, '', ...fixedTable(fixed)].join('\n') : head;
   }
   return [
-    `## Keystone evolve — ${skill}`,
+    `## Sattva evolve — ${skill}`,
     `${take.length} to take · ${fixed.length} possibly fixed · ${t.logged.get(skill) ?? 0} already in the evolve log`,
     '',
     '### Findings to take',
@@ -803,7 +803,7 @@ export function evolveReport(opts, env = process.env, cwd = process.cwd()) {
   ].join('\n');
 }
 
-// Appends the human's decisions to docs/keystone/evolve-log.md of the Keystone repository (keys only). Any bad input → one error line, no write.
+// Appends the human's decisions to docs/sattva/evolve-log.md of the Sattva repository (keys only). Any bad input → one error line, no write.
 export function evolved(opts, env = process.env, cwd = process.cwd()) {
   if (off(env)) return `${E}: nothing to do — feedback is off`;
   try {
@@ -814,8 +814,8 @@ export function evolved(opts, env = process.env, cwd = process.cwd()) {
     if (!acc.length && !rej.length) return `${E}: error — no keys (--accepted / --rejected)`;
     const bad = [...acc, ...rej].find((k) => !KEY.test(k));
     if (bad !== undefined) return `${E}: error — not a key: ${cut(bad, 40)}`;
-    const repo = keystoneRoot(cwd);
-    if (!repo) return `${E}: error — not the Keystone repository`;
+    const repo = sattvaRoot(cwd);
+    if (!repo) return `${E}: error — not the Sattva repository`;
     const file = join(repo, LOG);
     mkdirSync(dirname(file), { recursive: true });
     if (!existsSync(file)) appendFileSync(file, '# Evolve log\n');
@@ -854,21 +854,21 @@ export function main(argv, env = process.env) {
     if (cmd === 'signals') return signals({ plan: positionals[0], auto: o.auto === true, session: v('session'), transcripts: (o.transcript ?? []).map(val).filter(Boolean), task: v('task') }, env);
     if (cmd === 'summary') {
       const since = v('since');
-      if (since !== undefined && !/^\d+(\.\d+){0,2}$/.test(since)) return 'Keystone feedback: error — --since takes a version like 0.9.30';
+      if (since !== undefined && !/^\d+(\.\d+){0,2}$/.test(since)) return 'Sattva feedback: error — --since takes a version like 0.9.30';
       return summary({ since }, env);
     }
     if (cmd === 'evolve') return evolveReport({ skill: v('skill') }, env);
     if (cmd === 'evolved') return evolved({ skill: v('skill'), accepted: v('accepted'), rejected: v('rejected') }, env);
   } catch (e) {
-    return `${cmd === 'evolve' ? E : 'Keystone feedback'}: error — ${String(e?.message ?? e).split('\n')[0]}`;
+    return `${cmd === 'evolve' ? E : 'Sattva feedback'}: error — ${String(e?.message ?? e).split('\n')[0]}`;
   }
-  return 'Keystone feedback: error — usage: feedback.mjs hook | add | signals | summary | evolve | evolved';
+  return 'Sattva feedback: error — usage: feedback.mjs hook | add | signals | summary | evolve | evolved';
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   let out = '';
   // the hook output becomes context: an error there stays silent ("error or wrong input → nothing"); other commands show one line
-  try { out = main(process.argv.slice(2)); } catch (e) { out = process.argv[2] === 'hook' ? '' : `Keystone feedback: error — ${String(e?.message ?? e).split('\n')[0]}`; }
+  try { out = main(process.argv.slice(2)); } catch (e) { out = process.argv[2] === 'hook' ? '' : `Sattva feedback: error — ${String(e?.message ?? e).split('\n')[0]}`; }
   // exit only after the output is flushed: a pipe may take a large output in pieces
   if (out) process.stdout.write(out + '\n', () => process.exit(0)); else process.exit(0);
 }

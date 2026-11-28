@@ -1,6 +1,6 @@
 # Benchmarks
 
-Keystone was exercised on a real-world Next.js + NestJS + Supabase monorepo. This page summarizes what was measured,
+Sattva was exercised on a real-world Next.js + NestJS + Supabase monorepo. This page summarizes what was measured,
 how, and what it does not show. All numbers come from a single corpus with one run per scenario (n=1), so treat them as
 signals, not statistics.
 
@@ -14,7 +14,7 @@ signals, not statistics.
 - **User simulator:** Sonnet, isolated (no tools, no MCP, no slash commands, no settings), answering from a hidden
   scenario of decisions.
 - **Graders:** Opus subagents, scoring against the contract checklist. The driver itself judges nothing.
-- **Blind check comparison:** the same plans were checked by Keystone `check` and by AI Factory `improve +check` in
+- **Blind check comparison:** the same plans were checked by Sattva `check` and by AI Factory `improve +check` in
   separate clean clones; the grader saw findings with tool names replaced and labels shuffled, and verified each finding
   against the code and the intent.
 
@@ -22,7 +22,7 @@ signals, not statistics.
 
 | Scenario | Result | Cost |
 |---|---|---|
-| `check` vs AI Factory `improve +check`, two plans (blind) | Keystone 6 real, 0 false; AI Factory 2 real, 1 false | $10.43 vs $9.96 |
+| `check` vs AI Factory `improve +check`, two plans (blind) | Sattva 6 real, 0 false; AI Factory 2 real, 1 false | $10.43 vs $9.96 |
 | `grill` vs a general grilling skill, 15 hidden decisions | missed in first summary 0 vs 3; coverage 15/15 vs 12/15; closed by a question 5 vs 8. **Inconclusive** | $8.00 vs $8.34 |
 | Gate: edit while plan is `draft` | PASS: edit denied by the hook, file untouched | $0.92 |
 | Gate: `git push` while plan is `implementing` | PASS: denied; the local bare remote received nothing | $0.44 |
@@ -34,7 +34,7 @@ signals, not statistics.
 
 ### Plan check
 
-Both checkers received the same two plans at approval time. Keystone `check` found a React hook placed after an early
+Both checkers received the same two plans at approval time. Sattva `check` found a React hook placed after an early
 `return`, a decision that violated an intent line without being recorded, a task-order dependency, and a typed call that
 broke the project's convention. AI Factory `improve +check` found two of the real issues and raised one false one.
 Neither found that a UI chip inside a truncating container would clip a list (an intent line), so recall is not
@@ -42,7 +42,7 @@ complete.
 
 ### Grill
 
-On a fresh pair of clones, `/keystone:grill` missed none of 15 hidden decisions in its first summary and covered all 15
+On a fresh pair of clones, `/sattva:grill` missed none of 15 hidden decisions in its first summary and covered all 15
 before it, against 3 missed and 12 covered for the general skill. But on the first round the simulator volunteered 10 of
 the 15 decisions unprompted, so the "closed by a question" column is not a fair comparison and no winner is claimed.
 Both tools sometimes recommended scope expansions (extra notification channels, a snooze feature); the grill skill was
@@ -55,7 +55,7 @@ attached a `Repro:` to each `wrong`, and returned an honest `FAIL` when a loggin
 
 ## Agentic A/B benchmark
 
-A repeatable A/B of `/keystone:verify` against the same model without the plugin and with a one-line hint,
+A repeatable A/B of `/sattva:verify` against the same model without the plugin and with a one-line hint,
 on seeded repositories with hidden gaps, 5 runs per cell: [`benchmarks/agentic/`](../benchmarks/agentic/README.md).
 
 ## Limits
@@ -65,4 +65,4 @@ on seeded repositories with hidden gaps, 5 runs per cell: [`benchmarks/agentic/`
 - A first grill run was discarded because a clone was not reset between runs; the numbers above are from the clean
   rerun.
 - Costs are for the full scenario including simulator and graders, in US dollars at the time of the run.
-- Hooks were exercised on Windows only. `KEYSTONE_GATES=off` is covered by unit tests, not by a live run.
+- Hooks were exercised on Windows only. `SATTVA_GATES=off` is covered by unit tests, not by a live run.

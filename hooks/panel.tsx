@@ -1,4 +1,4 @@
-// Keystone side panel: who waits for you, child sessions, this session's plan, checks and cost. It reads the app's list
+// Sattva side panel: who waits for you, child sessions, this session's plan, checks and cost. It reads the app's list
 // of child sessions, and skills/sessions/scripts/panel.mjs (the engine's registry, git, plan files); it sends nothing,
 // calls no model, and its one button only fills the prompt box. Every failure stays inside the panel.
 import type { EngineInterface, Register } from 'claude-code'
@@ -7,15 +7,15 @@ import { strings, type Strings } from './i18n.ts'
 import { chip, langOf, pick } from './next.tsx'
 import { nextOf, sessionPlan, verdictOf, type Ledger, type Plan } from './plan.ts'
 
-const PANE = 'keystone-panel'
-const PANEL = { plugin: 'keystone', key: 'panel' } as const
-const CLOSED = { plugin: 'keystone', key: 'panelClosed' } as const
-const OPEN = { plugin: 'keystone', key: 'panelOpen' } as const // next.tsx hides its panel button while the pane is up
+const PANE = 'sattva-panel'
+const PANEL = { plugin: 'sattva', key: 'panel' } as const
+const CLOSED = { plugin: 'sattva', key: 'panelClosed' } as const
+const OPEN = { plugin: 'sattva', key: 'panelOpen' } as const // next.tsx hides its panel button while the pane is up
 const SHOWN = 8
 const TICK_MS = 30000
 const EMPTY: PanelOwn = { plan: null, next: null, wait: null, verdict: null, coverage: null, security: null, cost: '', sessionUsd: null }
 
-// keystone.ts hands these over (no circular import); a function that takes $ cannot be handed over, so sessionPlan is imported
+// sattva.ts hands these over (no circular import); a function that takes $ cannot be handed over, so sessionPlan is imported
 type Deps = { nextButtons: (p: Plan | null, hasIntent: boolean, main?: string | null) => string[]; costLine: (l: Ledger) => string; ledgerKey: (p: Plan) => string }
 type Listed = { sessionId: string; title?: string; branch?: string; isArchived?: boolean; isRunning?: boolean; starting?: boolean; startedBy?: string }
 type Detail = { worktreePath?: string; originCwd?: string; sourceBranch?: string }
@@ -203,7 +203,7 @@ async function maybeOpen($: EngineInterface) {
   if ((await closed($)) || (await isOpen($)) || !(await onDesktop($))) return
   const { value: d = null } = await $.state.get(PANEL)
   if (!d?.own.plan && !d?.rows?.length) return
-  const r = await $.ui.open({ id: PANE, title: 'Keystone' })
+  const r = await $.ui.open({ id: PANE, title: 'Sattva' })
   await $.state.set(OPEN, !!r?.isPlaced)
   startTimer($)
 }
@@ -220,13 +220,13 @@ async function auto($: EngineInterface) {
   }
 }
 
-// /keystone-panel and the band's «panel» button (next.tsx): a $.command.run from this plugin would not reach its own hook
+// /sattva-panel and the band's «panel» button (next.tsx): a $.command.run from this plugin would not reach its own hook
 export async function openPane($: EngineInterface): Promise<string> {
   const t = strings(await langOf($))
   let text: string = t.panelOpened
   try {
     await mark($, false)
-    const r = await $.ui.open({ id: PANE, title: 'Keystone' })
+    const r = await $.ui.open({ id: PANE, title: 'Sattva' })
     startTimer($)
     await $.state.set(OPEN, r.isPlaced)
     if (!r.isPlaced) text = t.panelWaits(r.reason)
@@ -237,7 +237,7 @@ export async function openPane($: EngineInterface): Promise<string> {
   return text
 }
 
-// keystone.ts calls these from its own session.start and turn.complete (one hook per event per plugin), off the hook
+// sattva.ts calls these from its own session.start and turn.complete (one hook per event per plugin), off the hook
 export async function onStart($: EngineInterface) {
   if (!enabled) {
     // panel: false — a pane left from before (the app keeps it over a reload) would stay an empty frame
@@ -248,7 +248,7 @@ export async function onStart($: EngineInterface) {
     }
     return
   }
-  await $.command.register({ name: 'keystone-panel', description: 'Keystone: open the side panel (no model call)' }).catch(() => undefined)
+  await $.command.register({ name: 'sattva-panel', description: 'Sattva: open the side panel (no model call)' }).catch(() => undefined)
   try {
     const up = await isOpen($)
     await $.state.set(OPEN, up)
@@ -286,7 +286,7 @@ export function register(on: Parameters<Register>[0], options: Parameters<Regist
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  on('command.run', { command: 'keystone-panel' }, async ($) => ({ text: await openPane($) })).catch(($, e, next) => next(e))
+  on('command.run', { command: 'sattva-panel' }, async ($) => ({ text: await openPane($) })).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     placement = e.props.placement
@@ -296,7 +296,7 @@ export function register(on: Parameters<Register>[0], options: Parameters<Regist
     if (!d)
       return (
         <Box flexDirection="column">
-          <Text bold>Keystone</Text>
+          <Text bold>Sattva</Text>
           <Text dimColor>{t.noData}</Text>
         </Box>
       )

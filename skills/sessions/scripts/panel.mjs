@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Keystone · side panel — one row per child session of a main session: state, stage, progress, what it waits for.
+// Sattva · side panel — one row per child session of a main session: state, stage, progress, what it waits for.
 // Read-only: the engine's registry of live sessions, git and plan files. The mod (hooks/panel.tsx) draws the rows.
 // CLI: panel.mjs < { "self": id, "originCwd": dir, "sessions": [...] }   → JSON { "rows": [...] }
 import { readFileSync, readdirSync } from 'node:fs';
@@ -54,10 +54,10 @@ const finished = (p) => !p.intentOnly && p.status === 'verified' && p.release.le
 
 function statusCommand(p) {
   if (!p || p.intentOnly) return null;
-  if (p.status === 'draft') return `/keystone:plan ${p.path}`;
-  if (p.status === 'approved' || (p.status === 'implementing' && p.open > 0)) return `/keystone:implement ${p.path}`;
-  if (p.status === 'implementing') return `/keystone:verify ${p.path}`;
-  if (p.status === 'verified' && p.release.length) return `/keystone:implement ${p.path}`;
+  if (p.status === 'draft') return `/sattva:plan ${p.path}`;
+  if (p.status === 'approved' || (p.status === 'implementing' && p.open > 0)) return `/sattva:implement ${p.path}`;
+  if (p.status === 'implementing') return `/sattva:verify ${p.path}`;
+  if (p.status === 'verified' && p.release.length) return `/sattva:implement ${p.path}`;
   return null;
 }
 
@@ -66,10 +66,10 @@ function statusCommand(p) {
 function nextFor(code, arg, plans, current) {
   const on = (cmd, p) => (p ? `${cmd} ${p.path}` : null);
   if (code === 'answer') return statusCommand(current);
-  if (code === 'accept') return on('/keystone:verify accept', plans.find((p) => p.verdict === 'PASS-UNPROVEN' && p.status !== 'verified'));
-  if (code === 'approve') return on('/keystone:plan', plans.find((p) => p.status === 'draft'));
-  if (code === 'release') return on('/keystone:implement', plans.find((p) => p.status === 'verified' && p.release.length));
-  if (code === 'intent') return on('/keystone:plan', plans.find((p) => p.intentOnly))?.replace(/plan\.md$/, 'intent.md') ?? null;
+  if (code === 'accept') return on('/sattva:verify accept', plans.find((p) => p.verdict === 'PASS-UNPROVEN' && p.status !== 'verified'));
+  if (code === 'approve') return on('/sattva:plan', plans.find((p) => p.status === 'draft'));
+  if (code === 'release') return on('/sattva:implement', plans.find((p) => p.status === 'verified' && p.release.length));
+  if (code === 'intent') return on('/sattva:plan', plans.find((p) => p.intentOnly))?.replace(/plan\.md$/, 'intent.md') ?? null;
   return code === 'stuck' ? arg : null;
 }
 

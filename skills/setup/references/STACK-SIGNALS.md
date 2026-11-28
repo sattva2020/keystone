@@ -2,7 +2,7 @@
 
 # Stack signals — what to detect and what to propose
 
-Read in `/keystone:setup` step 3. A signal is a file or fact in the repo; propose only what a signal supports.
+Read in `/sattva:setup` step 3. A signal is a file or fact in the repo; propose only what a signal supports.
 Everything is a proposal shown to the user with a diff — nothing here is written automatically.
 
 ## 1. Commands (for `CLAUDE.md`)
@@ -52,7 +52,7 @@ current docs (Context7 or the server's README) before writing: names change.
 |---|---|
 | any project that keeps decisions in git | memory for the project: `sattva2020/memlab` (index of code and decision records) |
 | typed language (TypeScript, Python with mypy, Go, Rust, Java, C#) | a code-intelligence / LSP plugin for that language — "search `/plugin` for <language> LSP"; no id unless you are sure |
-| Keystone itself | already installed if this skill runs; nothing to add |
+| Sattva itself | already installed if this skill runs; nothing to add |
 | frontend with a design system | search `/plugin` for design/UI plugins; offer, do not assume |
 
 Write to `.claude/settings.json` only chosen ones: `{"enabledPlugins": {"<plugin>@<marketplace>": true}}`, plus

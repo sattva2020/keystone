@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { findBase, git, history, trend } from '../skills/verify/scripts/collect.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PLAN = 'docs/keystone/2026-10-18-x/plan.md';
-const VERIFY = 'docs/keystone/2026-10-18-x/verify.md';
+const PLAN = 'docs/sattva/2026-10-18-x/plan.md';
+const VERIFY = 'docs/sattva/2026-10-18-x/verify.md';
 const roots = [];
 after(() => { for (const r of roots) try { rmSync(r, { recursive: true, force: true }); } catch { /* Windows file locks */ } });
 
@@ -21,7 +21,7 @@ function commit(root, files, msg) {
   git(root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--no-verify', '-m', msg);
 }
 const vmd = (base, report, verdict = 'FAIL') =>
-  `# Verify: x\nDate: 2026-11-01 · Base: ${base.slice(0, 7)} · Verdict: ${verdict}\n\n## Checks\n- base: ${base.slice(0, 7)}\n\n## Carried\n\n## Report\nKeystone verify: ${PLAN} · base ${base.slice(0, 7)}\n${report}\n\n## Verdict\n${verdict}\n`;
+  `# Verify: x\nDate: 2026-11-01 · Base: ${base.slice(0, 7)} · Verdict: ${verdict}\n\n## Checks\n- base: ${base.slice(0, 7)}\n\n## Carried\n\n## Report\nSattva verify: ${PLAN} · base ${base.slice(0, 7)}\n${report}\n\n## Verdict\n${verdict}\n`;
 
 function fails(n) {
   const root = mkdtempSync(join(tmpdir(), 'ks-trend-'));

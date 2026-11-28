@@ -1,8 +1,8 @@
 <!-- derived from ai-factory@2.19.0 skills/aif-verify/SKILL.md (MIT); see THIRD_PARTY_NOTICES.md -->
 
-# Keystone verify — after the Step 6 choice
+# Sattva verify — after the Step 6 choice
 
-Read by `/keystone:verify`: read before the Step 6 menu on FAIL / PASS / PASS-UNPROVEN, and after the pick; also when
+Read by `/sattva:verify`: read before the Step 6 menu on FAIL / PASS / PASS-UNPROVEN, and after the pick; also when
 the diff may have made a context file stale.
 
 ## Step 6 options
@@ -11,24 +11,24 @@ Recommended first and marked `(Recommended)`:
 
 - **FAIL** — `Fix directly here — every finding, in this session` (Recommended when the findings are few and small) ·
   `Fix critical only — wrong behaviour and security / architecture gate fails` (only when there are non-critical
-  findings too) · `Fix every finding in a clean session — /keystone:fix verify` (Recommended when the context is
-  large or the findings are many) · `Finish an unfinished task — /keystone:implement <plan>` (only when a row is
+  findings too) · `Fix every finding in a clean session — /sattva:fix verify` (Recommended when the context is
+  large or the findings are many) · `Finish an unfinished task — /sattva:implement <plan>` (only when a row is
   `missing`) · `Stop here`. With `ceiling: reached` (checked first) or `rules menu: on this FAIL` the menu of `LOOP.md`
   replaces this one.
 - **PASS-UNPROVEN** — one `Prove now: <check>` option for each group of open rows that can be proven before
-  production (a test to run, a read-only query against the database, `/keystone:security <plan>` for a security
-  row, a local run) · `Accept as unproven (<n> rows: <short list>)` · on L `Run /keystone:review first` ·
+  production (a test to run, a read-only query against the database, `/sattva:security <plan>` for a security
+  row, a local run) · `Accept as unproven (<n> rows: <short list>)` · on L `Run /sattva:review first` ·
   `Stop here`. A `Prove now` option goes first whenever one exists. **Accept is never first** when an open row or the
   Security gate concerns security (RLS, grants, auth, permissions) — then the security check is the recommendation.
-- **PASS** with open `## Release` steps — `Release: /keystone:implement <plan>` (on L `Run /keystone:review first`
+- **PASS** with open `## Release` steps — `Release: /sattva:implement <plan>` (on L `Run /sattva:review first`
   goes first) · `Stop here`.
-- **PASS** without release steps — `Review the diff — /keystone:review` (Recommended on L) · `Security check —
-  /keystone:security <plan>` (when the diff touches auth, data or user input) · `Push` · `Stop here`.
+- **PASS** without release steps — `Review the diff — /sattva:review` (Recommended on L) · `Security check —
+  /sattva:security <plan>` (when the diff touches auth, data or user input) · `Push` · `Stop here`.
 
 **After the sweep — no review and security again (I-4).** When the plan had its sweep (Step 1 `sweep: done in …`, or
-`Sweep: done` in this run), the menus above lose `Review the diff` and `Security check` (PASS), `Run /keystone:review
-first` (PASS-UNPROVEN, PASS with `## Release`), and `Next:` carries no `/keystone:review`. Say in one line that a manual
-`/keystone:review` or `/keystone:security` stays possible. M plans and plans with runs before the sweep keep the menus as they are.
+`Sweep: done` in this run), the menus above lose `Review the diff` and `Security check` (PASS), `Run /sattva:review
+first` (PASS-UNPROVEN, PASS with `## Release`), and `Next:` carries no `/sattva:review`. Say in one line that a manual
+`/sattva:review` or `/sattva:security` stays possible. M plans and plans with runs before the sweep keep the menus as they are.
 
 **Context drift (a second question, only when found).** Verify never edits context files. Compare the diff with
 `docs/architecture.md`, `CLAUDE.md` / `.claude/CLAUDE.md` and `.claude/rules/**`: a new module, top-level folder or
@@ -36,8 +36,8 @@ dependency direction the architecture file does not describe; a command, stack i
 that the diff changed; a convention the diff introduces or a rule it now contradicts on purpose. Only when a file is
 clearly stale — not merely silent about a detail — add one more question to the same AskUserQuestion call:
 `Context drift: <file> — <what is stale>. Update it now?` with one option per stale file, its owning command —
-`docs/architecture.md` → `/keystone:architecture`, `CLAUDE.md` → `/keystone:setup`, `.claude/rules` →
-`/keystone:evolve` — and `Not now`. A pick runs that skill after the Step 6 choice is done (read its SKILL.md and follow
+`docs/architecture.md` → `/sattva:architecture`, `CLAUDE.md` → `/sattva:setup`, `.claude/rules` →
+`/sattva:evolve` — and `Not now`. A pick runs that skill after the Step 6 choice is done (read its SKILL.md and follow
 it; it shows a diff and writes only after a yes). No drift → no question. The final report carries
 `Context drift: <file — what is stale> | none` either way.
 
@@ -58,10 +58,10 @@ After the choice:
   line (a clean session, or an irreversible step the human starts).
 - `Decide each open finding` (the ceiling menu of `LOOP.md`) → go to **Decide at the ceiling** of `ACCEPT.md`; the
   click is the confirmation to start, each finding is then asked there.
-- `Back to the plan — /keystone:plan <plan>` (the ceiling menu) → nothing is written: `Next: /keystone:plan <plan>`;
+- `Back to the plan — /sattva:plan <plan>` (the ceiling menu) → nothing is written: `Next: /sattva:plan <plan>`;
   verify edits neither the plan nor the intent.
-- `Fix the whole class, then one last verify — /keystone:fix verify` (the rules menu of `LOOP.md`) → the same, in a
-  clean session: `Next: /keystone:fix verify`.
+- `Fix the whole class, then one last verify — /sattva:fix verify` (the rules menu of `LOOP.md`) → the same, in a
+  clean session: `Next: /sattva:fix verify`.
 - `Accept the violation consciously` (the rules menu) → the click is the confirmation: go to **Accept a rule
   violation** of `ACCEPT.md` without asking again.
 - AskUserQuestion unavailable (`claude -p`, CI) → no menu: print the options as a numbered list and put the first one

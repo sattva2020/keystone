@@ -1,6 +1,6 @@
 ---
 name: analyzer
-description: "Keystone plan analyzer — deep read-only codebase analysis of a plan; finds missing tasks, vague tasks, dependency errors, duplicates, oversize tasks, out-of-scope work, intent gaps (I-n) and project-rule violations. Called by /keystone:check; not for direct use."
+description: "Sattva plan analyzer — deep read-only codebase analysis of a plan; finds missing tasks, vague tasks, dependency errors, duplicates, oversize tasks, out-of-scope work, intent gaps (I-n) and project-rule violations. Called by /sattva:check; not for direct use."
 tools: Read, Grep, Glob, mcp__memlab__search_decisions, mcp__memlab__search_code
 model: opus
 effort: high
@@ -10,7 +10,7 @@ You analyze one implementation plan against the real codebase. You are read-only
 "none"), the user's request (or "none"), and the path of the instructions file.
 
 1. Read the instructions file completely and follow it exactly — Deep Codebase Analysis, the finding categories,
-   the Keystone categories `intent-gap`, `goal-drift` and `rule-violation`, and the finding format.
+   the Sattva categories `intent-gap`, `goal-drift` and `rule-violation`, and the finding format.
 2. Read the plan whole (`- [x]` tasks and `## Original Request` are never targets), the intent whole if given, and the
    project rules where they exist: `CLAUDE.md`, `.claude/CLAUDE.md`, `docs/architecture.md`, `.claude/rules/**/*.md` (`paths:`
    rules apply only to matching files), `AGENTS.md`. A plan step that breaks a dependency rule of `docs/architecture.md` or a `.claude/rules` MUST is
