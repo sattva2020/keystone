@@ -20,12 +20,12 @@ test('rush driver: implement is picked only for a ready task, and a stage that c
 });
 
 test('rush driver: no CLAUDE_CODE_FORK_SUBAGENT advice before the normal-permissions run proves it (plan task 10)', () => {
-  if (existsSync(join(ROOT, 'docs/keystone/2026-11-19-rush-mode/live-run/permissions.md'))) return;
+  if (existsSync(join(ROOT, 'docs/sattva/2026-11-19-rush-mode/live-run/permissions.md'))) return;
   const files = ['README.md', 'README.ru.md'];
   const walk = (d) => readdirSync(join(ROOT, d), { withFileTypes: true }).forEach((e) =>
     e.isDirectory() ? walk(join(d, e.name)) : e.name.endsWith('.md') && files.push(join(d, e.name)));
   ['skills', 'agents', 'docs'].forEach((d) => existsSync(join(ROOT, d)) && walk(d));
-  const hits = files.filter((f) => !f.replaceAll('\\', '/').startsWith('docs/keystone/') || f.endsWith('public-readme-section.md'))
+  const hits = files.filter((f) => !f.replaceAll('\\', '/').startsWith('docs/sattva/') || f.endsWith('public-readme-section.md'))
     .filter((f) => readFileSync(join(ROOT, f), 'utf8').includes('CLAUDE_CODE_FORK_SUBAGENT'));
   assert.deepEqual(hits, []);
 });

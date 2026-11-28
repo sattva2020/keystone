@@ -27,12 +27,12 @@ test('0.9.31: no skill or agent description has <angle-bracket> text — claude.
   }
 });
 
-test('plugin: keystone manifest, marketplace, one version, hooks wired', () => {
+test('plugin: sattva manifest, marketplace, one version, hooks wired', () => {
   const p = json('.claude-plugin/plugin.json');
-  assert.equal(p.name, 'keystone');
-  assert.equal(p.version, '0.9.48');
+  assert.equal(p.name, 'sattva');
+  assert.equal(p.version, '0.10.0');
   assert.equal(json('package.json').version, p.version);
-  assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['keystone', './']]);
+  assert.deepEqual(json('.claude-plugin/marketplace.json').plugins.map((x) => [x.name, x.source]), [['sattva', './']]);
   assert.ok(existsSync(join(root, 'hooks/hooks.json')));
   const ups = json('hooks/hooks.json').hooks.UserPromptSubmit?.[0]?.hooks?.[0];
   assert.deepEqual([ups?.command, ups?.args], ['node', ['${CLAUDE_PLUGIN_ROOT}/hooks/sessions-event.mjs']]);
@@ -68,7 +68,7 @@ test('frontmatter values containing ": " are quoted (valid YAML)', () => {
     }
 });
 
-test('plan, implement, fix run only on explicit /keystone:* (no clash with aif-* triggers)', () => {
+test('plan, implement, fix run only on explicit /sattva:* (no clash with aif-* triggers)', () => {
   for (const s of ['plan', 'implement', 'fix']) assert.match(front(`skills/${s}/SKILL.md`), /^disable-model-invocation: true$/m, s);
 });
 
@@ -135,22 +135,22 @@ test('I-3: plan infers Settings, never asks', () => {
 test('plan: header contract, Reconciliation, Rules check, Risks, check before Approve, baseline commit', () => {
   const t = read('skills/plan/SKILL.md') + read('skills/plan/references/PLAN-FORMAT.md');
   for (const s of ['Status: draft', 'Status: approved', '| Decision | Source | Verification evidence |', 'intent — I-',
-                   'Project rules check:', '## Risks', '/keystone:check', 'What could this change break', 'Approve',
-                   'not `/compact`', 'docs/keystone/'])
+                   'Project rules check:', '## Risks', '/sattva:check', 'What could this change break', 'Approve',
+                   'not `/compact`', 'docs/sattva/'])
     assert.ok(t.includes(s), s);
 });
 
 test('check: analyzer + mandatory validator, intent coverage, applies only after the human answers', () => {
   const t = read('skills/check/SKILL.md');
   assert.doesNotMatch(front('skills/check/SKILL.md'), /context: fork/);
-  for (const s of ['keystone:analyzer', 'keystone:validator', 'intent-gap', 'rule-violation', 'Coverage:', 'AskUserQuestion', 'Original Request is immutable'])
+  for (const s of ['sattva:analyzer', 'sattva:validator', 'intent-gap', 'rule-violation', 'Coverage:', 'AskUserQuestion', 'Original Request is immutable'])
     assert.ok(t.includes(s), s);
 });
 
-test('I-8: implement keeps the Keystone execution rules', () => {
+test('I-8: implement keeps the Sattva execution rules', () => {
   const i = read('skills/implement/SKILL.md');
   for (const r of [/Baseline first/i, /same commit/, /git diff --cached --stat/, /BLOCKED: <reason>/, /never `?\[x\]`?|stays `\[ \]`/,
-                   /pass \| fail \| not run \| BLOCKED/, /a \+ b \+ c \+ d/, /Status: implementing/, /cost: not measured/, /\/keystone:verify/])
+                   /pass \| fail \| not run \| BLOCKED/, /a \+ b \+ c \+ d/, /Status: implementing/, /cost: not measured/, /\/sattva:verify/])
     assert.match(i, r);
 });
 
@@ -161,11 +161,11 @@ test('I-5: fix is regression-first, S starts implementing, existing tests untouc
 
 test('I-9/I-7: verify verdicts, accept with sign-off, read-only verifier, /code-review', () => {
   const v = read('skills/verify/SKILL.md');
-  for (const s of ['PASS-UNPROVEN', 'Accepted unproven by', 'Status: verified', 'docs(verify)', '/code-review', 'keystone:verifier', 'not evidence'])
+  for (const s of ['PASS-UNPROVEN', 'Accepted unproven by', 'Status: verified', 'docs(verify)', '/code-review', 'sattva:verifier', 'not evidence'])
     assert.ok(v.includes(s), s);
   assert.doesNotMatch(front('skills/verify/SKILL.md'), /context: fork/);
   const a = read('agents/verifier.md');
-  for (const s of ['unrequested', 'not proven', 'BLOCKED', 'Keystone Chain:']) assert.ok(a.includes(s), s);
+  for (const s of ['unrequested', 'not proven', 'BLOCKED', 'Sattva Chain:']) assert.ok(a.includes(s), s);
 });
 
 test('I-17: grill goes all the way down', () => {
@@ -175,15 +175,15 @@ test('I-17: grill goes all the way down', () => {
     assert.ok(g.toLowerCase().includes(s.toLowerCase()), s);
 });
 
-test('intent: IDs, decisions log, paths (docs/keystone only), no spec stage', () => {
+test('intent: IDs, decisions log, paths (docs/sattva only), no spec stage', () => {
   const i = read('skills/intent/SKILL.md');
-  for (const s of ['- I-1 ', 'never renumbered', '## Decisions log', 'Written after plan:', 'docs/keystone/', 'no separate spec stage'])
+  for (const s of ['- I-1 ', 'never renumbered', '## Decisions log', 'Written after plan:', 'docs/sattva/', 'no separate spec stage'])
     assert.ok(i.includes(s), s);
 });
 
-test('start routes to the Keystone skills and handles a lingering active plan', () => {
+test('start routes to the Sattva skills and handles a lingering active plan', () => {
   const t = read('skills/start/SKILL.md');
-  for (const s of ['/keystone:plan', '/keystone:implement', '/keystone:verify', '/keystone:fix', 'Status: abandoned', 'Any single L sign makes it L'])
+  for (const s of ['/sattva:plan', '/sattva:implement', '/sattva:verify', '/sattva:fix', 'Status: abandoned', 'Any single L sign makes it L'])
     assert.ok(t.includes(s), s);
 });
 
@@ -204,9 +204,9 @@ test('I-19…I-23: Done means, keep going / stop, three-part summary, Repro/Unco
 
 test('stand 12.10 fixes: verify never edits intent, accept re-checks freshness, fix path, BLOCKED in fix, grill coverage table', () => {
   const v = VERIFY.map(read).join('\n');
-  assert.match(v, /\/keystone:intent/);
+  assert.match(v, /\/sattva:intent/);
   assert.match(v, /changed after the last `?verify\.md/i);
-  assert.match(read('skills/fix/SKILL.md'), /docs\/keystone/);
+  assert.match(read('skills/fix/SKILL.md'), /docs\/sattva/);
   assert.match(read('skills/fix/SKILL.md'), /BLOCKED: <reason>/);
   assert.match(read('skills/implement/SKILL.md'), /## Open questions \(implement\)/);
   assert.match(read('skills/check/SKILL.md'), /not re-checked/);
@@ -232,19 +232,19 @@ test('README: memlab is a separate plugin with install commands; adapter only fo
   }
 });
 
-test('mod: hooks.json loads the keystone module next to the settings hooks', () => {
+test('mod: hooks.json loads the sattva module next to the settings hooks', () => {
   const h = json('hooks/hooks.json');
-  assert.deepEqual(h.modules, ['./keystone.ts']);
+  assert.deepEqual(h.modules, ['./sattva.ts']);
   assert.ok(h.hooks.PreToolUse && h.hooks.Stop);
-  const m = read('hooks/keystone.ts');
-  for (const s of ["name: 'keystone-status'", "on('turn.complete'", "on('prompt.submit'", '$.session.usage()', 'Keystone cost meter', "on('prompt.suggest'", 'export function nextCommand'])
+  const m = read('hooks/sattva.ts');
+  for (const s of ["name: 'sattva-status'", "on('turn.complete'", "on('prompt.submit'", '$.session.usage()', 'Sattva cost meter', "on('prompt.suggest'", 'export function nextCommand'])
     assert.ok(m.includes(s), s);
 });
 
-// 0.9.5 — buttons, links, handoff (docs/keystone/2026-10-14-mod-next-buttons-file-links/plan.md)
+// 0.9.5 — buttons, links, handoff (docs/sattva/2026-10-14-mod-next-buttons-file-links/plan.md)
 test('0.9.5 mod: one module imports the band and the links; buttons without a model; handoff clears only on the marker', () => {
-  const m = read('hooks/keystone.ts');
-  for (const s of ["from './next.tsx'", "from './links.ts'", 'export function nextButtons', "name: 'keystone-handoff'", "command: 'clear'", 'MARKER'])
+  const m = read('hooks/sattva.ts');
+  for (const s of ["from './next.tsx'", "from './links.ts'", 'export function nextButtons', "name: 'sattva-handoff'", "command: 'clear'", 'MARKER'])
     assert.ok(m.includes(s), s);
   const n = read('hooks/next.tsx');
   for (const s of ["component: 'AbovePrompt'", '$.prompt.fill', "'classic.SessionStart'", "'session.measure'"]) assert.ok(n.includes(s), s);
@@ -253,13 +253,13 @@ test('0.9.5 mod: one module imports the band and the links; buttons without a mo
   assert.ok(json('.claude-plugin/plugin.json').types === './types/index.d.ts');
 });
 
-// 0.8.0 — project context and toolbox (docs/keystone/2026-10-12-project-context-and-toolbox/intent.md)
+// 0.8.0 — project context and toolbox (docs/sattva/2026-10-12-project-context-and-toolbox/intent.md)
 test('0.8 I-1/I-10: setup writes only after a yes, never overwrites, secrets as ${VAR}, no skills.sh installs', () => {
   const s = read('skills/setup/SKILL.md');
   for (const x of ['CLAUDE.md', '.claude/rules/base.md', '.mcp.json', '${', 'enabledPlugins', 'Never overwrite', 'at most 60 lines', 'skills.sh'])
     assert.ok(s.includes(x), x);
   assert.match(front('skills/setup/SKILL.md'), /^disable-model-invocation: true$/m);
-  for (const x of ['/keystone:architecture', '/keystone:docs', '/keystone:dockerize', '/keystone:ci']) assert.ok(s.includes(x), `setup offers ${x}`);
+  for (const x of ['/sattva:architecture', '/sattva:docs', '/sattva:dockerize', '/sattva:ci']) assert.ok(s.includes(x), `setup offers ${x}`);
   assert.match(s, /`@AGENTS\.md` \(import\)/, 'a new CLAUDE.md must not switch off an existing AGENTS.md');
 });
 
@@ -272,7 +272,7 @@ test('0.8 I-2/I-13: plan, check, implement, fix, verify, review, security read t
 
 test('0.8 I-3: security — ignore list with reason, pass/warn/fail gate, audit script by skill dir, wired into plan/verify', () => {
   const s = read('skills/security/SKILL.md');
-  for (const x of ['docs/keystone/security-ignores.md', 'Security gate: pass | warn | fail', '${CLAUDE_SKILL_DIR}/scripts/audit.sh'])
+  for (const x of ['docs/sattva/security-ignores.md', 'Security gate: pass | warn | fail', '${CLAUDE_SKILL_DIR}/scripts/audit.sh'])
     assert.ok(s.includes(x), x);
   for (const r of ['AUTH.md', 'PROMPT-INJECTION.md', 'RACE.md', 'CHECKLIST.md']) assert.ok(existsSync(join(root, 'skills/security/references', r)), r);
   assert.match(read('skills/security/SKILL.md').replace(/\s+/g, ' '), /do \*\*NOT\*\* flag it as a finding/);
@@ -290,7 +290,7 @@ test('0.8 I-5/I-9: docs update from implement; implement proposes rules into .cl
   assert.match(read('skills/docs/SKILL.md'), /README is a landing page, not a manual/);
   assert.match(front('skills/docs/SKILL.md'), /^disable-model-invocation: false$/m);
   const i = read('skills/implement/SKILL.md');
-  assert.match(i, /\/keystone:docs update/);
+  assert.match(i, /\/sattva:docs update/);
   assert.match(front('skills/implement/SKILL.md'), /^allowed-tools:.*\bSkill\b/m);
   assert.match(i, /\.claude\/rules\//);
   assert.match(i, /to 3 new rules/);
@@ -298,9 +298,9 @@ test('0.8 I-5/I-9: docs update from implement; implement proposes rules into .cl
 
 test('0.8 I-6: review always runs the clean-context validator (keep / modify / drop) and keeps Unconfirmed', () => {
   const r = read('skills/review/SKILL.md');
-  for (const x of ['keystone:review-validator', '`keep`', '`modify`', '`drop`', 'Unconfirmed']) assert.ok(r.includes(x), x);
+  for (const x of ['sattva:review-validator', '`keep`', '`modify`', '`drop`', 'Unconfirmed']) assert.ok(r.includes(x), x);
   assert.match(read('skills/review/references/VALIDATOR.md'), /Never treat a finding as fabricated just because the cited code is absent from disk/);
-  assert.match(read('skills/verify/SKILL.md'), /\/keystone:review/);
+  assert.match(read('skills/verify/SKILL.md'), /\/sattva:review/);
 });
 
 test('0.8 I-7/I-8/I-12: dockerize, ci, research mode; S stays light', () => {
@@ -314,14 +314,14 @@ test('0.8 I-11: every new ported .md carries the attribution and its skill is li
   const notices = read('THIRD_PARTY_NOTICES.md');
   const walk = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
   for (const s of ['setup', 'security', 'architecture', 'docs', 'review', 'dockerize', 'ci', 'qa', 'qa-check', 'roadmap', 'reference', 'distill', 'evolve', 'transfer', 'ask']) {
-    for (const f of walk(`skills/${s}`).filter((f) => f.endsWith('.md'))) assert.match(read(f), /derived from ai-factory@2\.19\.0 .*\(MIT\)|^<!-- original Keystone file \(MIT\) -->/, f);
+    for (const f of walk(`skills/${s}`).filter((f) => f.endsWith('.md'))) assert.match(read(f), /derived from ai-factory@2\.19\.0 .*\(MIT\)|^<!-- original Sattva file \(MIT\) -->/, f);
     assert.ok(notices.includes('`skills/' + s + '/`'), `skills/${s}/ in NOTICES`);
   }
   assert.match(read('agents/review-validator.md'), /derived from ai-factory@2\.19\.0/);
   assert.ok(notices.includes('`agents/review-validator.md`'));
 });
 
-// qa-roadmap-lessons (docs/keystone/2026-10-12-qa-roadmap-lessons/intent.md)
+// qa-roadmap-lessons (docs/sattva/2026-10-12-qa-roadmap-lessons/intent.md)
 const has = (f, ...xs) => { const t = [].concat(f).map(read).join(' ').replace(/\s+/g, ' '); for (const x of xs) assert.ok(t.includes(x), `${f}: ${x}`); };
 // verify keeps its rare branches (accept, gates, after the choice, context drift) in references, read on demand
 const VERIFY = ['skills/verify/SKILL.md', 'skills/verify/references/ACCEPT.md', 'skills/verify/references/AFTER-CHOICE.md'];
@@ -334,14 +334,14 @@ test('qa/qa-check: files in <task>/qa/, evidence before pass, Playwright replay'
 test('roadmap, reference, distill: stable milestone ids, Context7 first, output location asked', () => {
   has('skills/roadmap/SKILL.md', 'docs/roadmap.md', 'Never remove milestones silently');
   has('skills/intent/SKILL.md', 'Roadmap: M-<n>');
-  has('skills/verify/SKILL.md', '/keystone:roadmap', '/keystone:evolve');
+  has('skills/verify/SKILL.md', '/sattva:roadmap', '/sattva:evolve');
   has('skills/reference/SKILL.md', 'docs/references/', 'Context7');
   has('skills/distill/SKILL.md', 'Distill, do not copy.', '${CLAUDE_SKILL_DIR}/scripts/material-prep.py', '~/.claude/skills');
 });
 
 test('evolve/transfer: lessons become .claude/rules after a yes, evolve-log, read-only source, no skill-context', () => {
   for (const f of ['skills/evolve/SKILL.md', 'skills/transfer/SKILL.md']) {
-    has(f, '.claude/rules/', 'docs/keystone/evolve-log.md');
+    has(f, '.claude/rules/', 'docs/sattva/evolve-log.md');
     assert.doesNotMatch(read(f), /skill-context/, f);
   }
   has('skills/evolve/SKILL.md', 'One prevention point = one rule.');
@@ -372,8 +372,8 @@ test('setup proposes the Dokploy MCP by signal, with ${VAR} only', () => {
   has('skills/dockerize/SKILL.md', 'github.com/sattva2020/dokploy-mcp');
 });
 
-test('setup proposes docs/keystone/** in .prettierignore under Prettier and reports it in the end table', () => {
-  has('skills/setup/SKILL.md', '### 3.6 `.prettierignore` — only when the project runs Prettier', '`docs/keystone/**` in `.prettierignore`',
+test('setup proposes docs/sattva/** in .prettierignore under Prettier and reports it in the end table', () => {
+  has('skills/setup/SKILL.md', '### 3.6 `.prettierignore` — only when the project runs Prettier', '`docs/sattva/**` in `.prettierignore`',
     '| .prettierignore | already there / added / skipped (no Prettier) |');
 });
 
@@ -400,9 +400,9 @@ test('session audit 12.10: check accepts a D-list intent; start keeps grilled de
 test('every skill ends with an explicit Next: line; grill run directly routes its decisions; status shows Next', () => {
   for (const s of SKILLS) has(`skills/${s}/SKILL.md`, '**Next step (mandatory).**');
   for (const d of readdirSync(join(root, 'skills'))) has(`skills/${d}/SKILL.md`, 'the next session (after `/clear`) starts there', 'its absolute path');
-  has('skills/grill/SKILL.md', 'Run directly by the user', 'Next: /keystone:intent <topic>');
-  has('hooks/keystone.ts', 'Next: ${next ??');
-  for (const f of ['docs/scenarios.md', 'docs/scenarios.ru.md']) has(f, '/keystone-status', '/keystone:verify accept');
+  has('skills/grill/SKILL.md', 'Run directly by the user', 'Next: /sattva:intent <topic>');
+  has('hooks/sattva.ts', 'Next: ${next ??');
+  for (const f of ['docs/scenarios.md', 'docs/scenarios.ru.md']) has(f, '/sattva-status', '/sattva:verify accept');
 });
 
 test('audit.sh behaviour: provider and uppercase env secrets found, ${VAR} and plain words clean', async () => {
@@ -426,7 +426,7 @@ test('audit.sh behaviour: provider and uppercase env secrets found, ${VAR} and p
 test('security P1', () => {
   has('skills/security/SKILL.md', 'Confidence:', 'Entry point:', '## Needs verification', 'SEVERITY.md', 'DO-NOT-FLAG.md', 'A05:2025');
   for (const f of ['SEVERITY.md', 'DO-NOT-FLAG.md']) {
-    assert.ok(read(`skills/security/references/${f}`).startsWith('<!-- original Keystone file (MIT) -->'), f);
+    assert.ok(read(`skills/security/references/${f}`).startsWith('<!-- original Sattva file (MIT) -->'), f);
   }
   assert.match(read('skills/security/references/PROMPT-INJECTION.md'), /^\| RAG/m);
   has('skills/security/references/SUPPLY-CHAIN.md', 'AGENTS.md');
@@ -437,7 +437,7 @@ test('pentest skill, authorized and scoped', () => {
   assert.match(front('skills/pentest/SKILL.md'), /^disable-model-invocation:\s*true$/m);
   has('skills/pentest/SKILL.md', 'Scope gate', 'localhost', 'production', 'brute', 'DoS', 'Not reproduced', 'OWASP WSTG');
   for (const f of ['SCOPE', 'PASSIVE-CHECKS', 'CONFIRM']) {
-    assert.ok(read(`skills/pentest/references/${f}.md`).startsWith('<!-- original Keystone file (MIT) -->'), f);
+    assert.ok(read(`skills/pentest/references/${f}.md`).startsWith('<!-- original Sattva file (MIT) -->'), f);
   }
   has('skills/pentest/references/SCOPE.md', 'third-party');
 });
@@ -454,16 +454,16 @@ test('writing skills ask before they write (yes-gates)', () => {
 });
 
 test('pentest is wired: security offers it for Needs verification, verify recommends it on warn', () => {
-  has('skills/security/SKILL.md', '/keystone:pentest <your target URL> <this report>');
-  has('skills/verify/SKILL.md', '/keystone:pentest <your');
+  has('skills/security/SKILL.md', '/sattva:pentest <your target URL> <this report>');
+  has('skills/verify/SKILL.md', '/sattva:pentest <your');
 });
 
 test('optimize skill measures before and after', () => {
   assert.match(front('skills/optimize/SKILL.md'), /disable-model-invocation: true/);
   has('skills/optimize/SKILL.md', 'perf', 'simplify', 'before', 'after', 'noise', 'revert', '3+', 'production');
-  assert.ok(read('skills/optimize/references/MEASURE.md').startsWith('<!-- original Keystone file (MIT) -->'));
+  assert.ok(read('skills/optimize/references/MEASURE.md').startsWith('<!-- original Sattva file (MIT) -->'));
   has('skills/optimize/references/MEASURE.md', 'EXPLAIN ANALYZE');
-  has('skills/review/SKILL.md', '/keystone:optimize perf');
+  has('skills/review/SKILL.md', '/sattva:optimize perf');
 });
 
 test('security severity rubric is consistent; ids carry the year; pentest/optimize rules', () => {
@@ -543,7 +543,7 @@ test('no $<digit> in skills: Claude Code reads it as an argument placeholder and
 
 test('verify/fix loop: Rules gate lists every rule and violation; fix verify takes all findings in one pass', () => {
   has('agents/verifier.md', 'One line per rule', 'never stop at the first violation');
-  has('skills/verify/SKILL.md', '/keystone:fix verify', 'references/LOOP.md');
+  has('skills/verify/SKILL.md', '/sattva:fix verify', 'references/LOOP.md');
   has('skills/verify/references/LOOP.md', 'Code unchanged since the last FAIL');
   has('skills/fix/SKILL.md', '### Verify findings mode', 'fix all of them in one pass');
 });
@@ -571,12 +571,12 @@ test('0.9.9: implement live task list mirrors the checkboxes', () => {
 });
 
 test('0.9.9: review rules — rules check without a plan, verifier format, suggested updates for evolve', () => {
-  has('skills/review/SKILL.md', '## Step R — Rules check without a plan (`/keystone:review rules [ref]`)',
+  has('skills/review/SKILL.md', '## Step R — Rules check without a plan (`/sattva:review rules [ref]`)',
     '`rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`', 'never stop at the first violation',
-    '### Suggested rule updates', '/keystone:evolve');
+    '### Suggested rule updates', '/sattva:evolve');
   assert.match(front('skills/review/SKILL.md'), /argument-hint:.*rules \[ref\]/);
   has('agents/verifier.md', '`rule <source:line> — pass | fail — <file:line>; <file:line>; … | n/a — <why>`');
-  has('skills/evolve/SKILL.md', '`### Suggested rule updates` from a `/keystone:review rules` run');
+  has('skills/evolve/SKILL.md', '`### Suggested rule updates` from a `/sattva:review rules` run');
 });
 
 test('AIF 2.20: review coverage-first with confidence markers; PR review pinned to the head SHA', () => {
@@ -591,7 +591,7 @@ test('AIF 2.20: review coverage-first with confidence markers; PR review pinned 
 
 test('evolve add: one dictated rule — dedupe, topic file, checked paths:, diff before yes, log without Sources', () => {
   assert.match(front('skills/evolve/SKILL.md'), /argument-hint:.*add <rule text>/);
-  has('skills/evolve/SKILL.md', '## Mode add — one rule you dictate (`/keystone:evolve add <rule text>`)',
+  has('skills/evolve/SKILL.md', '## Mode add — one rule you dictate (`/sattva:evolve add <rule text>`)',
     '`MUST` / `MUST NOT`', 'Glob each one', '**Covered** → quote the existing rule', '`Write` / `Change topic or paths` / `Cancel`',
     '`## <date> — evolve add`', 'no `Sources:` line');
 });
@@ -610,8 +610,8 @@ test('0.9.9: check takes a free-text request and ends with Plan refined', () => 
 });
 
 test('0.9.9: verify asks about context drift and offers the owning command', () => {
-  has(VERIFY, '**Context drift (a second question, only when found).**', '`/keystone:architecture`',
-    '`/keystone:setup`', '`.claude/rules` → `/keystone:evolve`', 'Context drift: <file — what is stale, owning command> | none');
+  has(VERIFY, '**Context drift (a second question, only when found).**', '`/sattva:architecture`',
+    '`/sattva:setup`', '`.claude/rules` → `/sattva:evolve`', 'Context drift: <file — what is stale, owning command> | none');
 });
 
 test('0.9.10: every committing skill honours a commitlint scope-enum', () => {
@@ -625,7 +625,7 @@ test('0.9.11: no skill or agent reads AI Factory skill-context or SECURITY.md', 
 
 test('0.9.12: verify flags weakened tests and contradicted prior decisions', () => {
   has('agents/verifier.md', '## 5a. Weakened tests and prior decisions', '`Weakened test: <file:line> — <what was loosened>',
-    'satisfies a test\'s wording but not its meaning', '`docs/keystone/*/intent.md` with `Status: accepted`',
+    'satisfies a test\'s wording but not its meaning', '`docs/sattva/*/intent.md` with `Status: accepted`',
     '`Decision: <intent path:I-n | note path> — contradicted by <file:line> — <how>`', 'Weakened tests: <Weakened test: … lines> | none', 'Decisions: <Decision: … lines> | none');
   has('skills/verify/SKILL.md', 'A green test run proves nothing about a test the diff loosened', '`Weakened tests: none` (or each tied to a task); `Decisions: none`',
     'or a `Weakened test` line no task asks for', 'a `Decision:` line,');
@@ -636,7 +636,7 @@ test('0.9.17: a file outside the working directory is never a link — plain tex
   has('hooks/links.ts', 'export function outsideAsText', 'resolveFile');
 });
 
-test('0.9.17: Keystone never reads or writes .ai-factory — skills, agents and hooks', () => {
+test('0.9.17: Sattva never reads or writes .ai-factory — skills, agents and hooks', () => {
   const walk = (d) => readdirSync(join(root, d), { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
   for (const f of [...walk('skills'), ...walk('agents'), ...walk('hooks')].filter((x) => /\.(md|ts|tsx|mjs)$/.test(x) && !/\.test\./.test(x)))
     assert.doesNotMatch(read(f), /\.ai-factory|paths\.specs/, f);
@@ -657,7 +657,7 @@ test('security 0.9.18: comparison gaps closed — SSRF ranges, starters, severit
   has(R + 'PROMPT-INJECTION.md', '## LLM09:2026 Vector and Embedding Weaknesses', 'stripInvisible', 'U+E0000', 'logits');
   assert.ok(pi.includes(String.raw`/\bsk-(?:proj-|ant-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}/g`));
   has(R + 'AUTH.md', "algorithms: ['RS256']", '`kid`', '`jku`', '## OAuth 2.0 / OIDC', 'redirect_uri', 'PKCE', 'CWE-204');
-  assert.ok(read(R + 'IAC.md').startsWith('<!-- original Keystone file (MIT) -->'));
+  assert.ok(read(R + 'IAC.md').startsWith('<!-- original Sattva file (MIT) -->'));
   has(R + 'IAC.md', 'privileged: true', 'allowPrivilegeEscalation', 'http_tokens', 'cluster-admin', '## Not a finding');
   has(R + 'AGENT-MCP.md', "## The project's own MCP server and agent tools", 'tool description', '0.0.0.0', 'fail-closed', "uvx --from 'pkg==1.4.2' pkg");
   has(R + 'MAPPING.md', 'IMDSv1', 'CWE-611', 'CWE-915', 'CWE-1321', 'CWE-347', 'CWE-1427', 'CWE-295', 'CWE-532');
@@ -742,7 +742,7 @@ test('0.9.19: verify — orchestrator on the mid model, judge on Opus, report wr
     assert.ok(existsSync(join(root, f)), f);
 });
 
-// verify-fix-convergence (docs/keystone/2026-11-01-verify-fix-convergence/intent.md)
+// verify-fix-convergence (docs/sattva/2026-11-01-verify-fix-convergence/intent.md)
 test('0.9.26: verifier judges only judge/uncarried rows, fixed ids, Advisory and Minor, Decisions first', () => {
   has('agents/verifier.md', 'Advisory:', 'Minor:', 'judge:', 'rules scope:', 'carried ids:', '`Done means <n>`', '`Row <n>`',
     'Do not read a past `verify.md`', 'no past verdicts, no past evidence', 'in doubt → not minor', 'MUST → not minor',
@@ -754,9 +754,9 @@ test('0.9.26: verifier judges only judge/uncarried rows, fixed ids, Advisory and
 
 test('0.9.26: verify carries rows into ## Carried, records the cost, keeps Advisory/Minor out of the verdict, ceiling (0.9.31)', () => {
   has('skills/verify/SKILL.md', 'above the record-only marker', '0 files changed', 'recomputed with carried rows', 'before asking',
-    'Keystone cost meter', 'cost: verify+fix', 'counts as 0.00', '--history', '--full', '## Carried', 'Advisory', 'Minor',
+    'Sattva cost meter', 'cost: verify+fix', 'counts as 0.00', '--history', '--full', '## Carried', 'Advisory', 'Minor',
     'Carried:', 'ceiling: reached', 'Strictness: **L is strict by default**');
-  has('skills/verify/references/LOOP.md', 'Decide each open finding', 'cycle cost', '(this run not included)', 'Keystone cost meter', 'cost: verify+fix n/a');
+  has('skills/verify/references/LOOP.md', 'Decide each open finding', 'cycle cost', '(this run not included)', 'Sattva cost meter', 'cost: verify+fix n/a');
   has('skills/verify/references/AFTER-CHOICE.md', 'Prove now: <check>', '**Accept is never first**', 'read before the Step 6 menu');
   has('skills/verify/references/CHECKS.md', 'delta:', 'carried:', 'judge:', 'rules scope:', 'release refs:', '## Debt', 'history:', 'ceiling: reached', 'cost:');
   assert.match(front('skills/verify/SKILL.md'), /argument-hint:.*--full/);
@@ -764,7 +764,7 @@ test('0.9.26: verify carries rows into ## Carried, records the cost, keeps Advis
 
 test('0.9.31: the ceiling menu routes — decide each open finding or back to the plan (replaces the 0.9.26 trend menu, intent D9)', () => {
   has('skills/verify/references/AFTER-CHOICE.md', 'Decide each open finding', 'Decide at the ceiling', 'Back to the plan',
-    'Next: /keystone:plan <plan>', 'Next: /keystone:fix verify');
+    'Next: /sattva:plan <plan>', 'Next: /sattva:fix verify');
 });
 
 test('0.9.26: fix verify leaves Advisory, Minor and carried rows alone', () => {
@@ -776,7 +776,7 @@ test('0.9.26: check finds a contradiction with an accepted decision before Appro
   has('skills/check/references/ANALYZE.md', 'docs/notes/*.md', 'Status: accepted', 'Decision:');
 });
 
-// verify-fix-class-sweep (docs/keystone/2026-11-03-verify-fix-class-sweep/intent.md)
+// verify-fix-class-sweep (docs/sattva/2026-11-03-verify-fix-class-sweep/intent.md)
 test('0.9.28 I-1/I-15/I-16: the verifier names the class and every place of it; rule lines carry sites to cover and Class', () => {
   has('agents/verifier.md', 'Class:', 'every place of the class', 'left the plan:', '— Class: <', 'sites to cover:', 'shared point',
     'only on lines the diff added or changed', 'One line per rule', 'never stop at the first violation',
@@ -798,7 +798,7 @@ test('0.9.28 I-5/I-6/I-17/I-20: verify stops without a judge, marks late finding
     'the ceiling is checked before the rules menu (0.9.31)');
   const loop = flat('skills/verify/references/LOOP.md');
   for (const s of ['not judged', 'verifier not called', 'Rules-only FAIL twice', 'Fix the whole class, then one last verify',
-    'Accept the violation consciously', 'Late', '/keystone:fix verify']) assert.ok(loop.includes(s), s);
+    'Accept the violation consciously', 'Late', '/sattva:fix verify']) assert.ok(loop.includes(s), s);
   const acc = flat('skills/verify/references/ACCEPT.md');
   for (const s of ['Accepted violation by', 'docs(verify): accept violation', 'only the listed', 'Security gate']) assert.ok(acc.includes(s), s);
   assert.match(acc.split('## Accept — ')[1].split('### ')[0], /PASS-UNPROVEN[^.]*Accepted violation by/, 'a recomputed PASS-UNPROVEN may be accepted');
@@ -812,7 +812,7 @@ test('0.9.28 I-5/I-6/I-17/I-20: verify stops without a judge, marks late finding
 
 test('0.9.28 I-2/I-3/I-4/I-14/I-15/I-17/I-18/I-19: fix verify closes the whole class, proves it, asks before rules and decisions', () => {
   has('skills/fix/SKILL.md', 'Class', 'every place of its class', 'shared point', 'Repro before:', 'red on revert', 'Decision:',
-    'supersedes <path> I-a, I-b, I-c', '/keystone:evolve', 'rules self-check', 'new work', '/keystone:plan <plan path>', 'not judged',
+    'supersedes <path> I-a, I-b, I-c', '/sattva:evolve', 'rules self-check', 'new work', '/sattva:plan <plan path>', 'not judged',
     'accepted violations:', 'sites to cover:', 'every `Unrequested:` item', '### Verify findings mode', 'fix all of them in one pass');
   const mode = read('skills/fix/SKILL.md').split('### Verify findings mode')[1].split('\n### ')[0];
   const six = mode.split('6. **The same class again.**')[1].split('7. **')[0];
@@ -851,7 +851,7 @@ test('0.9.27 I-7/I-8: qa makes a case per open debt line, qa-check closes it whe
   has('skills/qa-check/SKILL.md', 'by qa-check TC-NNN', 'Debt: closed', '## Debt', 'and the plan file', '(closing only)');
 });
 
-// agent feedback (docs/keystone/2026-11-12-agent-feedback-judge/plan.md)
+// agent feedback (docs/sattva/2026-11-12-agent-feedback-judge/plan.md)
 test('feedback judge: read-only opus agent that confirms or doubts claims and adds what was left unsaid', () => {
   has('agents/feedback-judge.md', 'confirmed', 'added', 'unconfirmed', 'skill-text', 'agent', 'environment', '§');
   assert.match(front('agents/feedback-judge.md'), /^tools: Read, Grep, Glob$/m);
@@ -859,8 +859,8 @@ test('feedback judge: read-only opus agent that confirms or doubts claims and ad
 });
 
 test('feedback skill: modes, judge call, storage, off line, silent when called by another skill', () => {
-  has('skills/feedback/SKILL.md', 'summary', 'judge <plan path>', 'auto <plan path>', '--auto', 'session:', 'keystone:feedback-judge', '--kind judge',
-    'Level: M', 'feedback is off', 'Keystone feedback judge: error', 'no `Next:` and no menu', 'Keystone feedback judge: not needed');
+  has('skills/feedback/SKILL.md', 'summary', 'judge <plan path>', 'auto <plan path>', '--auto', 'session:', 'sattva:feedback-judge', '--kind judge',
+    'Level: M', 'feedback is off', 'Sattva feedback judge: error', 'no `Next:` and no menu', 'Sattva feedback judge: not needed');
   assert.doesNotMatch(front('skills/feedback/SKILL.md'), /disable-model-invocation/);
   assert.match(front('skills/feedback/SKILL.md'), /^model: sonnet$/m);
   assert.match(front('skills/feedback/SKILL.md'), /^allowed-tools:.*Bash\(node \*feedback\.mjs\*\)/m);
@@ -868,7 +868,7 @@ test('feedback skill: modes, judge call, storage, off line, silent when called b
 
 test('feedback wiring: the 8 chain skills carry the Feedback line and the Bash rule, no other skill does', () => {
   const chain = ['start', 'intent', 'plan', 'check', 'implement', 'verify', 'fix', 'review'];
-  const line = '**Feedback.** If the context has a `Keystone feedback: on` line';
+  const line = '**Feedback.** If the context has a `Sattva feedback: on` line';
   for (const s of SKILLS) {
     const t = read(`skills/${s}/SKILL.md`), f = front(`skills/${s}/SKILL.md`);
     if (chain.includes(s)) {
@@ -895,8 +895,8 @@ test('feedback option: SessionStart hook in exec form, other hooks untouched, us
   assert.equal(fb.type, 'boolean');
   assert.equal(fb.default, false);
   assert.equal(fb.title, 'Agent feedback');
-  has('benchmarks/agentic/run.py', '"KEYSTONE_FEEDBACK": "off"');
-  has('test/harness/drive.mjs', "KEYSTONE_FEEDBACK: 'off'");
+  has('benchmarks/agentic/run.py', '"SATTVA_FEEDBACK": "off"');
+  has('test/harness/drive.mjs', "SATTVA_FEEDBACK: 'off'");
 });
 
 test('feedback judge: a contradicted claim is unconfirmed, the reply language comes from the caller', () => {
@@ -930,20 +930,20 @@ test('rush early check: the verifier judges only the tasks named in early:, no v
 
 test('rush driver: RUSH.md carries every rule of the Design, implement enters it only on Pace: rush', () => {
   const R = 'skills/implement/references/RUSH.md';
-  has(R, 'Keystone rush stage:', 'RUSH: done', 'RUSH: question', 'RUSH: stop', 'model: "opus"', 'effort: "high"', '$ARGUMENTS',
+  has(R, 'Sattva rush stage:', 'RUSH: done', 'RUSH: question', 'RUSH: stop', 'model: "opus"', 'effort: "high"', '$ARGUMENTS',
     'the active plan in this file means', 'Fix directly here', 'menu:', 'start with the fix stage', 'tool denied', 'early:',
     'never writes verify.md', 'ceiling:', 'rules menu: on this FAIL', 'nothing to judge', 'Rush остановлен на', 'nothing changed',
     'build or test failed twice', 'Next: nothing now — waiting for', 'no conclusions', 'rush недоступен', '/fast', 'rush.mjs summary',
-    'subagent_tokens', '/keystone-status', 'Accept', 'Approve', '/keystone:review');
+    'subagent_tokens', '/sattva-status', 'Accept', 'Approve', '/sattva:review');
   assert.doesNotMatch(read(R), /max-budget|mode:|trend menu/);
-  assert.match(read(R).split('\n')[0], /^<!-- original Keystone file \(MIT\) -->$/);
+  assert.match(read(R).split('\n')[0], /^<!-- original Sattva file \(MIT\) -->$/);
   assert.match(front('skills/implement/SKILL.md'), /allowed-tools:.*\bAgent\b/);
-  has('skills/implement/SKILL.md', 'Keystone rush stage:', 'never `verified`', 'references/RUSH.md');
+  has('skills/implement/SKILL.md', 'Sattva rush stage:', 'never `verified`', 'references/RUSH.md');
 });
 
 test('rush entry points: start routes --rush, intent and plan write Pace: rush, plan runs the chain on Approve', () => {
   assert.match(front('skills/start/SKILL.md'), /--rush/);
-  has('skills/start/SKILL.md', 'M → `/keystone:plan <task> --rush`', 'L → `/keystone:intent --rush <idea>`', 'rush не нужен на S', 'The level question stays one');
+  has('skills/start/SKILL.md', 'M → `/sattva:plan <task> --rush`', 'L → `/sattva:intent --rush <idea>`', 'rush не нужен на S', 'The level question stays one');
   assert.match(front('skills/intent/SKILL.md'), /--rush/);
   has('skills/intent/SKILL.md', '`Pace: rush` right after `Goal check:`', '<Pace: rush — only with --rush>', 'the whole frontier',
     'mandatory edge-case pass', 'eleven areas', 'in the same batch', 'only for questions whose answer depends on ones already asked',
